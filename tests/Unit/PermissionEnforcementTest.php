@@ -49,7 +49,6 @@ final class PermissionEnforcementTest extends TestCase
 
         $executor = new ToolExecutor(
             new PermissionResolver(new DenyAllPermissionChecker(), $this->app),
-            $this->app->make(ToolApprovalService::class),
             $this->app['events'],
         );
 
