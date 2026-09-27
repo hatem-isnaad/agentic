@@ -79,6 +79,8 @@ final class SkillController
             'tools' => ['nullable', 'array'],
             'tools.*' => ['string'],
             'knowledge' => ['nullable', 'array'],
+            'routing_keywords' => ['nullable', 'array'],
+            'routing_keywords.*' => ['string', 'max:255'],
             'config' => ['nullable', 'array'],
         ]);
 
@@ -103,6 +105,7 @@ final class SkillController
             'knowledge' => $skill->knowledge,
             'status' => $skill->metadata['status'] ?? null,
             'id' => $skill->metadata['id'] ?? null,
+            'routing_keywords' => $skill->metadata['routing_keywords'] ?? [],
         ];
     }
 }
