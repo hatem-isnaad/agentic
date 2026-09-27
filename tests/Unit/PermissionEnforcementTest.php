@@ -11,6 +11,7 @@ use Agentic\Tests\TestCase;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\ToolDefinition;
 use Agentic\Tool\ToolExecutionContext;
+use Agentic\Tool\ToolApprovalService;
 use Agentic\Tool\ToolExecutor;
 use Agentic\Tool\ToolResult;
 use Illuminate\Support\Facades\Event;
@@ -44,8 +45,11 @@ final class PermissionEnforcementTest extends TestCase
             new DenyAllPermissionChecker(),
         );
 
+        config(['agentic.tool_approval.enabled' => false]);
+
         $executor = new ToolExecutor(
             new PermissionResolver(new DenyAllPermissionChecker(), $this->app),
+            $this->app->make(ToolApprovalService::class),
             $this->app['events'],
         );
 
