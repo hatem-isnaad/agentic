@@ -3,12 +3,14 @@
 namespace Agentic\Tool\Drivers\Http;
 
 use Agentic\Contracts\Connections\ConnectionResolver;
+use Agentic\Connections\OAuth2TokenManager;
 use InvalidArgumentException;
 
 final class AuthenticationResolver
 {
     public function __construct(
         private ?ConnectionResolver $connections = null,
+        private ?OAuth2TokenManager $oauth2 = null,
     ) {}
 
     public function resolve(?array $auth, ?string $connection = null): array
