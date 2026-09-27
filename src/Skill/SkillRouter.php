@@ -17,13 +17,17 @@ final class SkillRouter
         private ?LlmSkillRouter $llm = null,
     ) {}
 
-    public function select(AgentDefinition $agent, string $message, int $limit = 3): SkillSelection
-    {
+    public function select(
+        AgentDefinition $agent,
+        string $message,
+        int $limit = 3,
+        ?int $fallbackLimit = null,
+    ): SkillSelection {
         $message = mb_strtolower(trim($message));
         $candidates = $this->skills->resolveMany($agent->skills);
 
         if ($message === '' || $candidates === []) {
-            return new SkillSelection($agent->skills);
+            return $this->fallbackSelection($agent->skills, $fallbackLimit);
         }
 
         $ranked = [];
@@ -64,13 +68,29 @@ final class SkillRouter
         }
 
         if ((bool) config('agentic.skill_routing.ai.enabled', false) && $this->llm !== null) {
-            $selection = $this->llm->select($agent->skills, $message);
+            try {
+                $selection = $this->llm->select($agent->skills, $message);
+            } catch (\Throwable) {
+                $selection = null;
+            }
 
             if ($selection !== null) {
                 return $selection;
             }
         }
 
-        return new SkillSelection($agent->skills);
+        return $this->fallbackSelection($agent->skills, $fallbackLimit);
+    }
+
+    /**
+     * @param  list<string>  $skills
+     */
+    private function fallbackSelection(array $skills, ?int $fallbackLimit): SkillSelection
+    {
+        if ($fallbackLimit !== null && count($skills) > $fallbackLimit) {
+            return new SkillSelection(array_slice($skills, 0, max(1, $fallbackLimit)));
+        }
+
+        return new SkillSelection($skills);
     }
 }

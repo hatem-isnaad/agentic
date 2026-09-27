@@ -14,7 +14,7 @@
 
 ## Host responsibilities
 
-1. **Authentication** — Enable `AGENTIC_API_REQUIRE_AUTH` / `AGENTIC_ADMIN_REQUIRE_AUTH` and issue Sanctum tokens for production runtime/admin APIs.
+1. **Authentication** — Admin UI/API are **open by default** (local dev). For production enable `AGENTIC_API_REQUIRE_AUTH` / `AGENTIC_ADMIN_REQUIRE_AUTH`, add `auth` middleware to `admin.web.middleware` for the SPA, and optionally `AGENTIC_ADMIN_GATE` with `Gate::define()` (Telescope-style allow lists). See [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md).
 2. **Tenant isolation** — Bind `Agentic\Contracts\TenantResolver` and pass tenant context on widget/runtime requests.
 3. **Secrets** — Store connection credentials and OAuth client secrets outside version control; use Laravel encrypted env or vault.
 4. **MCP** — Only register trusted MCP servers in `config/mcp.php`; sync exposes their tools to the agent runtime.

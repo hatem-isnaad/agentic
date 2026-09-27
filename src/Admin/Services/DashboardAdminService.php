@@ -9,6 +9,7 @@ use Agentic\Contracts\Repositories\ExecutionRepository;
 use Agentic\Contracts\Repositories\KnowledgeRepository;
 use Agentic\Contracts\Repositories\SkillRepository;
 use Agentic\Contracts\Repositories\ToolRepository;
+use Agentic\Contracts\Repositories\WorkflowRepository;
 
 final class DashboardAdminService
 {
@@ -17,6 +18,7 @@ final class DashboardAdminService
         private SkillRepository $skills,
         private ToolRepository $tools,
         private KnowledgeRepository $knowledge,
+        private WorkflowRepository $workflows,
         private ExecutionRepository $executions,
         private ConversationRepository $conversations,
     ) {}
@@ -28,6 +30,7 @@ final class DashboardAdminService
             skills: count($this->skills->all()),
             tools: count($this->tools->all()),
             knowledgeSources: count($this->knowledge->all()),
+            workflows: count($this->workflows->all()),
             executions: count($this->executions->recent(1000)),
             conversations: count($this->conversations->recent(1000)),
         );

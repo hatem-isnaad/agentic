@@ -4,11 +4,15 @@ namespace Agentic\Http\Requests\Admin;
 
 use Agentic\Admin\DTO\AgentData;
 use Agentic\Http\Requests\Admin\Concerns\NormalizesCommaSeparatedLists;
+use Agentic\Http\Requests\Admin\Concerns\ValidatesAgentAiSelection;
+use Agentic\Http\Requests\Admin\Concerns\ValidatesAgentPersona;
 use Illuminate\Foundation\Http\FormRequest;
 
 final class StoreAgentRequest extends FormRequest
 {
     use NormalizesCommaSeparatedLists;
+    use ValidatesAgentAiSelection;
+    use ValidatesAgentPersona;
 
     public function authorize(): bool
     {
@@ -17,7 +21,7 @@ final class StoreAgentRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->normalizeCommaSeparatedLists(['skills', 'tools', 'permissions']);
+        $this->normalizeCommaSeparatedLists(['skills', 'tools', 'knowledge', 'permissions']);
     }
 
     /**
@@ -31,8 +35,7 @@ final class StoreAgentRequest extends FormRequest
             'description' => ['nullable', 'string'],
             'instructions' => ['nullable', 'string'],
             'status' => ['nullable', 'string', 'in:draft,published,archived'],
-            'provider' => ['nullable', 'string', 'max:128'],
-            'model' => ['nullable', 'string', 'max:128'],
+            ...$this->agentAiRules(),
             'temperature' => ['nullable', 'numeric'],
             'max_tokens' => ['nullable', 'integer', 'min:1'],
             'skills' => ['nullable', 'array'],
@@ -44,6 +47,7 @@ final class StoreAgentRequest extends FormRequest
             'permissions.*' => ['string'],
             'runtime' => ['nullable', 'array'],
             'config' => ['nullable', 'array'],
+            ...$this->personaRules(),
         ];
     }
 

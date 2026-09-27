@@ -19,18 +19,42 @@ final readonly class ToolData
         public array $config = [],
         public array $definition = [],
         public ?bool $publish = null,
+        public ?int $id = null,
     ) {}
 
     public static function fromDefinition(ToolDefinition $tool): self
     {
+        $definition = array_filter([
+            'input_schema' => $tool->inputSchema !== [] ? $tool->inputSchema : null,
+            'output_schema' => $tool->outputSchema !== [] ? $tool->outputSchema : null,
+            'method' => $tool->configuration['method'] ?? null,
+            'url' => $tool->configuration['url'] ?? null,
+            'auth' => $tool->configuration['auth'] ?? null,
+            'timeout' => $tool->configuration['timeout'] ?? null,
+            'retry' => $tool->configuration['retry'] ?? null,
+            'response_mapping' => $tool->configuration['response_mapping'] ?? null,
+            'headers' => $tool->configuration['headers'] ?? null,
+            'handler' => $tool->configuration['handler'] ?? null,
+            'connection' => $tool->connection,
+        ], static fn ($value) => $value !== null && $value !== [] && $value !== '');
+
+        $config = $tool->configuration;
+        foreach ([
+            'method', 'url', 'auth', 'timeout', 'retry', 'response_mapping', 'headers', 'handler',
+            'input_schema', 'inputSchema', 'output_schema', 'outputSchema', 'permissions', 'runtime', 'approval',
+        ] as $key) {
+            unset($config[$key]);
+        }
+
         return new self(
             name: $tool->description !== '' ? $tool->description : $tool->name,
             slug: $tool->name,
             driver: (string) $tool->driver,
             description: $tool->description,
             status: $tool->status,
-            config: $tool->configuration,
-            definition: [],
+            config: $config,
+            definition: $definition,
+            id: $tool->id,
         );
     }
 
@@ -48,6 +72,7 @@ final readonly class ToolData
             config: $validated['config'] ?? [],
             definition: $validated['definition'] ?? [],
             publish: $validated['publish'] ?? null,
+            id: isset($validated['id']) ? (int) $validated['id'] : null,
         );
     }
 

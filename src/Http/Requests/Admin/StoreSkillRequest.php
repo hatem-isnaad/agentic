@@ -17,7 +17,7 @@ final class StoreSkillRequest extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->normalizeCommaSeparatedLists(['tools']);
+        $this->normalizeCommaSeparatedLists(['tools', 'knowledge']);
     }
 
     /**

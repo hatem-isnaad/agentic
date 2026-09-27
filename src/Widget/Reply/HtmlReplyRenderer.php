@@ -7,6 +7,10 @@ namespace Agentic\Widget\Reply;
  */
 final class HtmlReplyRenderer
 {
+    public function __construct(
+        private MarkdownHtmlConverter $markdown = new MarkdownHtmlConverter(),
+    ) {}
+
     /**
      * @param  array<string, mixed>|string|null  $payload
      */
@@ -27,7 +31,7 @@ final class HtmlReplyRenderer
         }
 
         return match ($format) {
-            'html' => (string) ($payload['html'] ?? $payload['content'] ?? ''),
+            'html' => $this->safeHtml((string) ($payload['html'] ?? $payload['content'] ?? '')),
             'table' => $this->table(is_array($payload['rows'] ?? null) ? $payload['rows'] : []),
             'list' => $this->list(is_array($payload['items'] ?? null) ? $payload['items'] : []),
             'card' => $this->card($payload),
@@ -47,7 +51,7 @@ final class HtmlReplyRenderer
             $type = (string) ($block['type'] ?? 'text');
 
             $html .= match ($type) {
-                'html' => (string) ($block['html'] ?? ''),
+                'html' => $this->safeHtml((string) ($block['html'] ?? '')),
                 'table' => $this->table(is_array($block['rows'] ?? null) ? $block['rows'] : []),
                 'list' => $this->list(is_array($block['items'] ?? null) ? $block['items'] : []),
                 'card' => $this->card($block),
@@ -62,7 +66,15 @@ final class HtmlReplyRenderer
 
     private function text(string $value): string
     {
-        return nl2br(e($value), false);
+        return $this->markdown->convert($value);
+    }
+
+    private function safeHtml(string $html): string
+    {
+        $html = preg_replace('/<(script|style|iframe|object|embed|form)\b[^>]*>.*?<\/\1>/is', '', $html) ?? $html;
+        $html = preg_replace('/\son[a-z]+\s*=\s*("[^"]*"|\'[^\']*\'|[^\s>]+)/i', '', $html) ?? $html;
+
+        return preg_replace('/javascript\s*:/i', '', $html) ?? $html;
     }
 
     /**
@@ -77,13 +89,13 @@ final class HtmlReplyRenderer
         $headers = array_keys($rows[0]);
         $html = '<table><thead><tr>';
         foreach ($headers as $header) {
-            $html .= '<th>'.e((string) $header).'</th>';
+            $html .= '<th>'.$this->markdown->convertInline((string) $header).'</th>';
         }
         $html .= '</tr></thead><tbody>';
         foreach ($rows as $row) {
             $html .= '<tr>';
             foreach ($headers as $header) {
-                $html .= '<td>'.e((string) ($row[$header] ?? '')).'</td>';
+                $html .= '<td>'.$this->markdown->convertInline((string) ($row[$header] ?? '')).'</td>';
             }
             $html .= '</tr>';
         }
@@ -103,7 +115,7 @@ final class HtmlReplyRenderer
 
         $html = '<ul>';
         foreach ($items as $item) {
-            $html .= '<li>'.e(is_scalar($item) ? (string) $item : json_encode($item)).'</li>';
+            $html .= '<li>'.$this->markdown->convertInline(is_scalar($item) ? (string) $item : (string) json_encode($item)).'</li>';
         }
         $html .= '</ul>';
 
@@ -115,16 +127,16 @@ final class HtmlReplyRenderer
      */
     private function card(array $payload): string
     {
-        $title = e((string) ($payload['title'] ?? ''));
-        $body = e((string) ($payload['body'] ?? $payload['text'] ?? ''));
-        $footer = e((string) ($payload['footer'] ?? ''));
+        $title = $this->markdown->convertInline((string) ($payload['title'] ?? ''));
+        $body = $this->markdown->convert((string) ($payload['body'] ?? $payload['text'] ?? ''));
+        $footer = $this->markdown->convertInline((string) ($payload['footer'] ?? ''));
 
         $html = '<article class="agentic-card">';
         if ($title !== '') {
             $html .= '<header><strong>'.$title.'</strong></header>';
         }
         if ($body !== '') {
-            $html .= '<p>'.$body.'</p>';
+            $html .= $body;
         }
         if ($footer !== '') {
             $html .= '<footer><small>'.$footer.'</small></footer>';

@@ -26,6 +26,9 @@ use Agentic\Knowledge\Documents\DocumentUrlFetcher;
 use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
 use Agentic\Console\InstallAgenticCommand;
+use Agentic\Console\WidgetEmbedTokenCommand;
+use Agentic\Console\MakeCodeToolCommand;
+use Agentic\Console\SyncCodeToolsCommand;
 use Agentic\Console\PruneWorkflowRunsCommand;
 use Agentic\Console\RagValidateCommand;
 use Agentic\Console\SyncMcpToolsCommand;
@@ -90,14 +93,21 @@ use Agentic\Tool\Drivers\Http\HttpRequestBuilder;
 use Agentic\Tool\Drivers\Mcp\LaravelMcpClientGateway;
 use Agentic\Tool\Drivers\Mcp\McpToolRegistrar;
 use Agentic\Tool\Drivers\McpToolDriver;
+use Agentic\Tool\Discovery\CustomCodeToolDiscovery;
 use Agentic\Tool\Handlers\HandlerRegistry;
 use Agentic\Tool\Registry\ToolRegistry;
 use Agentic\Tool\ToolApprovalExecutionService;
 use Agentic\Tool\ToolExecutor;
 use Agentic\Tool\ToolFactory;
+use Agentic\Widget\Broadcast\CompositeWidgetBroadcastDriver;
 use Agentic\Widget\Broadcast\DatabaseWidgetBroadcastDriver;
+use Agentic\Widget\Broadcast\PusherWidgetBroadcastDriver;
 use Agentic\Widget\Broadcast\WidgetBroadcastDriver;
+use Agentic\Http\Support\AdminLocaleMeta;
+use Agentic\Support\AdminSpaAssets;
+use Agentic\Support\WidgetEmbedAssets;
 use Illuminate\Support\Facades\Route;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Mcp\Client\ClientManager;
 use Laravel\Mcp\Server\McpServiceProvider as LaravelMcpServiceProvider;
@@ -118,6 +128,7 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(LlmSkillRouter::class);
         $this->app->singleton(SkillRouter::class);
         $this->app->singleton(HandlerRegistry::class);
+        $this->app->singleton(CustomCodeToolDiscovery::class);
         $this->app->singleton(DriverResolver::class);
         $this->app->singleton(ContextBuilder::class);
         $this->app->singleton(ContextManager::class);
@@ -155,7 +166,9 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(McpToolRegistrar::class);
         $this->app->singleton(ExecutionManager::class);
         $this->app->singleton(OAuth2TokenManager::class);
-        $this->app->singleton(WidgetBroadcastDriver::class, DatabaseWidgetBroadcastDriver::class);
+        $this->app->singleton(WidgetBroadcastDriver::class, CompositeWidgetBroadcastDriver::class);
+        $this->app->singleton(DatabaseWidgetBroadcastDriver::class);
+        $this->app->singleton(PusherWidgetBroadcastDriver::class);
         $this->app->singleton(ToolApprovalExecutionService::class);
 
         $this->app->singleton(PermissionChecker::class, function ($app) {
@@ -276,17 +289,46 @@ final class AgenticServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        if (config('agentic.code_tools.auto_register', true)) {
+            $this->app->booted(function (): void {
+                $this->app->make(CustomCodeToolDiscovery::class)
+                    ->registerDiscovered($this->app->make(HandlerRegistry::class));
+            });
+        }
+
         $this->callAfterResolving(ContextManager::class, function (ContextManager $manager): void {
             $manager->extend($this->app->make(HttpRequestContextProvider::class));
             $manager->extend($this->app->make(ConversationContextProvider::class));
         });
 
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'agentic');
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'agentic');
+
+        \Illuminate\Support\Facades\Blade::component('agentic::components.widget-embed', 'agentic-widget');
+        // Host usage: <x-agentic-widget agent="support" :token="..." />
+
+        View::composer('agentic::admin.*', function ($view): void {
+            $meta = AdminLocaleMeta::build();
+            $view->with([
+                'adminLocale' => $meta['locale'],
+                'adminSupportedLocales' => $meta['supported_locales'],
+                'adminHtmlLang' => $meta['html_lang'],
+                'adminDirection' => $meta['direction'],
+            ]);
+        });
 
         $this->publishes([
             __DIR__.'/../config/agentic.php' => config_path('agentic.php'),
         ], 'agentic-config');
+
+        $this->publishes([
+            AdminSpaAssets::distPath() => public_path('vendor/agentic/admin'),
+        ], 'agentic-admin-assets');
+
+        $this->publishes([
+            WidgetEmbedAssets::distPath() => public_path('vendor/agentic/widget'),
+        ], 'agentic-widget-assets');
 
         RateLimiter::for('agentic-api', function ($request) {
             return Limit::perMinute((int) config('agentic.api.rate_limit.per_minute', 120))
@@ -325,6 +367,21 @@ final class AgenticServiceProvider extends ServiceProvider
                 ->group(__DIR__.'/../routes/admin-api.php');
         }
 
+        if (config('agentic.admin.enabled') && config('agentic.admin.web.enabled', false)) {
+            $prefix = trim((string) config('agentic.admin.web.prefix', 'agentic/admin'), '/');
+            $middleware = config('agentic.admin.web.middleware', ['web']);
+            $namePrefix = (string) config('agentic.admin.web.route_name_prefix', 'agentic.admin.');
+
+            $webRoutes = config('agentic.admin.web.ui', 'spa') === 'blade'
+                ? __DIR__.'/../routes/admin-web.php'
+                : __DIR__.'/../routes/admin-spa-web.php';
+
+            Route::prefix($prefix)
+                ->middleware($middleware)
+                ->name($namePrefix)
+                ->group($webRoutes);
+        }
+
         if (config('agentic.widget.enabled', true)) {
             $prefix = trim((string) config('agentic.widget.prefix', 'api/agentic/widget'), '/');
             $middleware = config('agentic.widget.middleware', ['api']);
@@ -334,6 +391,19 @@ final class AgenticServiceProvider extends ServiceProvider
                 ->middleware($middleware)
                 ->name($namePrefix)
                 ->group(__DIR__.'/../routes/widget-api.php');
+        }
+
+        if (config('agentic.widget.enabled', true) && config('agentic.widget.web.enabled', true)) {
+            $prefix = trim((string) config('agentic.widget.web.prefix', 'agentic/widget'), '/');
+            $middleware = $this->mergeOptionalAdminGate(
+                config('agentic.widget.web.middleware', ['web']),
+            );
+            $namePrefix = (string) config('agentic.widget.web.route_name_prefix', 'agentic.widget.web.');
+
+            Route::prefix($prefix)
+                ->middleware($middleware)
+                ->name($namePrefix)
+                ->group(__DIR__.'/../routes/widget-web.php');
         }
 
         if (config('agentic.auth.enabled', true) && class_exists(\Laravel\Sanctum\SanctumServiceProvider::class)) {
@@ -353,6 +423,9 @@ final class AgenticServiceProvider extends ServiceProvider
                 PruneWorkflowRunsCommand::class,
                 RagValidateCommand::class,
                 SyncMcpToolsCommand::class,
+                MakeCodeToolCommand::class,
+                SyncCodeToolsCommand::class,
+                WidgetEmbedTokenCommand::class,
             ]);
         }
 
@@ -393,10 +466,30 @@ final class AgenticServiceProvider extends ServiceProvider
      */
     private function resolveMiddleware(array $middleware, bool $requireAuth): array
     {
-        if (! $requireAuth || ! class_exists(\Laravel\Sanctum\SanctumServiceProvider::class)) {
+        if ($requireAuth && class_exists(\Laravel\Sanctum\SanctumServiceProvider::class)) {
+            $middleware = array_merge($middleware, ['auth:sanctum']);
+        }
+
+        return $this->mergeOptionalAdminGate($middleware);
+    }
+
+    /**
+     * @param  list<string|class-string>  $middleware
+     * @return list<string|class-string>
+     */
+    private function mergeOptionalAdminGate(array $middleware): array
+    {
+        $gate = config('agentic.admin.authorization.gate');
+        $authorize = \Agentic\Http\Middleware\AuthorizeAgenticAdmin::class;
+
+        if (! is_string($gate) || $gate === '') {
             return $middleware;
         }
 
-        return array_merge($middleware, ['auth:sanctum']);
+        if (in_array($authorize, $middleware, true)) {
+            return $middleware;
+        }
+
+        return array_merge($middleware, [$authorize]);
     }
 }

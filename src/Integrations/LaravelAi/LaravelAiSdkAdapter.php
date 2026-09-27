@@ -29,10 +29,14 @@ final class LaravelAiSdkAdapter
     ): AgentResponse {
         $sdkAgent = $this->makeAgent($agent, $builtContext, $tools, $context);
 
+        $provider = AiProviderResolver::provider($agent->provider);
+        $model = AiProviderResolver::model($agent->model);
+        AiProviderResolver::assertReady($provider);
+
         return $sdkAgent->prompt(
             $context->message,
-            provider: $agent->provider ?? config('agentic.ai.provider'),
-            model: $agent->model ?? config('agentic.ai.model'),
+            provider: $provider,
+            model: $model,
         );
     }
 
@@ -59,8 +63,8 @@ final class LaravelAiSdkAdapter
             $tools,
         );
 
-        $provider = $agent->provider ?? config('agentic.ai.provider');
-        $laravelTools = $this->toolSets->build($laravelTools, is_string($provider) ? $provider : null);
+        $provider = AiProviderResolver::provider($agent->provider);
+        $laravelTools = $this->toolSets->build($laravelTools, $provider);
 
         return agent(
             instructions: $this->composeInstructions($agent, $builtContext),

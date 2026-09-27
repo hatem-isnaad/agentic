@@ -14,11 +14,7 @@
 
 @include('agentic::admin.partials.status-select', ['selected' => $agent->status ?? 'draft'])
 
-<label for="provider">{{ __('agentic::admin.fields.provider') }}</label>
-<input type="text" name="provider" id="provider" value="{{ old('provider', $agent->provider ?? '') }}">
-
-<label for="model">{{ __('agentic::admin.fields.model') }}</label>
-<input type="text" name="model" id="model" value="{{ old('model', $agent->model ?? '') }}">
+@include('agentic::admin.partials.ai-provider-fields', ['agent' => $agent ?? null])
 
 <label for="skills">{{ __('agentic::admin.fields.skills') }}</label>
 <input type="text" name="skills" id="skills" value="{{ old('skills', isset($agent) ? implode(', ', $agent->skills) : '') }}">

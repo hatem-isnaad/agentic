@@ -3,9 +3,11 @@
 namespace Agentic\Http\Controllers\Widget;
 
 use Agentic\Exceptions\AgentNotFoundException;
+use Agentic\Http\Requests\Widget\WidgetAgentQueryRequest;
+use Agentic\Http\Responses\JsonApiResponse;
+use Agentic\Models\WidgetEmbedToken;
 use Agentic\Widget\Services\WidgetConfigService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 final class ConfigController
 {
@@ -13,18 +15,17 @@ final class ConfigController
         private WidgetConfigService $config,
     ) {}
 
-    public function __invoke(Request $request): JsonResponse
+    public function __invoke(WidgetAgentQueryRequest $request): JsonResponse
     {
-        $agent = (string) $request->query('agent', '');
-
-        if ($agent === '') {
-            return response()->json(['message' => 'Query parameter [agent] is required.'], 422);
-        }
-
         try {
-            return response()->json($this->config->forAgent($agent));
+            $embed = $request->attributes->get('agentic_widget_embed');
+
+            return response()->json($this->config->forAgent(
+                $request->agentSlug(),
+                $embed instanceof WidgetEmbedToken ? $embed : null,
+            ));
         } catch (AgentNotFoundException) {
-            return response()->json(['message' => 'Agent not found.'], 404);
+            return JsonApiResponse::error('Agent not found.', 404);
         }
     }
 }

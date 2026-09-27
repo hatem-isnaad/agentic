@@ -17,5 +17,5 @@ interface ConversationRepository
     /**
      * @return list<Conversation>
      */
-    public function recent(int $limit = 50): array;
+    public function recent(int $limit = 50, ?string $agent = null): array;
 }

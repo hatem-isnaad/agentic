@@ -18,6 +18,7 @@ final class WidgetApprovalApiTest extends TestCase
         parent::defineEnvironment($app);
 
         $app['config']->set('agentic.widget.enabled', true);
+        $app['config']->set('agentic.widget.embed.require_token', false);
         $app['config']->set('agentic.tool_approval.auto_execute_on_approve', false);
     }
 

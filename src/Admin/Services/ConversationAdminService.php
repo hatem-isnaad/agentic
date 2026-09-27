@@ -14,11 +14,11 @@ final class ConversationAdminService
     /**
      * @return list<ConversationData>
      */
-    public function list(int $limit = 50): array
+    public function list(int $limit = 50, ?string $agent = null): array
     {
         return array_map(
             fn ($conversation) => ConversationData::fromConversation($conversation),
-            $this->conversations->recent($limit),
+            $this->conversations->recent($limit, $agent),
         );
     }
 

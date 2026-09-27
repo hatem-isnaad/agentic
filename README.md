@@ -46,17 +46,21 @@ LLM provider
 
 - PHP **8.3+**
 - Laravel **12+** (package supports `illuminate/*` ^12|^13)
-- [`laravel/ai`](https://github.com/laravel/ai) ^1.0
+- [`laravel/ai`](https://github.com/laravel/ai) ^1.0 (installed automatically with Agentic)
 
 ```bash
-composer require hatem-isnaad/agentic laravel/ai
+composer require hatem-isnaad/agentic
 php artisan agentic:install
 php artisan vendor:publish --tag=ai-config
+php artisan vendor:publish --tag=agentic-widget-assets --force
+php artisan vendor:publish --tag=agentic-admin-assets --force
 php artisan migrate
 php artisan agentic:rag-validate --offline
 ```
 
-Copy variables from [`.env.example`](.env.example) into your application `.env`. See [docs/HOST_BOOTSTRAP.md](docs/HOST_BOOTSTRAP.md) for the full host checklist. The package ships **no production React UI** — build Admin and Widget SPAs against the JSON APIs (see [Frontend documentation](#frontend-documentation)). Optional **Filament** CRUD is available via `Agentic\Filament\AgenticPlugin` when `filament/filament` is installed.
+Copy variables from [`.env.example`](.env.example) into your application `.env`. See [docs/HOST_BOOTSTRAP.md](docs/HOST_BOOTSTRAP.md) for the full host checklist. Optional **Blade admin** and **widget chat page** ship in the package (`AGENTIC_ADMIN_WEB_ENABLED`, `AGENTIC_WIDGET_WEB_ENABLED`); custom SPAs can still target the JSON APIs (see [Frontend documentation](#frontend-documentation)). Optional **Filament** CRUD is available via `Agentic\Filament\AgenticPlugin` when `filament/filament` is installed.
+
+**Monorepo:** after package changes, run `composer agentic-sync` in `laravel-host/`.
 
 Before production, follow **[docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md)**.
 
@@ -625,22 +629,28 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" \
 
 List responses include pagination meta: `total`, `page`, `per_page`, `locale`, `direction`, `is_rtl`.
 
-Optional Blade admin placeholders (disabled by default): `AGENTIC_ADMIN_WEB_ENABLED=true`.
+**Built-in admin UI** (React + Tailwind + Framer Motion + Lucide + react-select): set `AGENTIC_ADMIN_WEB_ENABLED=true` and `AGENTIC_ADMIN_WEB_UI=spa` (default), open `/agentic/admin`. Build assets: `cd agentic && npm ci && npm run build`, then `php artisan vendor:publish --tag=agentic-admin-assets`. Legacy Blade UI: `AGENTIC_ADMIN_WEB_UI=blade`. **Widget chat:** `/agentic/widget?agent=support`.
 
 ---
 
 ## Widget API (embeddable chat)
 
-Base URL: **`/api/agentic/widget`**. Supports **guest** and **authenticated** users (`AGENTIC_WIDGET_AUTH_MODE`).
+Base URL: **`/api/agentic/widget`**. Supports **guest** and **authenticated** users (`AGENTIC_WIDGET_AUTH_MODE`). Controllers are thin: Form Requests + DTOs (`WidgetMessageData`, `WidgetIdentity`) and a single JSON envelope (`data` / `message`).
+
+**Embed on any site:** publish `agentic-widget.js` + `.css`, create a `wgt_…` token with `allowed_origins`, inject the token from your server. See **[docs/WIDGET_EMBED_SDK.md](docs/WIDGET_EMBED_SDK.md)**.
+
+**Web vs other platforms:** widget/admin replies are **Markdown → safe HTML** (bold, lists, tables, code) and follow the theme. WhatsApp/Messenger presenters exist for later — they use those networks’ text markers, not HTML.
 
 | Endpoint | Purpose |
 |----------|---------|
-| `GET /config?agent={slug}` | Theme, intake, locales, realtime driver, AI provider registry |
-| `GET/POST /conversations` | List/create (`agent` query/body required) |
-| `POST /messages` | Send message; optional `conversation_id` |
-| `GET /conversations/{id}/messages` | History with `html`, `blocks`, token counts |
+| `GET /config?agent={slug}` | Agent name (persona), theme, welcome, realtime (no secrets) |
+| `GET/POST /conversations` | List/create (`agent` required; 24h resume + inbox drawer on the client) |
+| `POST /messages` | Send message; optional `conversation_id`. Async + Pusher returns `{ pending, conversation_id }` |
+| `GET /conversations/{id}/messages` | History `html` + `blocks` (paginated, scroll-up loads older) |
 | `GET /conversations/{id}/realtime` | Long-poll when driver=`polling` |
 | `POST /approvals/{id}/approve\|reject\|execute` | Tool approval workflow |
+
+`AgenticChat.init({ theme, position })` — themes include `isnaad`, `techsup`, and 20 other presets (no theme picker in the chat UI). Composer has an emoji button. Arabic assistant replies switch to RTL.
 
 **Guest message example:**
 
@@ -704,11 +714,14 @@ Prefer the **admin API** for dashboard operations; use the runtime API for servi
 
 ## Frontend documentation
 
-The package does not ship production React UI. Implement two apps against the JSON APIs:
+The package ships an **admin SPA** (`/agentic/admin`) and an **embeddable widget**. Publish assets after install (`--tag=agentic-admin-assets`, `--tag=agentic-widget-assets`). You can still build a custom SPA against the JSON APIs.
 
 | Document | Purpose |
 |----------|---------|
-| [docs/FRONTEND_IMPLEMENTATION_GUIDE.md](docs/FRONTEND_IMPLEMENTATION_GUIDE.md) | **Source of truth** — every route, header, event, block type |
+| [docs/DEVELOPER_QUICKSTART.md](docs/DEVELOPER_QUICKSTART.md) | Install → tools → RAG → chatbot |
+| [docs/WIDGET_EMBED_SDK.md](docs/WIDGET_EMBED_SDK.md) | Popup embed, tokens, themes, Pusher, HTML replies |
+| [docs/CONFIGURE_BY_CODE.md](docs/CONFIGURE_BY_CODE.md) | Persona, widget, and agent config from PHP |
+| [docs/FRONTEND_IMPLEMENTATION_GUIDE.md](docs/FRONTEND_IMPLEMENTATION_GUIDE.md) | Every route, header, event, block type |
 | [docs/COPY_PROMPT_FOR_AI.md](docs/COPY_PROMPT_FOR_AI.md) | Paste into Cursor/Claude to scaffold Admin + Widget |
 | [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) | Sequence diagrams (approval, realtime, auth) |
 | [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) | Host app setup, auth, RAG, MCP, launch verification |

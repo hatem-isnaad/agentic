@@ -6,6 +6,7 @@ use Agentic\Agent\AgentDefinition;
 use Agentic\Context\RuntimeContext;
 use Agentic\Contracts\Repositories\KnowledgeRepository;
 use Agentic\Skill\SkillResolver;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Orchestrates retrieval from configured knowledge sources.
@@ -76,12 +77,29 @@ final class KnowledgeOrchestrator
         int $limit = 5,
     ): array {
         if ($this->repository === null || $query === '') {
+            $this->logRetrievalSkipped($query, $sourceSlugs, 'repository_or_empty_query');
+
             return [];
+        }
+
+        $unique = array_values(array_unique($sourceSlugs));
+        if ($unique === []) {
+            $this->logRetrievalSkipped($query, $sourceSlugs, 'no_source_slugs');
+
+            return [];
+        }
+
+        if ((bool) config('agentic.knowledge.log_embeddings', false)) {
+            Log::info('Agentic RAG: starting retrieval', [
+                'query' => $query,
+                'sources' => $unique,
+                'limit' => $limit,
+            ]);
         }
 
         $chunks = [];
 
-        foreach (array_unique($sourceSlugs) as $slug) {
+        foreach ($unique as $slug) {
             if (! is_string($slug) || $slug === '') {
                 continue;
             }
@@ -105,7 +123,33 @@ final class KnowledgeOrchestrator
 
         usort($chunks, fn (KnowledgeChunk $a, KnowledgeChunk $b) => ($b->score ?? 0) <=> ($a->score ?? 0));
 
-        return array_slice($chunks, 0, $limit);
+        $result = array_slice($chunks, 0, $limit);
+
+        if ((bool) config('agentic.knowledge.log_embeddings', false)) {
+            Log::info('Agentic RAG: retrieval finished', [
+                'query' => $query,
+                'chunks' => count($result),
+                'top_score' => $result[0]->score ?? null,
+            ]);
+        }
+
+        return $result;
+    }
+
+    /**
+     * @param  list<string>  $sourceSlugs
+     */
+    private function logRetrievalSkipped(string $query, array $sourceSlugs, string $reason): void
+    {
+        if (! (bool) config('agentic.knowledge.log_embeddings', false)) {
+            return;
+        }
+
+        Log::info('Agentic RAG: retrieval skipped', [
+            'reason' => $reason,
+            'query' => $query,
+            'sources' => $sourceSlugs,
+        ]);
     }
 
     /**

@@ -5,6 +5,9 @@ namespace Agentic\Widget\Services;
 use Agentic\Conversation\ConversationManager;
 use Agentic\Models\Conversation;
 use Agentic\Models\ConversationMessage;
+use Agentic\Widget\DTO\WidgetIdentity;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
+
 final class WidgetConversationService
 {
     public function __construct(
@@ -14,15 +17,17 @@ final class WidgetConversationService
     /**
      * @return list<array<string, mixed>>
      */
-    public function listForAgent(string $agentSlug, ?string $guestId, ?int $userId): array
+    public function listForAgent(string $agentSlug, WidgetIdentity $identity): array
     {
-        $identity = $userId !== null ? (string) $userId : ($guestId !== null ? 'guest:'.$guestId : null);
+        $userId = $identity->conversationUserId();
 
         return Conversation::query()
             ->where('agent', $agentSlug)
-            ->when($identity !== null, fn ($q) => $q->where('user_id', $identity))
+            ->when($userId !== null, fn ($q) => $q->where('user_id', $userId))
+            ->with('latestChatMessage')
+            ->latest('updated_at')
             ->latest('id')
-            ->limit((int) config('agentic.widget.conversation.max_open_per_user', 10))
+            ->limit((int) config('agentic.widget.conversation.max_open_per_user', 20))
             ->get()
             ->map(fn (Conversation $row) => $this->serializeConversation($row))
             ->all();
@@ -32,14 +37,12 @@ final class WidgetConversationService
      * @param  array<string, mixed>  $metadata
      * @return array<string, mixed>
      */
-    public function create(string $agentSlug, ?string $guestId, ?int $userId, ?string $tenantId, array $metadata = []): array
+    public function create(string $agentSlug, WidgetIdentity $identity, array $metadata = []): array
     {
-        $identity = $userId !== null ? (string) $userId : ($guestId !== null ? 'guest:'.$guestId : null);
-
         $conversation = $this->conversations->start(
             agent: $agentSlug,
-            userId: $identity,
-            tenantId: $tenantId,
+            userId: $identity->conversationUserId(),
+            tenantId: $identity->tenantId,
             metadata: $metadata,
         );
 
@@ -49,34 +52,83 @@ final class WidgetConversationService
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * Paginated messages (newest page first). Pass {@see $beforeCursor} to load older messages.
+     *
+     * @return array{messages: list<array<string, mixed>>, meta: array{has_more: bool, next_before: int|null}}
      */
-    public function messages(string $conversationUuid): array
-    {
-        $conversation = Conversation::query()->where('uuid', $conversationUuid)->firstOrFail();
+    public function messagesPage(
+        string $conversationUuid,
+        WidgetIdentity $identity,
+        int $limit = 20,
+        ?int $beforeCursor = null,
+    ): array {
+        $conversation = $this->resolveConversationForIdentity($conversationUuid, $identity);
 
-        return ConversationMessage::query()
+        $max = max(1, (int) config('agentic.widget.history.max_page_size', 50));
+        $limit = max(1, min($max, $limit));
+
+        $query = ConversationMessage::query()
             ->where('conversation_id', $conversation->id)
             ->where('role', '!=', 'system')
-            ->orderBy('id')
-            ->get()
-            ->map(function (ConversationMessage $message): array {
-                $blocks = is_array($message->metadata['blocks'] ?? null) ? $message->metadata['blocks'] : null;
+            ->when($beforeCursor !== null, fn ($q) => $q->where('id', '<', $beforeCursor))
+            ->orderByDesc('id')
+            ->limit($limit);
 
-                return [
-                    'id' => $message->uuid,
-                    'role' => $message->role,
-                    'html' => $message->content_html,
-                    'format' => $message->format,
-                    'blocks' => $blocks,
-                    'tokens_in' => $message->tokens_in,
-                    'tokens_out' => $message->tokens_out,
-                    'tokens_total' => $message->tokens_total,
-                    'locale' => $message->locale,
-                    'created_at' => optional($message->created_at)?->toISOString(),
-                ];
-            })
-            ->all();
+        $rows = $query->get()->reverse()->values();
+
+        $oldestId = $rows->first()?->id;
+        $hasMore = false;
+        if ($oldestId !== null) {
+            $hasMore = ConversationMessage::query()
+                ->where('conversation_id', $conversation->id)
+                ->where('role', '!=', 'system')
+                ->where('id', '<', $oldestId)
+                ->exists();
+        }
+
+        return [
+            'messages' => $rows
+                ->map(fn (ConversationMessage $message) => $this->serializeMessage($message))
+                ->all(),
+            'meta' => [
+                'has_more' => $hasMore,
+                'next_before' => $hasMore ? $oldestId : null,
+            ],
+        ];
+    }
+
+    private function resolveConversationForIdentity(string $conversationUuid, WidgetIdentity $identity): Conversation
+    {
+        $conversation = Conversation::query()->where('uuid', $conversationUuid)->first();
+
+        if ($conversation === null) {
+            throw new ModelNotFoundException();
+        }
+
+        $userId = $identity->conversationUserId();
+        if ($userId !== null && $conversation->user_id !== null && $conversation->user_id !== $userId) {
+            throw new ModelNotFoundException();
+        }
+
+        return $conversation;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function serializeMessage(ConversationMessage $message): array
+    {
+        $blocks = is_array($message->metadata['blocks'] ?? null) ? $message->metadata['blocks'] : null;
+
+        return [
+            'id' => $message->uuid,
+            'cursor' => (int) $message->id,
+            'role' => $message->role,
+            'html' => $message->content_html,
+            'format' => $message->format,
+            'blocks' => $blocks,
+            'created_at' => optional($message->created_at)?->toISOString(),
+        ];
     }
 
     /**
@@ -84,12 +136,18 @@ final class WidgetConversationService
      */
     private function serializeConversation(Conversation $row): array
     {
+        $latest = $row->latestChatMessage;
+        $preview = is_string($latest?->content_html) ? trim(strip_tags($latest->content_html)) : '';
+        $lastAt = $latest?->created_at ?? $row->updated_at ?? $row->created_at;
+
         return [
             'id' => $row->uuid,
             'agent' => $row->agent,
             'user_id' => $row->user_id,
             'tenant_id' => $row->tenant_id,
             'metadata' => $row->metadata ?? [],
+            'preview' => mb_substr($preview, 0, 120),
+            'last_message_at' => optional($lastAt)?->toISOString(),
             'created_at' => optional($row->created_at)?->toISOString(),
             'updated_at' => optional($row->updated_at)?->toISOString(),
         ];

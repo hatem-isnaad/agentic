@@ -2,9 +2,13 @@
 
 namespace Agentic\Http\Controllers\Widget;
 
+use Agentic\Http\Requests\Widget\StoreWidgetConversationRequest;
+use Agentic\Http\Requests\Widget\WidgetAgentQueryRequest;
+use Agentic\Http\Requests\Widget\WidgetHistoryRequest;
+use Agentic\Http\Responses\JsonApiResponse;
+use Agentic\Widget\DTO\WidgetIdentity;
 use Agentic\Widget\Services\WidgetConversationService;
 use Illuminate\Http\JsonResponse;
-use Illuminate\Http\Request;
 
 final class ConversationController
 {
@@ -12,44 +16,30 @@ final class ConversationController
         private WidgetConversationService $conversations,
     ) {}
 
-    public function index(Request $request): JsonResponse
+    public function index(WidgetAgentQueryRequest $request): JsonResponse
     {
-        $agent = (string) $request->query('agent', '');
-
-        if ($agent === '') {
-            return response()->json(['message' => 'Query parameter [agent] is required.'], 422);
-        }
-
-        return response()->json([
-            'data' => $this->conversations->listForAgent(
-                $agent,
-                $request->header('X-Agentic-Guest-Id'),
-                $request->user()?->getAuthIdentifier(),
-            ),
-        ]);
+        return JsonApiResponse::data($this->conversations->listForAgent(
+            $request->agentSlug(),
+            WidgetIdentity::fromRequest($request),
+        ));
     }
 
-    public function store(Request $request): JsonResponse
+    public function store(StoreWidgetConversationRequest $request): JsonResponse
     {
-        $validated = $request->validate([
-            'agent' => ['required', 'string'],
-            'locale' => ['nullable', 'string'],
-            'metadata' => ['nullable', 'array'],
-        ]);
+        $data = $request->toData();
 
-        $conversation = $this->conversations->create(
-            $validated['agent'],
-            $request->header('X-Agentic-Guest-Id'),
-            $request->user()?->getAuthIdentifier(),
-            $request->header('X-Agentic-Tenant-Id'),
-            $validated['metadata'] ?? [],
+        return JsonApiResponse::created($this->conversations->create($data->agent, $data->identity, $data->metadata));
+    }
+
+    public function messages(WidgetHistoryRequest $request, string $id): JsonResponse
+    {
+        $page = $this->conversations->messagesPage(
+            $id,
+            WidgetIdentity::fromRequest($request),
+            $request->limit(),
+            $request->beforeCursor(),
         );
 
-        return response()->json(['data' => $conversation], 201);
-    }
-
-    public function messages(string $id): JsonResponse
-    {
-        return response()->json(['data' => $this->conversations->messages($id)]);
+        return JsonApiResponse::data($page['messages'], meta: $page['meta']);
     }
 }

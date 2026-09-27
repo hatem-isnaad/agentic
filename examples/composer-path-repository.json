@@ -9,7 +9,6 @@
         }
     ],
     "require": {
-        "hatem-isnaad/agentic": "*",
-        "laravel/ai": "^1.0"
+        "hatem-isnaad/agentic": "*"
     }
 }

@@ -15,7 +15,7 @@
 
 ## 1. System overview
 
-The **package does not ship production UI**. You implement:
+The package ships an optional **Blade admin** (`AGENTIC_ADMIN_WEB_ENABLED=true`, default prefix `/agentic/admin`) and a **widget chat page** (`AGENTIC_WIDGET_WEB_ENABLED`, `/agentic/widget`). For custom branding or richer UX, implement:
 
 1. **Admin SPA** → `AGENTIC_ADMIN_API_PREFIX` (default `/api/agentic/admin`)
 2. **Widget SPA** (embeddable) → `AGENTIC_WIDGET_PREFIX` (default `/api/agentic/widget`)

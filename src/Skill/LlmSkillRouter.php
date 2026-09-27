@@ -51,12 +51,16 @@ final class LlmSkillRouter
         $provider = config('agentic.skill_routing.ai.provider');
         $model = config('agentic.skill_routing.ai.model');
 
-        if (is_string($provider) && $provider !== '' && is_string($model) && $model !== '') {
-            $response = $classification->classify(provider: $provider, model: $model);
-        } elseif (is_string($provider) && $provider !== '') {
-            $response = $classification->classify(provider: $provider);
-        } else {
-            $response = $classification->classify();
+        try {
+            if (is_string($provider) && $provider !== '' && is_string($model) && $model !== '') {
+                $response = $classification->classify(provider: $provider, model: $model);
+            } elseif (is_string($provider) && $provider !== '') {
+                $response = $classification->classify(provider: $provider);
+            } else {
+                $response = $classification->classify();
+            }
+        } catch (\Throwable) {
+            return null;
         }
 
         $answer = $response->answer('skill');

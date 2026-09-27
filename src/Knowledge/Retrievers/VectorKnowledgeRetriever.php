@@ -8,6 +8,7 @@ use Agentic\Knowledge\Contracts\Retriever;
 use Agentic\Knowledge\Contracts\VectorStore;
 use Agentic\Knowledge\KnowledgeChunk;
 use Agentic\Knowledge\KnowledgeSourceDefinition;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Retrieves knowledge via embeddings + vector store.
@@ -35,6 +36,8 @@ final class VectorKnowledgeRetriever implements Retriever
             ? $source->configuration['namespace']
             : $source->slug;
 
+        $this->logQueryEmbedding($query, $vector, $source->slug, $namespace);
+
         $chunks = $this->store->search($vector, $limit, $namespace);
         $tenant = $this->tenantKey($runtime);
 
@@ -46,6 +49,41 @@ final class VectorKnowledgeRetriever implements Retriever
             $chunks,
             fn (KnowledgeChunk $chunk): bool => $this->chunkVisibleForTenant($chunk, $tenant),
         ));
+    }
+
+    /**
+     * @param  list<float>  $vector
+     */
+    private function logQueryEmbedding(string $query, array $vector, string $sourceSlug, string $namespace): void
+    {
+        if (! (bool) config('agentic.knowledge.log_embeddings', false)) {
+            return;
+        }
+
+        $preview = (int) config('agentic.knowledge.log_embedding_preview_dims', 8);
+        $preview = min($preview, count($vector));
+
+        Log::info('Agentic RAG: query embedding for vector search', [
+            'query' => $query,
+            'source' => $sourceSlug,
+            'namespace' => $namespace,
+            'dimensions' => count($vector),
+            'vector_preview' => $preview > 0 ? array_slice($vector, 0, $preview) : [],
+            'vector_l2_norm' => $this->vectorL2Norm($vector),
+        ]);
+    }
+
+    /**
+     * @param  list<float>  $vector
+     */
+    private function vectorL2Norm(array $vector): float
+    {
+        $sum = 0.0;
+        foreach ($vector as $v) {
+            $sum += (float) $v * (float) $v;
+        }
+
+        return sqrt($sum);
     }
 
     private function tenantKey(?RuntimeContext $runtime): ?string

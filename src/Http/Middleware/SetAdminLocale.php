@@ -10,7 +10,12 @@ final class SetAdminLocale
 {
     public function handle(Request $request, Closure $next): Response
     {
-        $locale = $request->query('locale')
+        $locale = $request->hasSession()
+            ? $request->session()->get('agentic.admin.locale')
+            : null;
+
+        $locale = $locale
+            ?? $request->query('locale')
             ?? $request->header('X-Agentic-Locale')
             ?? config('agentic.admin.default_locale', 'en');
 

@@ -1,15 +1,17 @@
 # Agentic implementation status
 
 **Source of truth:** files under `routes/`, `src/`, and `database/migrations/` on `main`.  
-**Last updated:** 2026-09-27
+**Last updated:** 2026-09-28
 
 ## Route surfaces (implemented)
 
 | Prefix | File | Purpose |
 |--------|------|---------|
 | `/api/agentic` | `routes/api.php` | Runtime CRUD, execute, workflows, memories, knowledge ingest, MCP sync (`AGENTIC_API_ENABLED`) |
-| `/api/agentic/admin` | `routes/admin-api.php` | Headless admin SPA (`AGENTIC_ADMIN_ENABLED`) |
-| `/api/agentic/widget` | `routes/widget-api.php` | Embeddable widget (`AGENTIC_WIDGET_ENABLED`) |
+| `/api/agentic/admin` | `routes/admin-api.php` | JSON admin API (`AGENTIC_ADMIN_API_ENABLED`) |
+| `/{AGENTIC_ADMIN_PREFIX}` | `routes/admin-web.php` | Blade admin UI (`AGENTIC_ADMIN_WEB_ENABLED`) |
+| `/api/agentic/widget` | `routes/widget-api.php` | Embeddable widget API (`AGENTIC_WIDGET_ENABLED`) |
+| `/{AGENTIC_WIDGET_WEB_PREFIX}` | `routes/widget-web.php` | Standalone widget chat page (`AGENTIC_WIDGET_WEB_ENABLED`) |
 | `/api/agentic/auth` | `routes/auth-api.php` | Sanctum + passkeys when packages installed (`AGENTIC_AUTH_ENABLED`) |
 
 ## Feature matrix
@@ -23,7 +25,11 @@
 | Memory (scoped) | ✅ | API + context injection |
 | Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete; persisted runs (`workflow_run_id`); `GET .../workflow-runs` + `GET .../workflow-runs/{uuid}`; admin API parity; `POST .../resume` continues from saved step pointer |
 | Admin API | ✅ | Agents, skills, tools, knowledge, workflows (CRUD + execute/resume), workflow runs, executions, widget settings |
-| Widget API | ✅ | Config, conversations, messages, approvals, realtime bridge |
+| Widget API | ✅ | Config, conversations, messages, approvals, realtime; Form Requests + DTOs; `JsonApiResponse` |
+| Widget embed SDK | ✅ | Published JS/CSS, `wgt_…` + origins, themes, inbox drawer, emoji, RTL |
+| Channel replies | ✅ | Web/widget → Markdown HTML; WhatsApp/Messenger presenters reserved |
+| Agent persona | ✅ | Name, gender, language/dialect, tone in `config.persona` + admin form |
+| Lean context | ✅ | Default on; widget caps history/skills/tools/RAG per turn |
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |
 | MCP discovery | ✅ | Tool sync, catalog API, optional resource injection via agent `config.mcp` |
 | API rate limiting | ✅ | `throttle:agentic-api` on runtime routes |

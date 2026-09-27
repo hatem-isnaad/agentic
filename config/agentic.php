@@ -22,7 +22,7 @@ return [
             ],
             'anthropic' => [
                 'label' => 'Anthropic',
-                'models' => array_filter(explode(',', (string) env('AGENTIC_ANTHROPIC_MODELS', 'claude-sonnet-4-20250514'))),
+                'models' => array_filter(explode(',', (string) env('AGENTIC_ANTHROPIC_MODELS', 'claude-sonnet-5,claude-sonnet-4-6'))),
             ],
             'gemini' => [
                 'label' => 'Google Gemini',
@@ -35,15 +35,30 @@ return [
                 'label' => 'Ollama (local)',
                 'models' => array_filter(explode(',', (string) env(
                     'AGENTIC_OLLAMA_MODELS',
-                    'qwen3.5:4b,llama3.2,nomic-embed-text',
+                    'qwen3:8b,qwen2.5-coder:14b,nomic-embed-text',
                 ))),
             ],
         ],
         'deferred_tools' => [
-            'enabled' => env('AGENTIC_DEFERRED_TOOLS', false),
+            'enabled' => filter_var(env('AGENTIC_DEFERRED_TOOLS', true), FILTER_VALIDATE_BOOL),
             'deferred_count' => env('AGENTIC_DEFERRED_TOOL_COUNT', 10),
             'direct_tools' => env('AGENTIC_DIRECT_TOOL_COUNT', 1),
             'strategy' => env('AGENTIC_DEFERRED_TOOL_STRATEGY'),
+        ],
+    ],
+
+    /*
+    | Agent voice — stored on the agent as config.persona and injected into instructions.
+    | Host PHP: AgentRepository::save([..., 'config' => ['persona' => [...]]])
+    */
+    'persona' => [
+        'genders' => ['male', 'female', 'unspecified'],
+        'languages' => ['en', 'ar', 'bilingual'],
+        'dialects' => ['msa', 'saudi', 'egyptian', 'gulf', 'levant'],
+        'tones' => ['friendly', 'formal', 'casual', 'professional', 'warm'],
+        'name_suggestions' => [
+            'male' => ['Ahmed', 'Mohamed', 'Omar', 'Khalid', 'Youssef', 'Faisal', 'Hassan'],
+            'female' => ['Sara', 'Fatima', 'Noura', 'Layla', 'Mona', 'Hana', 'Reem'],
         ],
     ],
 
@@ -84,12 +99,42 @@ return [
 
     'admin' => [
         'enabled' => env('AGENTIC_ADMIN_ENABLED', true),
+
+        /*
+        |--------------------------------------------------------------------------
+        | Admin authorization (Telescope-style)
+        |--------------------------------------------------------------------------
+        |
+        | By default the admin SPA, admin API, and widget demo page are open. For
+        | production, combine:
+        |   - AGENTIC_ADMIN_REQUIRE_AUTH=true (Sanctum on admin API)
+        |   - auth / auth:sanctum on admin.web.middleware (session for SPA)
+        |   - AGENTIC_ADMIN_GATE=viewAgentic + Gate::define('viewAgentic', ...) in
+        |     your AppServiceProvider (allow specific users, roles, or emails).
+        |
+        */
+        'authorization' => [
+            'gate' => env('AGENTIC_ADMIN_GATE'),
+        ],
+
         'api' => [
             'enabled' => env('AGENTIC_ADMIN_API_ENABLED', true),
             'prefix' => env('AGENTIC_ADMIN_API_PREFIX', 'api/agentic/admin'),
             'middleware' => [
                 'api',
                 Agentic\Http\Middleware\SetAdminLocale::class,
+                Agentic\Http\Middleware\AuthorizeAgenticAdmin::class,
+            ],
+            'route_name_prefix' => 'agentic.admin.api.',
+        ],
+        'web' => [
+            'enabled' => env('AGENTIC_ADMIN_WEB_ENABLED', false),
+            'ui' => env('AGENTIC_ADMIN_WEB_UI', 'spa'),
+            'prefix' => env('AGENTIC_ADMIN_PREFIX', 'agentic/admin'),
+            'middleware' => [
+                'web',
+                Agentic\Http\Middleware\SetAdminLocale::class,
+                Agentic\Http\Middleware\AuthorizeAgenticAdmin::class,
             ],
             'route_name_prefix' => 'agentic.admin.',
         ],
@@ -104,16 +149,72 @@ return [
         'middleware' => [
             'api',
             Agentic\Http\Middleware\SetAdminLocale::class,
-            Agentic\Http\Middleware\EnsureWidgetAccess::class,
+            Agentic\Http\Middleware\ValidateWidgetEmbed::class,
         ],
         'route_name_prefix' => 'agentic.widget.',
+        'web' => [
+            'enabled' => env('AGENTIC_WIDGET_WEB_ENABLED', true),
+            'prefix' => env('AGENTIC_WIDGET_WEB_PREFIX', 'agentic/widget'),
+            'middleware' => ['web'],
+            'route_name_prefix' => 'agentic.widget.web.',
+        ],
         'auth' => [
             'mode' => env('AGENTIC_WIDGET_AUTH_MODE', 'both'),
-            'allow_guest' => env('AGENTIC_WIDGET_ALLOW_GUEST', true),
-            'allow_authenticated' => env('AGENTIC_WIDGET_ALLOW_AUTH', true),
+            'allow_guest' => filter_var(env('AGENTIC_WIDGET_ALLOW_GUEST', true), FILTER_VALIDATE_BOOLEAN),
+            'allow_authenticated' => filter_var(env('AGENTIC_WIDGET_ALLOW_AUTH', true), FILTER_VALIDATE_BOOLEAN),
+        ],
+        /*
+        |--------------------------------------------------------------------------
+        | Embeddable widget (standalone JS on Blade / SPA / any site)
+        |--------------------------------------------------------------------------
+        |
+        | When require_token is true, all /api/agentic/widget/* requests must send
+        | Authorization: Bearer wgt_… (from agentic:widget-embed-token) or Sanctum.
+        | Restrict origins and agents per token. Guest chat still uses X-Agentic-Guest-Id
+        | when the token allows guest_allowed.
+        |
+        */
+        'embed' => [
+            'require_token' => filter_var(env('AGENTIC_WIDGET_EMBED_REQUIRE_TOKEN', true), FILTER_VALIDATE_BOOLEAN),
+            'sanctum_allowed' => filter_var(env('AGENTIC_WIDGET_EMBED_SANCTUM_ALLOWED', true), FILTER_VALIDATE_BOOLEAN),
+            'script_url' => env('AGENTIC_WIDGET_EMBED_SCRIPT_URL'),
+            'default_agent' => env('AGENTIC_WIDGET_EMBED_DEFAULT_AGENT'),
+            'position' => env('AGENTIC_WIDGET_EMBED_POSITION', 'bottom-right'),
+            /*
+            | Widget colors — set in AgenticChat.init({ theme: 'ocean' }), not in the chat UI.
+            | Presets: aurora, midnight, ocean, forest, sunset, rose, gold, arctic, graphite, ember,
+            | slate, sand, lime, coral, indigo, mocha, mint, crimson, sky, neon, isnaad, techsup
+            | Aliases: light → aurora, dark → midnight, brand → ember, system → aurora|midnight
+            | isnaad = Limenos / isnaad.ai brand red #c02526
+            | techsup = TechSup Tkt brand plum #6C075D
+            */
+            'theme_presets' => [
+                'aurora', 'midnight', 'ocean', 'forest', 'sunset', 'rose', 'gold', 'arctic', 'graphite', 'ember',
+                'slate', 'sand', 'lime', 'coral', 'indigo', 'mocha', 'mint', 'crimson', 'sky', 'neon', 'isnaad', 'techsup',
+            ],
+            'sound_pack' => env('AGENTIC_WIDGET_SOUND_PACK', 'subtle'),
         ],
         'conversation' => [
-            'max_open_per_user' => (int) env('AGENTIC_WIDGET_MAX_CONVERSATIONS', 10),
+            'max_open_per_user' => (int) env('AGENTIC_WIDGET_MAX_CONVERSATIONS', 20),
+            'resume_after_hours' => (int) env('AGENTIC_WIDGET_RESUME_HOURS', 24),
+        ],
+        'history' => [
+            'page_size' => (int) env('AGENTIC_WIDGET_HISTORY_PAGE_SIZE', 20),
+            'max_page_size' => (int) env('AGENTIC_WIDGET_HISTORY_MAX_PAGE_SIZE', 50),
+        ],
+        /*
+        | Lean agent context per widget message (tokens + latency).
+        | Reply UX stays async (HTTP ack + queue + Pusher); execution usage is on the broadcast payload.
+        */
+        'context' => [
+            'enabled' => filter_var(env('AGENTIC_WIDGET_LEAN_CONTEXT', true), FILTER_VALIDATE_BOOL),
+            'max_history_messages' => (int) env('AGENTIC_WIDGET_CONTEXT_HISTORY', 12),
+            'skill_routing_limit' => (int) env('AGENTIC_WIDGET_SKILL_LIMIT', 2),
+            'skills_fallback_limit' => (int) env('AGENTIC_WIDGET_SKILLS_FALLBACK_LIMIT', 2),
+            'knowledge_chunk_limit' => (int) env('AGENTIC_WIDGET_KNOWLEDGE_LIMIT', 3),
+            'memory_entry_limit' => (int) env('AGENTIC_WIDGET_MEMORY_LIMIT', 8),
+            'max_tools' => (int) env('AGENTIC_WIDGET_MAX_TOOLS', 20),
+            'compact_skill_descriptions' => filter_var(env('AGENTIC_WIDGET_COMPACT_SKILLS', true), FILTER_VALIDATE_BOOL),
         ],
         'intake' => [
             'enabled' => env('AGENTIC_WIDGET_INTAKE_ENABLED', false),
@@ -134,6 +235,11 @@ return [
         'reply' => [
             'formats' => ['text', 'html', 'table', 'list', 'card', 'code', 'blocks', 'actions'],
         ],
+        /*
+        | null = auto: async when AGENTIC_WIDGET_BROADCAST_DRIVER=pusher (HTTP ack + queue + Pusher).
+        | true/false = force async or sync. Async requires: php artisan queue:work
+        */
+        'async_replies' => env('AGENTIC_WIDGET_ASYNC_REPLIES'),
         'broadcast' => [
             'driver' => env('AGENTIC_WIDGET_BROADCAST_DRIVER', 'polling'),
             'channel_prefix' => env('AGENTIC_WIDGET_BROADCAST_PREFIX', 'agentic-widget'),
@@ -141,7 +247,9 @@ return [
                 'interval_ms' => (int) env('AGENTIC_WIDGET_BROADCAST_POLL_MS', 3000),
             ],
             'pusher' => [
+                'app_id' => env('PUSHER_APP_ID'),
                 'key' => env('PUSHER_APP_KEY'),
+                'secret' => env('PUSHER_APP_SECRET'),
                 'cluster' => env('PUSHER_APP_CLUSTER', 'mt1'),
             ],
             'socketio' => [
@@ -153,13 +261,35 @@ return [
         'agents' => [],
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | Lean agent context (all channels — admin, API, widget)
+    |--------------------------------------------------------------------------
+    |
+    | One “full system” agent can keep many skills/tools in DB; each turn only
+    | loads a routed subset + capped history/RAG/memory. Widget uses stricter
+    | limits under agentic.widget.context when AGENTIC_WIDGET_LEAN_CONTEXT=true.
+    |
+    */
+    'context' => [
+        'lean_enabled' => filter_var(env('AGENTIC_LEAN_CONTEXT', true), FILTER_VALIDATE_BOOL),
+        'max_history_messages' => (int) env('AGENTIC_CONTEXT_HISTORY', 20),
+        'skill_routing_limit' => (int) env('AGENTIC_CONTEXT_SKILL_LIMIT', 4),
+        'skills_fallback_limit' => (int) env('AGENTIC_CONTEXT_SKILLS_FALLBACK', 4),
+        'knowledge_chunk_limit' => (int) env('AGENTIC_CONTEXT_KNOWLEDGE_LIMIT', 5),
+        'memory_entry_limit' => (int) env('AGENTIC_CONTEXT_MEMORY_LIMIT', 15),
+        'max_tools' => (int) env('AGENTIC_CONTEXT_MAX_TOOLS', 30),
+        'compact_skill_descriptions' => filter_var(env('AGENTIC_CONTEXT_COMPACT_SKILLS', true), FILTER_VALIDATE_BOOL),
+    ],
+
     'skill_routing' => [
-        'enabled' => env('AGENTIC_SKILL_ROUTING', true),
-        'limit' => env('AGENTIC_SKILL_ROUTING_LIMIT', 3),
+        'enabled' => filter_var(env('AGENTIC_SKILL_ROUTING', true), FILTER_VALIDATE_BOOL),
+        'limit' => (int) env('AGENTIC_SKILL_ROUTING_LIMIT', 4),
+        'fallback_limit' => (int) env('AGENTIC_SKILL_ROUTING_FALLBACK_LIMIT', 4),
         'ai' => [
-            'enabled' => env('AGENTIC_AI_SKILL_ROUTING', false),
-            'provider' => env('AGENTIC_AI_SKILL_ROUTING_PROVIDER'),
-            'model' => env('AGENTIC_AI_SKILL_ROUTING_MODEL'),
+            'enabled' => filter_var(env('AGENTIC_AI_SKILL_ROUTING', false), FILTER_VALIDATE_BOOL),
+            'provider' => env('AGENTIC_AI_SKILL_ROUTING_PROVIDER', env('AGENTIC_AI_PROVIDER')),
+            'model' => env('AGENTIC_AI_SKILL_ROUTING_MODEL', env('AGENTIC_AI_MODEL')),
             'min_confidence' => env('AGENTIC_AI_SKILL_ROUTING_MIN_CONFIDENCE', 0.75),
         ],
     ],
@@ -228,8 +358,15 @@ return [
     'knowledge' => [
         'driver' => env('AGENTIC_KNOWLEDGE_DRIVER', 'eloquent'),
         'embedding' => env('AGENTIC_KNOWLEDGE_EMBEDDING', 'null'),
-        'embedding_provider' => env('AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER', env('AGENTIC_AI_PROVIDER', 'openai')),
-        'embedding_model' => env('AGENTIC_KNOWLEDGE_EMBEDDING_MODEL', 'text-embedding-3-small'),
+        'embedding_provider' => $embeddingProvider = env(
+            'AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER',
+            env('AGENTIC_AI_PROVIDER', 'openai'),
+        ),
+        // OpenAI: text-embedding-3-small (1536). Ollama: nomic-embed-text (768) — run: ollama pull nomic-embed-text
+        'embedding_model' => env('AGENTIC_KNOWLEDGE_EMBEDDING_MODEL') ?: match ((string) $embeddingProvider) {
+            'ollama' => env('OLLAMA_EMBEDDING_MODEL', 'mxbai-embed-large'),
+            default => 'text-embedding-3-small',
+        },
         'vector_store' => env('AGENTIC_VECTOR_STORE', 'array'),
         'pgvector' => [
             'dimensions' => (int) env('AGENTIC_PGVECTOR_DIMENSIONS', 1536),
@@ -247,6 +384,8 @@ return [
             'max_bytes' => (int) env('AGENTIC_KNOWLEDGE_URL_FETCH_MAX_BYTES', 5 * 1024 * 1024),
         ],
         'queue_reindex' => env('AGENTIC_KNOWLEDGE_QUEUE_REINDEX', false),
+        'log_embeddings' => filter_var(env('AGENTIC_KNOWLEDGE_LOG_EMBEDDINGS', false), FILTER_VALIDATE_BOOL),
+        'log_embedding_preview_dims' => max(1, (int) env('AGENTIC_KNOWLEDGE_LOG_EMBEDDING_PREVIEW', 8)),
     ],
 
     /*
@@ -353,6 +492,23 @@ return [
         'http' => Agentic\Tool\Drivers\HttpToolDriver::class,
         'code' => Agentic\Tool\Drivers\CodeToolDriver::class,
         'mcp' => Agentic\Tool\Drivers\McpToolDriver::class,
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Custom code tools (host app PHP classes)
+    |--------------------------------------------------------------------------
+    |
+    | Place handlers in app/Agentic/Tools/Custom (or paths below). They must
+    | implement CodeToolHandler; use DeclarativeCodeToolHandler for auto metadata.
+    | Discovered handlers are registered on boot when auto_register is true.
+    |
+    */
+    'code_tools' => [
+        'auto_register' => env('AGENTIC_CODE_TOOLS_AUTO_REGISTER', true),
+        'paths' => [],
+        'namespace' => '',
+        'classes' => [],
     ],
 
     /*

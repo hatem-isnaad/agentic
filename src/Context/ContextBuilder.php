@@ -3,6 +3,9 @@
 namespace Agentic\Context;
 
 use Agentic\Agent\AgentDefinition;
+use Agentic\Agent\AgentPersona;
+use Agentic\Agent\AgentPersonaComposer;
+use Agentic\Reply\ChannelPresentationComposer;
 use Agentic\Knowledge\KnowledgeChunk;
 use Agentic\Knowledge\KnowledgeOrchestrator;
 use Agentic\Mcp\McpAgentKnowledgeEnricher;
@@ -39,8 +42,10 @@ final class ContextBuilder
         ?RuntimeContext $runtime = null,
         ?array $skillNames = null,
     ): array {
+        $policy = $this->contextPolicy($runtime);
         $skillNames ??= $agent->skills;
         $selectedSkills = [];
+        $compactSkills = (bool) ($policy['compact_skill_descriptions'] ?? false);
 
         foreach ($this->skills->resolveMany($skillNames) as $skill) {
             $tools = array_values(array_filter(
@@ -48,9 +53,14 @@ final class ContextBuilder
                 fn (string $tool) => $this->tools->has($tool),
             ));
 
+            $description = $skill->description;
+            if ($compactSkills && mb_strlen($description) > 160) {
+                $description = mb_substr($description, 0, 157).'…';
+            }
+
             $selectedSkills[] = [
                 'name' => $skill->name,
-                'description' => $skill->description,
+                'description' => $description,
                 'tools' => $tools,
             ];
         }
@@ -68,12 +78,14 @@ final class ContextBuilder
             $knowledge = array_merge($knowledge, $this->mcpKnowledge->enrich($agent));
         }
 
-        if ($this->knowledge !== null && is_string($retrievalQuery) && $retrievalQuery !== '') {
+        $knowledgeLimit = (int) ($policy['knowledge_chunk_limit'] ?? 5);
+
+        if ($this->knowledge !== null && is_string($retrievalQuery) && $retrievalQuery !== '' && $knowledgeLimit > 0) {
             $knowledge = array_merge(
                 $knowledge,
                 array_map(
                     fn (KnowledgeChunk $chunk) => $chunk->toContextArray(),
-                    $this->knowledge->retrieveForAgent($agent, $retrievalQuery, $runtime),
+                    $this->knowledge->retrieveForAgent($agent, $retrievalQuery, $runtime, $knowledgeLimit),
                 ),
             );
         }
@@ -85,10 +97,21 @@ final class ContextBuilder
                 fn ($record) => $record->toContextArray(),
                 $this->memory->recallForRuntime($runtime, $agent->identifier()),
             );
+
+            $memoryLimit = (int) ($policy['memory_entry_limit'] ?? 0);
+            if ($memoryLimit > 0 && count($memory) > $memoryLimit) {
+                $memory = array_slice($memory, 0, $memoryLimit);
+            }
         }
 
         return [
-            'instructions' => $agent->instructions,
+            'instructions' => (new ChannelPresentationComposer())->compose(
+                (new AgentPersonaComposer())->compose(
+                    $agent->instructions,
+                    AgentPersona::fromAgent($agent),
+                ),
+                $runtime,
+            ),
             'skills' => $selectedSkills,
             'knowledge' => $knowledge,
             'memory' => $memory,
@@ -111,5 +134,19 @@ final class ContextBuilder
         }
 
         return $inline;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function contextPolicy(?RuntimeContext $runtime): array
+    {
+        if ($runtime === null) {
+            return [];
+        }
+
+        $policy = $runtime->get('context_policy');
+
+        return is_array($policy) ? $policy : [];
     }
 }

@@ -4,6 +4,7 @@ namespace Agentic\Tests\Unit;
 
 use Agentic\Agent\AgentDefinition;
 use Agentic\Context\ContextBuilder;
+use Agentic\Context\RuntimeContext;
 use Agentic\Skill\SkillDefinition;
 use Agentic\Skill\SkillRegistry;
 use Agentic\Skill\SkillResolver;
@@ -48,6 +49,50 @@ final class ContextBuilderTest extends TestCase
         );
 
         $this->assertSame(['orders.search'], $context['skills'][0]['tools']);
+    }
+
+    public function test_persona_is_appended_to_instructions(): void
+    {
+        $tools = new ToolRegistry();
+        $skills = new SkillRegistry();
+
+        $context = (new ContextBuilder($tools, new SkillResolver($skills, $tools)))->build(
+            new AgentDefinition(
+                name: 'Support',
+                instructions: 'Help users.',
+                metadata: [
+                    'config' => [
+                        'persona' => [
+                            'display_name' => 'Mohamed',
+                            'gender' => 'male',
+                            'language' => 'ar',
+                            'dialect' => 'egyptian',
+                            'tone' => 'casual',
+                        ],
+                    ],
+                ],
+            )
+        );
+
+        $this->assertStringContainsString('Help users.', $context['instructions']);
+        $this->assertStringContainsString('Mohamed', $context['instructions']);
+        $this->assertStringContainsString('Egyptian', $context['instructions']);
+    }
+
+    public function test_widget_channel_appends_web_presentation_rules(): void
+    {
+        $tools = new ToolRegistry();
+        $skills = new SkillRegistry();
+
+        $context = (new ContextBuilder($tools, new SkillResolver($skills, $tools)))->build(
+            new AgentDefinition(name: 'support', instructions: 'Help users.'),
+            'Hello',
+            new RuntimeContext(['channel' => 'widget']),
+        );
+
+        $this->assertStringContainsString('Help users.', $context['instructions']);
+        $this->assertStringContainsString('web chat', $context['instructions']);
+        $this->assertStringContainsString('Markdown', $context['instructions']);
     }
 
     public function test_selected_skills_are_used_when_provided(): void

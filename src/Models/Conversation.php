@@ -3,6 +3,7 @@
 namespace Agentic\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Conversation extends Model
 {
@@ -14,5 +15,12 @@ class Conversation extends Model
         return [
             'metadata' => 'array',
         ];
+    }
+
+    public function latestChatMessage(): HasOne
+    {
+        return $this->hasOne(ConversationMessage::class, 'conversation_id')
+            ->where('role', '!=', 'system')
+            ->latestOfMany();
     }
 }

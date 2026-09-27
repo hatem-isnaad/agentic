@@ -5,6 +5,8 @@ namespace Agentic\Runtime;
 use Agentic\Agent\AgentDefinition;
 use Agentic\Context\ContextBuilder;
 use Agentic\Context\ContextManager;
+use Agentic\Context\ContextPolicyResolver;
+use Agentic\Conversation\ConversationHistoryForLlm;
 use Agentic\Conversation\ConversationManager;
 use Agentic\Exceptions\AgentExecutionFailedException;
 use Agentic\Execution\AgentExecutionContext;
@@ -36,6 +38,7 @@ final class AgentRuntime
         private ExecutionManager $executions,
         private SkillRouter $skillRouter,
         private ToolVersionResolver $toolVersions,
+        private ConversationHistoryForLlm $conversationHistory,
     ) {}
 
     public function run(AgentDefinition $agent, AgentExecutionContext $context): AgentExecutionResult
@@ -51,12 +54,31 @@ final class AgentRuntime
             agent: $agent,
             conversation: $conversation,
         );
+        $runtime = ContextPolicyResolver::applyIfMissing($runtime);
+
+        $policy = $runtime->get('context_policy');
+        $policy = is_array($policy) ? $policy : [];
+
+        $messages = $context->messages;
+        if (
+            $messages === []
+            && ($policy['enabled'] ?? false) === true
+            && (int) ($policy['max_history_messages'] ?? 0) > 0
+        ) {
+            $conversationUuid = $conversation?->id ?? $context->conversationId;
+            if (is_string($conversationUuid) && $conversationUuid !== '') {
+                $messages = $this->conversationHistory->priorMessages(
+                    $conversationUuid,
+                    (int) $policy['max_history_messages'],
+                );
+            }
+        }
 
         $context = new AgentExecutionContext(
             message: $context->message,
             metadata: $context->metadata,
             variables: $context->variables,
-            messages: $context->messages,
+            messages: $messages,
             runtime: $runtime,
             conversation: $conversation,
             conversationId: $conversation?->id ?? $context->conversationId,
@@ -96,11 +118,23 @@ final class AgentRuntime
 
             $skillSelection = null;
 
+            $policy = $context->runtime()->get('context_policy');
+            $policy = is_array($policy) ? $policy : [];
+
             if ((bool) config('agentic.skill_routing.enabled', true)) {
+                $skillLimit = (int) ($policy['skill_routing_limit'] ?? config('agentic.skill_routing.limit', 3));
+                $fallbackLimit = null;
+                if (array_key_exists('skills_fallback_limit', $policy)) {
+                    $fallbackLimit = (int) $policy['skills_fallback_limit'];
+                } elseif (filter_var(config('agentic.context.lean_enabled', true), FILTER_VALIDATE_BOOL)) {
+                    $fallbackLimit = (int) config('agentic.skill_routing.fallback_limit', 4);
+                }
+
                 $skillSelection = $this->skillRouter->select(
                     $agent,
                     $context->message,
-                    (int) config('agentic.skill_routing.limit', 3),
+                    $skillLimit,
+                    $fallbackLimit,
                 );
             }
 
@@ -111,6 +145,11 @@ final class AgentRuntime
                 $skillSelection?->skills,
             );
             $selectedTools = $this->resolveTools($built['tools']);
+
+            $maxTools = (int) ($policy['max_tools'] ?? 0);
+            if ($maxTools > 0 && count($selectedTools) > $maxTools) {
+                $selectedTools = array_slice($selectedTools, 0, $maxTools);
+            }
             $pinnedVersions = $this->pinToolVersions($selectedTools);
 
             $context = new AgentExecutionContext(

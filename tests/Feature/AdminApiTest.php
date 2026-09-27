@@ -36,6 +36,11 @@ final class AdminApiTest extends TestCase
 
         $this->getJson('/api/agentic/admin/translations')
             ->assertOk()
-            ->assertJsonPath('data.en.nav.dashboard', 'Dashboard');
+            ->assertJsonPath('data.en.nav.dashboard', 'Dashboard')
+            ->assertJsonPath('data.en.guide.title', 'Full setup guide');
+
+        $this->getJson('/api/agentic/admin/settings')
+            ->assertOk()
+            ->assertJsonPath('data.features.admin_api', true);
     }
 }

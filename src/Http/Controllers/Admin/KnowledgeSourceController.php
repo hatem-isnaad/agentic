@@ -7,6 +7,7 @@ use Agentic\Http\Requests\Admin\StoreKnowledgeSourceRequest;
 use Agentic\Http\Requests\Admin\UpdateKnowledgeSourceRequest;
 use Agentic\Http\Support\AdminLocaleMeta;
 use Agentic\Http\Support\AdminPaginator;
+use Agentic\Http\Support\KnowledgeIngestPayload;
 use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
 use Illuminate\Http\JsonResponse;
@@ -80,17 +81,7 @@ final class KnowledgeSourceController
             return response()->json(['message' => 'Knowledge source not found.'], 404);
         }
 
-        $payload = $request->validate([
-            'format' => ['nullable', 'string', 'in:text,plain,txt,markdown,html,json,pdf'],
-            'documents' => ['nullable'],
-            'raw_text' => ['nullable', 'string'],
-            'urls' => ['nullable', 'array'],
-            'urls.*' => ['url', 'max:2048'],
-            'chunk_size' => ['nullable', 'integer', 'min:100', 'max:8000'],
-            'chunk_overlap' => ['nullable', 'integer', 'min:0', 'max:2000'],
-            'tenant' => ['nullable', 'string', 'max:191'],
-            'reindex' => ['nullable', 'boolean'],
-        ]);
+        $payload = KnowledgeIngestPayload::fromRequest($request);
 
         try {
             $source = $this->ingestor->ingest($slug, $payload, (bool) ($payload['reindex'] ?? true));
