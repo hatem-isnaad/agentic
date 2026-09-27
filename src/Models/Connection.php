@@ -34,7 +34,7 @@ class Connection extends Model
             $decoded = decrypt($value);
 
             return json_decode($decoded, true, 512, JSON_THROW_ON_ERROR);
-        } catch (Throwable) {
+        } catch (\Throwable) {
             return $value;
         }
     }
