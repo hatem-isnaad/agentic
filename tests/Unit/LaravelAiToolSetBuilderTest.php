@@ -2,7 +2,7 @@
 
 namespace Agentic\Tests\Unit;
 
-use Agentic\Integrations\LaravelAi\AgenticLaravelTool;
+use Laravel\Ai\Contracts\Tool;
 use Agentic\Integrations\LaravelAi\LaravelAiToolSetBuilder;
 use Agentic\Tests\TestCase;
 use Laravel\Ai\Providers\Tools\ToolSearch;
@@ -19,7 +19,7 @@ final class LaravelAiToolSetBuilderTest extends TestCase
         ]);
 
         $tools = array_map(
-            fn (int $i) => $this->createMock(AgenticLaravelTool::class),
+            fn (int $i) => $this->createMock(Tool::class),
             range(1, 3),
         );
 
@@ -47,7 +47,7 @@ final class LaravelAiToolSetBuilderTest extends TestCase
         $result = app(LaravelAiToolSetBuilder::class)->build($tools, 'anthropic');
 
         $this->assertCount(2, $result);
-        $this->assertInstanceOf(AgenticLaravelTool::class, $result[0]);
+        $this->assertInstanceOf(Tool::class, $result[0]);
         $this->assertInstanceOf(ToolSearch::class, $result[1]);
         $this->assertCount(2, $result[1]->tools);
         $this->assertSame('bm25', $result[1]->strategy);
