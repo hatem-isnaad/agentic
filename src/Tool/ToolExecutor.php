@@ -9,6 +9,7 @@ use Agentic\Events\ToolExecutionFailed;
 use Agentic\Events\ToolExecutionStarted;
 use Agentic\Permission\PermissionResolver;
 use Agentic\Execution\ExecutionManager;
+use Agentic\Contracts\Repositories\ExecutionRepository;
 use Throwable;
 use Agentic\Tool\Contracts\ToolContract;
 use Illuminate\Contracts\Events\Dispatcher;
@@ -24,6 +25,7 @@ final class ToolExecutor
         private PermissionResolver $permissions,
         private ?Dispatcher $events = null,
         private ?ExecutionManager $executions = null,
+        private ?ExecutionRepository $executionRepository = null,
     ) {}
 
     public function execute(ToolContract $tool, ToolExecutionContext $context): ToolResult
@@ -98,14 +100,11 @@ final class ToolExecutor
             return;
         }
 
-        $execution = $this->executions->start(
-            agent: $context->runtime()->agent()?->identifier() ?? 'unknown',
-            input: [],
-            metadata: ['internal_tool_step' => true],
-            conversationId: $context->execution->conversationId,
-        );
+        $execution = $this->executionRepository?->find($context->execution->executionId);
 
-        $execution->id = $context->execution->executionId;
+        if ($execution === null) {
+            return;
+        }
 
         $this->executions->addStep(
             $execution,
