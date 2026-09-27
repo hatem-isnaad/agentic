@@ -6,6 +6,7 @@ use Agentic\Knowledge\Documents\Parsers\DocumentParser;
 use Agentic\Knowledge\Documents\Parsers\HtmlDocumentParser;
 use Agentic\Knowledge\Documents\Parsers\JsonDocumentParser;
 use Agentic\Knowledge\Documents\Parsers\MarkdownDocumentParser;
+use Agentic\Knowledge\Documents\Parsers\PdfDocumentParser;
 use Agentic\Knowledge\Documents\Parsers\PlainTextDocumentParser;
 use InvalidArgumentException;
 
@@ -20,6 +21,7 @@ final class DocumentParserResolver
             new JsonDocumentParser(),
             new MarkdownDocumentParser(),
             new HtmlDocumentParser(),
+            new PdfDocumentParser(),
             new PlainTextDocumentParser(),
         ];
     }

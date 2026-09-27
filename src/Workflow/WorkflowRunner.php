@@ -10,6 +10,7 @@ use Agentic\Runtime\AgentRuntime;
 use Agentic\Tool\Registry\ToolRegistry;
 use Agentic\Tool\Support\TemplateInterpolator;
 use Agentic\Tool\ToolExecutionContext;
+use Agentic\Tool\ToolApprovalService;
 use Agentic\Tool\ToolExecutor;
 use Agentic\Tool\ToolFactory;
 
@@ -21,6 +22,7 @@ final class WorkflowRunner
         private ToolExecutor $executor,
         private AgentResolver $agents,
         private AgentRuntime $runtime,
+        private ToolApprovalService $approvals,
     ) {}
 
     /**
@@ -59,6 +61,7 @@ final class WorkflowRunner
                     'tool' => $this->runTool($step, $variables, $pointer, $steps, $indexes),
                     'agent' => $this->runAgent($step, $variables, $pointer, $steps, $indexes),
                     'condition' => $this->runCondition($step, $variables, $pointer, $steps, $indexes),
+                    'approval' => $this->runApproval($workflow, $step, $variables, $pointer, $steps, $indexes, $trace, $started),
                     'complete' => $this->runComplete($step, $variables, $trace, $started),
 
                     default => throw new WorkflowExecutionException("Unsupported workflow step type [{$type}]."),
@@ -214,6 +217,102 @@ final class WorkflowRunner
         }
 
         return $this->resolveNext($step, $pointer, $steps, $indexes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $step
+     * @param  array<string, mixed>  $variables
+     * @param  list<array<string, mixed>>  $steps
+     * @param  array<string, int>  $indexes
+     */
+    /**
+     * @param  array<string, mixed>  $step
+     * @param  array<string, mixed>  $variables
+     * @param  list<array<string, mixed>>  $steps
+     * @param  array<string, int>  $indexes
+     * @param  list<array<string, mixed>>  $trace
+     */
+    private function runApproval(
+        WorkflowDefinition $workflow,
+        array $step,
+        array &$variables,
+        int $pointer,
+        array $steps,
+        array $indexes,
+        array &$trace,
+        float $started,
+    ): int|WorkflowResult {
+        $stepId = (string) ($step['id'] ?? 'step_'.$pointer);
+        $toolName = 'workflow:'.$workflow->slug.':'.$stepId;
+        $resumeKey = (string) ($step['resume_key'] ?? '_resume_approval_id');
+        $resumeId = data_get($variables, 'input.'.$resumeKey);
+
+        if (is_string($resumeId) && $resumeId !== '') {
+            $approval = $this->approvals->find($resumeId);
+
+            if ($approval === null || $approval->tool !== $toolName) {
+                throw new WorkflowExecutionException('Invalid workflow approval reference.');
+            }
+
+            if ($approval->status === 'rejected') {
+                throw new WorkflowExecutionException('Workflow approval was rejected.');
+            }
+
+            if ($approval->status === 'approved') {
+                $saveAs = (string) ($step['save_as'] ?? '');
+
+                if ($saveAs !== '') {
+                    $variables[$saveAs] = is_array($approval->arguments) ? $approval->arguments : [];
+                }
+
+                return $this->resolveNext($step, $pointer, $steps, $indexes);
+            }
+
+            $trace[] = [
+                'id' => $stepId,
+                'type' => 'approval',
+                'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+                'approval_id' => $resumeId,
+                'status' => 'pending',
+            ];
+
+            return WorkflowResult::pending($resumeId, $variables, $trace, [
+                'approval_id' => $resumeId,
+                'resume_key' => $resumeKey,
+                'variables' => $variables,
+            ]);
+        }
+
+        $payload = is_array($step['payload'] ?? null)
+            ? TemplateInterpolator::array($step['payload'], $variables)
+            : [];
+
+        $title = TemplateInterpolator::string((string) ($step['title'] ?? 'Workflow approval'), $variables);
+        $message = TemplateInterpolator::string((string) ($step['message'] ?? ''), $variables);
+
+        $approval = $this->approvals->createWorkflowPending(
+            workflowSlug: $workflow->slug,
+            stepId: $stepId,
+            payload: $payload,
+            title: $title,
+            message: $message !== '' ? $message : null,
+        );
+
+        $trace[] = [
+            'id' => $stepId,
+            'type' => 'approval',
+            'duration_ms' => (int) round((microtime(true) - $started) * 1000),
+            'approval_id' => $approval->uuid,
+            'status' => 'pending',
+        ];
+
+        return WorkflowResult::pending($approval->uuid, $variables, $trace, [
+            'approval_id' => $approval->uuid,
+            'title' => $title,
+            'message' => $message,
+            'resume_key' => $resumeKey,
+            'variables' => $variables,
+        ]);
     }
 
     /**

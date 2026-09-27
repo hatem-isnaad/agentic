@@ -57,6 +57,32 @@ final class ToolApprovalService
     /**
      * @param  array<string, mixed>  $arguments
      */
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    public function createWorkflowPending(
+        string $workflowSlug,
+        string $stepId,
+        array $payload = [],
+        ?string $title = null,
+        ?string $message = null,
+    ): ToolApproval {
+        return ToolApproval::query()->create([
+            'uuid' => (string) Str::uuid(),
+            'agent' => 'workflow:'.$workflowSlug,
+            'tool' => 'workflow:'.$workflowSlug.':'.$stepId,
+            'arguments' => $payload,
+            'status' => 'pending',
+            'metadata' => [
+                'kind' => 'workflow',
+                'workflow' => $workflowSlug,
+                'step' => $stepId,
+                'title' => $title,
+                'message' => $message,
+            ],
+        ]);
+    }
+
     public function createPending(
         ToolContract $tool,
         array $arguments,

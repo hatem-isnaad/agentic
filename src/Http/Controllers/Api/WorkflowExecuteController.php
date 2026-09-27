@@ -29,6 +29,18 @@ final class WorkflowExecuteController
 
         $result = $this->runner->run($workflow, $validated['input'] ?? []);
 
+        if ($result->pending) {
+            return response()->json([
+                'data' => [
+                    'status' => 'pending_approval',
+                    'approval_id' => $result->approvalId,
+                    'output' => $result->output,
+                    'variables' => $result->variables,
+                    'trace' => $result->trace,
+                ],
+            ], 202);
+        }
+
         if (! $result->success) {
             return response()->json([
                 'message' => $result->error ?? 'Workflow execution failed.',

@@ -14,6 +14,8 @@ final readonly class WorkflowResult
         public array $trace,
         public ?array $output = null,
         public ?string $error = null,
+        public bool $pending = false,
+        public ?string $approvalId = null,
     ) {}
 
     /**
@@ -31,5 +33,14 @@ final readonly class WorkflowResult
     public static function failed(string $error, array $variables, array $trace): self
     {
         return new self(false, $variables, $trace, null, $error);
+    }
+
+    /**
+     * @param  array<string, mixed>  $output
+     * @param  list<array<string, mixed>>  $trace
+     */
+    public static function pending(string $approvalId, array $variables, array $trace, array $output): self
+    {
+        return new self(false, $variables, $trace, $output, null, true, $approvalId);
     }
 }

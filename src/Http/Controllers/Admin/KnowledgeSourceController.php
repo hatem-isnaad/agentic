@@ -81,7 +81,7 @@ final class KnowledgeSourceController
         }
 
         $payload = $request->validate([
-            'format' => ['nullable', 'string', 'in:text,plain,txt,markdown,html,json'],
+            'format' => ['nullable', 'string', 'in:text,plain,txt,markdown,html,json,pdf'],
             'documents' => ['nullable'],
             'raw_text' => ['nullable', 'string'],
             'urls' => ['nullable', 'array'],

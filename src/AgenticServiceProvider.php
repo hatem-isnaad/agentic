@@ -304,6 +304,36 @@ final class AgenticServiceProvider extends ServiceProvider
                 SyncMcpToolsCommand::class,
             ]);
         }
+
+        $this->registerFilamentPlugin();
+    }
+
+    private function registerFilamentPlugin(): void
+    {
+        if (! class_exists(\Filament\Facades\Filament::class) || ! class_exists(\Agentic\Filament\AgenticPlugin::class)) {
+            return;
+        }
+
+        $this->app->booted(function (): void {
+            $panelIds = config('agentic.filament.panels', []);
+
+            if ($panelIds === []) {
+                return;
+            }
+
+            foreach ($panelIds as $panelId) {
+                if (! is_string($panelId) || $panelId === '') {
+                    continue;
+                }
+
+                try {
+                    $panel = \Filament\Facades\Filament::getPanel($panelId);
+                    $panel->plugin(\Agentic\Filament\AgenticPlugin::make());
+                } catch (\Throwable) {
+                    continue;
+                }
+            }
+        });
     }
 
     /**

@@ -21,19 +21,19 @@
 | Tools HTTP / Code / MCP | ✅ | Connections, OAuth2, SSRF limits |
 | Knowledge array + vector | ✅ | Chunking, ingest parsers, reindex |
 | Memory (scoped) | ✅ | API + context injection |
-| Workflows | ✅ | set / tool / agent / condition / complete |
+| Workflows | ✅ | set / tool / agent / condition / approval / complete |
 | Admin API | ✅ | Agents, skills, tools, knowledge, executions, widget settings |
 | Widget API | ✅ | Config, conversations, messages, approvals, realtime bridge |
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |
 | MCP discovery | ✅ | `agentic:mcp-sync`, `POST .../mcp/servers/{server}/sync` |
-| Filament UI | 🟡 | Config only; no bundled panel |
+| Filament UI | ✅ | `AgenticPlugin` + tools/skills/knowledge resources (`AGENTIC_FILAMENT_PANELS`) |
 | Multi-tenant contract | ✅ | `TenantResolver`, request/conversation context providers |
 
 ## Knowledge ingest
 
 `POST /api/agentic/knowledge-sources/{slug}/ingest` (and admin mirror) accepts:
 
-- `format`: `text`, `markdown`, `html`, `json`
+- `format`: `text`, `markdown`, `html`, `json`, `pdf` (requires `smalot/pdfparser`)
 - `documents` or `raw_text`
 - optional `urls` — HTTPS fetch (SSRF-safe, size-limited) merged before parsing
 - optional `chunk_size`, `chunk_overlap`, `tenant`

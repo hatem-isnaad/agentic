@@ -9,6 +9,7 @@ use Agentic\Tool\ToolExecutionContext;
 use Agentic\Tool\ToolFactory;
 use Agentic\Tool\ToolResult;
 use Agentic\Tests\TestCase;
+use Agentic\Tool\ToolApprovalService;
 use Agentic\Workflow\WorkflowDefinition;
 use Agentic\Workflow\WorkflowRunner;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -109,5 +110,39 @@ final class WorkflowRunnerTest extends TestCase
         $order = json_decode((string) $result->output['order'], true, 512, JSON_THROW_ON_ERROR);
         $this->assertSame('42', (string) $order['id']);
         $this->assertSame('ready', $order['status']);
+    }
+
+    public function test_approval_step_returns_pending_until_resumed_with_approved_id(): void
+    {
+        $workflow = new WorkflowDefinition(
+            slug: 'charge',
+            name: 'Charge',
+            steps: [
+                [
+                    'id' => 'confirm',
+                    'type' => 'approval',
+                    'title' => 'Approve charge',
+                    'payload' => ['amount' => '{input.amount}'],
+                ],
+                ['id' => 'done', 'type' => 'complete', 'output' => ['ok' => true]],
+            ],
+        );
+
+        $pending = app(WorkflowRunner::class)->run($workflow, ['amount' => 99]);
+
+        $this->assertTrue($pending->pending);
+        $this->assertNotEmpty($pending->approvalId);
+
+        app(ToolApprovalService::class)->approve(
+            app(ToolApprovalService::class)->find($pending->approvalId),
+        );
+
+        $completed = app(WorkflowRunner::class)->run($workflow, [
+            'amount' => 99,
+            '_resume_approval_id' => $pending->approvalId,
+        ]);
+
+        $this->assertTrue($completed->success);
+        $this->assertSame(['ok' => true], $completed->output);
     }
 }
