@@ -13,6 +13,7 @@ use Agentic\Contracts\Repositories\ExecutionRepository;
 use Throwable;
 use Agentic\Tool\Contracts\ToolContract;
 use Illuminate\Contracts\Events\Dispatcher;
+use Illuminate\Support\Facades\DB;
 
 /**
  * Executes a tool after permission resolution.
@@ -111,13 +112,29 @@ final class ToolExecutor
             'tool_call',
             input: $this->redact($context->arguments),
             output: $result?->success ? $this->redact($result->data) : ['error' => $error ?? $result?->error],
-            status: $result?->success === false ? \Agentic\Execution\ExecutionStatus::Failed : \Agentic\Execution\ExecutionStatus::Completed,
+            status: ($result?->success === false || $permissionAllowed === false)
+                ? \Agentic\Execution\ExecutionStatus::Failed
+                : \Agentic\Execution\ExecutionStatus::Completed,
             metadata: ['tool' => $tool->definition()->name],
             toolId: $tool->definition()->id,
-            toolVersionId: $tool->definition()->version,
+            toolVersionId: $this->resolveToolVersionId($tool),
             permissionAllowed: $permissionAllowed,
             durationMs: $durationMs,
         );
+    }
+
+    private function resolveToolVersionId(ToolContract $tool): ?int
+    {
+        $definition = $tool->definition();
+
+        if ($definition->id === null || $definition->version === null) {
+            return null;
+        }
+
+        return DB::table('agentic_tool_versions')
+            ->where('tool_id', $definition->id)
+            ->where('version', $definition->version)
+            ->value('id');
     }
 
     private function redact(mixed $value): mixed
