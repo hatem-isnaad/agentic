@@ -6,6 +6,7 @@ use Agentic\Agent\AgentDefinition;
 use Agentic\Contracts\Repositories\AgentRepository;
 use Agentic\Enums\Status;
 use Agentic\Models\Agent;
+use Agentic\Models\Skill;
 
 final class EloquentAgentRepository implements AgentRepository
 {
@@ -34,6 +35,58 @@ final class EloquentAgentRepository implements AgentRepository
             ->get()
             ->map(fn (Agent $agent) => $this->toDefinition($agent))
             ->all();
+    }
+
+    public function save(array $attributes): AgentDefinition
+    {
+        $config = $attributes['config'] ?? [];
+
+        foreach (['tools', 'knowledge', 'permissions', 'runtime'] as $key) {
+            if (array_key_exists($key, $attributes)) {
+                $config[$key] = $attributes[$key];
+            }
+        }
+
+        $modelConfig = array_filter([
+            'provider' => $attributes['provider'] ?? null,
+            'model' => $attributes['model'] ?? null,
+            'temperature' => $attributes['temperature'] ?? null,
+            'max_tokens' => $attributes['max_tokens'] ?? null,
+        ], fn ($value) => $value !== null);
+
+        $model = Agent::query()->updateOrCreate(
+            ['slug' => $attributes['slug']],
+            [
+                'name' => $attributes['name'],
+                'description' => $attributes['description'] ?? null,
+                'instructions' => $attributes['instructions'] ?? null,
+                'model_config' => $modelConfig === [] ? null : $modelConfig,
+                'config' => $config === [] ? null : $config,
+                'status' => $attributes['status'] ?? Status::Draft->value,
+            ],
+        );
+
+        if (array_key_exists('skills', $attributes)) {
+            $skillIds = Skill::query()
+                ->whereIn('slug', $attributes['skills'] ?? [])
+                ->pluck('id', 'slug');
+
+            $sync = [];
+            foreach ($attributes['skills'] ?? [] as $position => $slug) {
+                if ($skillIds->has($slug)) {
+                    $sync[$skillIds[$slug]] = ['position' => $position];
+                }
+            }
+
+            $model->skills()->sync($sync);
+        }
+
+        return $this->toDefinition($model->fresh(['skills']));
+    }
+
+    public function delete(string $slug): bool
+    {
+        return Agent::query()->where('slug', $slug)->delete() > 0;
     }
 
     private function toDefinition(Agent $agent): AgentDefinition

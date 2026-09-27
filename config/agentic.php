@@ -21,10 +21,98 @@ return [
     |--------------------------------------------------------------------------
     | Permission denial
     |--------------------------------------------------------------------------
+    |
+    | default: deny | allow
+    | Denied tools never reach a ToolDriver.
+    |
     */
     'permissions' => [
-        'default' => 'deny',
+        'default' => env('AGENTIC_PERMISSION_DEFAULT', 'deny'),
         'denial_message' => 'Permission denied for tool [:tool].',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Execution tracking
+    |--------------------------------------------------------------------------
+    |
+    | driver: eloquent | memory
+    |
+    */
+    'execution' => [
+        'driver' => env('AGENTIC_EXECUTION_DRIVER', 'eloquent'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Conversations
+    |--------------------------------------------------------------------------
+    |
+    | Agentic conversation records associate agent/user/tenant metadata.
+    | Laravel AI SDK remains responsible for provider-level message history.
+    |
+    | driver: eloquent | memory
+    |
+    */
+    'conversation' => [
+        'driver' => env('AGENTIC_CONVERSATION_DRIVER', 'eloquent'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Routing
+    |--------------------------------------------------------------------------
+    */
+    'routing' => [
+        'fallback_agent' => env('AGENTIC_FALLBACK_AGENT'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Knowledge
+    |--------------------------------------------------------------------------
+    |
+    | driver: eloquent | memory
+    |
+    */
+    'knowledge' => [
+        'driver' => env('AGENTIC_KNOWLEDGE_DRIVER', 'eloquent'),
+        'embedding' => env('AGENTIC_KNOWLEDGE_EMBEDDING', 'null'),
+        'embedding_provider' => env('AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER'),
+        'embedding_model' => env('AGENTIC_KNOWLEDGE_EMBEDDING_MODEL'),
+        'vector_store' => env('AGENTIC_VECTOR_STORE', 'array'),
+        'pinecone' => [
+            'host' => env('PINECONE_HOST'),
+            'api_key' => env('PINECONE_API_KEY'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filament admin (optional)
+    |--------------------------------------------------------------------------
+    |
+    | When filament/filament is installed, register the Agentic plugin on panels
+    | listed here (panel IDs). Leave empty to skip auto-registration.
+    |
+    */
+    'filament' => [
+        'panels' => array_filter(explode(',', (string) env('AGENTIC_FILAMENT_PANELS', 'admin'))),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | HTTP API (optional)
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, registers JSON routes for agents, routing, executions,
+    | and conversations. Host apps should apply their own authentication.
+    |
+    */
+    'api' => [
+        'enabled' => env('AGENTIC_API_ENABLED', false),
+        'prefix' => env('AGENTIC_API_PREFIX', 'api/agentic'),
+        'middleware' => ['api'],
     ],
 
     /*

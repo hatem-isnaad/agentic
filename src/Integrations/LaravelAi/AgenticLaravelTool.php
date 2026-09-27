@@ -2,9 +2,9 @@
 
 namespace Agentic\Integrations\LaravelAi;
 
-use Agentic\Permission\PermissionChecker;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\ToolExecutionContext;
+use Agentic\Tool\ToolExecutor;
 use Agentic\Tool\ToolResult;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
@@ -15,13 +15,13 @@ use Stringable;
 /**
  * Adapts an Agentic ToolContract into a Laravel AI SDK Tool.
  *
- * Permission checks happen here — before the Agentic tool executes.
+ * Permission checks happen in ToolExecutor — before the tool/driver runs.
  */
 final class AgenticLaravelTool implements Tool
 {
     public function __construct(
         private ToolContract $tool,
-        private PermissionChecker $permissions,
+        private ToolExecutor $executor,
         private ?ToolExecutionContext $baseContext = null,
     ) {}
 
@@ -37,12 +37,6 @@ final class AgenticLaravelTool implements Tool
 
     public function handle(Request $request): Stringable|string
     {
-        $ability = 'tool:'.$this->name();
-
-        if (! $this->permissions->allows($ability, $this->tool)) {
-            return $this->permissions->denialMessage($ability, $this->tool);
-        }
-
         $context = new ToolExecutionContext(
             arguments: $request->all(),
             metadata: $this->baseContext?->metadata ?? [],
@@ -50,7 +44,7 @@ final class AgenticLaravelTool implements Tool
             runtime: $this->baseContext?->runtime(),
         );
 
-        $result = $this->tool->execute($context);
+        $result = $this->executor->execute($this->tool, $context);
 
         return $this->stringify($result);
     }
