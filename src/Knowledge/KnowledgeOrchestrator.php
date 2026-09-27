@@ -46,6 +46,11 @@ final class KnowledgeOrchestrator
         }
     }
 
+    public function reindex(KnowledgeSourceDefinition $source): void
+    {
+        $this->index($source);
+    }
+
     /**
      * @return list<KnowledgeChunk>
      */

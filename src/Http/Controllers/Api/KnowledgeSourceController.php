@@ -3,6 +3,7 @@
 namespace Agentic\Http\Controllers\Api;
 
 use Agentic\Contracts\Repositories\KnowledgeRepository;
+use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
 use Agentic\Knowledge\KnowledgeSourceDefinition;
 use Illuminate\Http\JsonResponse;
@@ -13,6 +14,7 @@ final class KnowledgeSourceController
     public function __construct(
         private KnowledgeRepository $sources,
         private KnowledgeOrchestrator $knowledge,
+        private KnowledgeIngestor $ingestor,
     ) {}
 
     public function index(): JsonResponse
@@ -111,9 +113,37 @@ final class KnowledgeSourceController
             ));
         }
 
-        $this->knowledge->index($source);
+        $this->knowledge->reindex($source);
 
         return response()->json(['message' => 'Knowledge source indexed.']);
+    }
+
+    public function ingest(Request $request, string $slug): JsonResponse
+    {
+        if ($this->sources->findBySlug($slug) === null) {
+            return response()->json(['message' => 'Knowledge source not found.'], 404);
+        }
+
+        $payload = $request->validate([
+            'format' => ['nullable', 'string', 'in:text,plain,txt,markdown,html,json'],
+            'documents' => ['nullable'],
+            'raw_text' => ['nullable', 'string'],
+            'chunk_size' => ['nullable', 'integer', 'min:100', 'max:8000'],
+            'chunk_overlap' => ['nullable', 'integer', 'min:0', 'max:2000'],
+            'tenant' => ['nullable', 'string', 'max:191'],
+            'reindex' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $source = $this->ingestor->ingest($slug, $payload, (bool) ($payload['reindex'] ?? true));
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        return response()->json([
+            'data' => $this->serialize($source),
+            'meta' => $this->ingestor->preview($source),
+        ]);
     }
 
     /**

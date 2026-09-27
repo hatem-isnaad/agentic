@@ -7,6 +7,7 @@ use Agentic\Http\Requests\Admin\StoreKnowledgeSourceRequest;
 use Agentic\Http\Requests\Admin\UpdateKnowledgeSourceRequest;
 use Agentic\Http\Support\AdminLocaleMeta;
 use Agentic\Http\Support\AdminPaginator;
+use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -16,6 +17,7 @@ final class KnowledgeSourceController
     public function __construct(
         private KnowledgeSourceAdminService $sources,
         private KnowledgeOrchestrator $knowledge,
+        private KnowledgeIngestor $ingestor,
     ) {}
 
     public function index(Request $request): JsonResponse
@@ -67,9 +69,43 @@ final class KnowledgeSourceController
             return response()->json(['message' => 'Knowledge source not found.'], 404);
         }
 
-        $this->knowledge->index($source->toDefinition());
+        $this->knowledge->reindex($source->toDefinition());
 
         return response()->json(['message' => 'Knowledge source indexed.']);
+    }
+
+    public function ingest(Request $request, string $slug): JsonResponse
+    {
+        if ($this->sources->find($slug) === null) {
+            return response()->json(['message' => 'Knowledge source not found.'], 404);
+        }
+
+        $payload = $request->validate([
+            'format' => ['nullable', 'string', 'in:text,plain,txt,markdown,html,json'],
+            'documents' => ['nullable'],
+            'raw_text' => ['nullable', 'string'],
+            'chunk_size' => ['nullable', 'integer', 'min:100', 'max:8000'],
+            'chunk_overlap' => ['nullable', 'integer', 'min:0', 'max:2000'],
+            'tenant' => ['nullable', 'string', 'max:191'],
+            'reindex' => ['nullable', 'boolean'],
+        ]);
+
+        try {
+            $source = $this->ingestor->ingest($slug, $payload, (bool) ($payload['reindex'] ?? true));
+        } catch (\InvalidArgumentException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
+
+        return response()->json([
+            'data' => [
+                'slug' => $source->slug,
+                'name' => $source->name,
+                'driver' => $source->driver,
+                'status' => $source->status,
+                'config' => $source->configuration,
+            ],
+            'meta' => array_merge(AdminLocaleMeta::build(), $this->ingestor->preview($source)),
+        ]);
     }
 
     public function search(Request $request, string $slug): JsonResponse

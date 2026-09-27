@@ -43,6 +43,7 @@ Route::get('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'show'
 Route::put('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'update'])->name('knowledge-sources.update');
 Route::delete('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'destroy'])->name('knowledge-sources.destroy');
 Route::post('knowledge-sources/{slug}/index', [KnowledgeSourceController::class, 'indexDocuments'])->name('knowledge-sources.index-documents');
+Route::post('knowledge-sources/{slug}/ingest', [KnowledgeSourceController::class, 'ingest'])->name('knowledge-sources.ingest');
 Route::post('knowledge-sources/{slug}/search', [KnowledgeSourceController::class, 'search'])->name('knowledge-sources.search');
 
 Route::get('widget-settings/schema', [WidgetSettingsController::class, 'schema'])->name('widget-settings.schema');
