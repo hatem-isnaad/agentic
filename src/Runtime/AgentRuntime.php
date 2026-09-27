@@ -4,6 +4,8 @@ namespace Agentic\Runtime;
 
 use Agentic\Agent\AgentDefinition;
 use Agentic\Context\ContextBuilder;
+use Agentic\Context\ContextManager;
+use Agentic\Conversation\ConversationManager;
 use Agentic\Exceptions\AgentExecutionFailedException;
 use Agentic\Execution\AgentExecutionContext;
 use Agentic\Execution\AgentExecutionResult;
@@ -17,14 +19,16 @@ use Throwable;
 /**
  * Orchestrates Agent execution.
  *
- * Runtime coordinates context, tools, permissions, and execution tracking,
- * then delegates AI execution to the Laravel AI SDK adapter.
+ * Runtime coordinates context, conversation, tools, permissions, and execution
+ * tracking, then delegates AI execution to the Laravel AI SDK adapter.
  * It does not query Eloquent.
  */
 final class AgentRuntime
 {
     public function __construct(
         private ContextBuilder $contextBuilder,
+        private ContextManager $contexts,
+        private ConversationManager $conversations,
         private ToolRegistry $tools,
         private LaravelAiSdkAdapter $ai,
         private ExecutionManager $executions,
@@ -32,6 +36,28 @@ final class AgentRuntime
 
     public function run(AgentDefinition $agent, AgentExecutionContext $context): AgentExecutionResult
     {
+        $conversation = $context->conversation;
+
+        if ($conversation === null && $context->conversationId !== null) {
+            $conversation = $this->conversations->continue($context->conversationId);
+        }
+
+        $runtime = $this->contexts->build(
+            seed: $context->runtime()->all(),
+            agent: $agent,
+            conversation: $conversation,
+        );
+
+        $context = new AgentExecutionContext(
+            message: $context->message,
+            metadata: $context->metadata,
+            variables: $context->variables,
+            messages: $context->messages,
+            runtime: $runtime,
+            conversation: $conversation,
+            conversationId: $conversation?->id ?? $context->conversationId,
+        );
+
         $execution = $this->executions->start(
             agent: $agent->identifier(),
             input: [
@@ -43,11 +69,13 @@ final class AgentRuntime
                 'model' => $agent->model,
                 'provider' => $agent->provider,
             ],
+            conversationId: $conversation?->id,
         );
 
         try {
             $this->executions->addStep($execution, 'agent_start', [
                 'agent' => $agent->identifier(),
+                'conversation_id' => $conversation?->id,
             ]);
 
             $built = $this->contextBuilder->build($agent);
@@ -60,10 +88,18 @@ final class AgentRuntime
 
             $response = $this->ai->prompt($agent, $built, $selectedTools, $context);
 
+            if ($conversation !== null && is_string($response->conversationId) && $response->conversationId !== '') {
+                $conversation = $this->conversations->bindSdkConversation(
+                    $conversation,
+                    $response->conversationId,
+                );
+            }
+
             $output = [
                 'text' => $response->text,
                 'invocation_id' => $response->invocationId,
-                'conversation_id' => $response->conversationId,
+                'conversation_id' => $conversation?->id,
+                'sdk_conversation_id' => $response->conversationId,
                 'usage' => $response->usage,
                 'execution_id' => $execution->id,
             ];
@@ -72,7 +108,7 @@ final class AgentRuntime
                 'text' => $response->text,
             ]);
 
-            $execution->conversationId = $response->conversationId;
+            $execution->conversationId = $conversation?->id;
             $this->executions->complete($execution, $output);
 
             return AgentExecutionResult::success($output);
