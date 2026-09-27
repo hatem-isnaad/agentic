@@ -32,4 +32,23 @@ final class HttpUrlValidatorTest extends TestCase
 
         $this->assertTrue(true);
     }
+
+    public function test_urls_with_embedded_credentials_are_rejected(): void
+    {
+        $this->expectException(InvalidArgumentException::class);
+
+        (new HttpUrlValidator())->validate('https://user:pass@api.example.test/resource');
+    }
+
+    public function test_unresolved_hosts_are_rejected_by_default(): void
+    {
+        config([
+            'agentic.http.allow_private_hosts' => false,
+            'agentic.http.allow_unresolved_hosts' => false,
+        ]);
+
+        $this->expectException(InvalidArgumentException::class);
+
+        (new HttpUrlValidator())->validate('https://api.example.test/resource');
+    }
 }
