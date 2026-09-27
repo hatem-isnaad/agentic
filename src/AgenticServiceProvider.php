@@ -12,6 +12,7 @@ use Agentic\Contracts\Repositories\KnowledgeRepository;
 use Agentic\Contracts\Repositories\MemoryRepository;
 use Agentic\Contracts\Repositories\SkillRepository;
 use Agentic\Contracts\Repositories\ToolRepository;
+use Agentic\Contracts\Repositories\WorkflowRepository;
 use Agentic\Knowledge\Contracts\EmbeddingProvider;
 use Agentic\Knowledge\Contracts\VectorStore;
 use Agentic\Knowledge\Indexers\ArrayKnowledgeIndexer;
@@ -43,6 +44,10 @@ use Agentic\Persistence\InMemory\InMemoryConversationRepository;
 use Agentic\Persistence\InMemory\InMemoryExecutionRepository;
 use Agentic\Persistence\InMemory\InMemoryKnowledgeRepository;
 use Agentic\Persistence\InMemory\InMemoryMemoryRepository;
+use Agentic\Persistence\InMemory\InMemoryWorkflowRepository;
+use Agentic\Persistence\Eloquent\EloquentWorkflowRepository;
+use Agentic\Workflow\WorkflowResolver;
+use Agentic\Workflow\WorkflowRunner;
 use Agentic\Persistence\Eloquent\EloquentMemoryRepository;
 use Agentic\Memory\MemoryContextResolver;
 use Agentic\Memory\MemoryManager;
@@ -165,6 +170,15 @@ final class AgenticServiceProvider extends ServiceProvider
 
         $this->app->singleton(MemoryContextResolver::class);
         $this->app->singleton(MemoryManager::class);
+
+        $this->app->bind(WorkflowRepository::class, function ($app) {
+            return config('agentic.workflows.driver', 'eloquent') === 'memory'
+                ? $app->make(InMemoryWorkflowRepository::class)
+                : $app->make(EloquentWorkflowRepository::class);
+        });
+
+        $this->app->singleton(WorkflowResolver::class);
+        $this->app->singleton(WorkflowRunner::class);
 
         $this->app->singleton(EmbeddingProvider::class, function ($app) {
             $driver = config('agentic.knowledge.embedding', 'null');

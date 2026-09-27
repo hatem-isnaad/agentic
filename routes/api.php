@@ -9,6 +9,8 @@ use Agentic\Http\Controllers\Api\KnowledgeSourceController;
 use Agentic\Http\Controllers\Api\MemoryController;
 use Agentic\Http\Controllers\Api\SkillController;
 use Agentic\Http\Controllers\Api\ToolController;
+use Agentic\Http\Controllers\Api\WorkflowController;
+use Agentic\Http\Controllers\Api\WorkflowExecuteController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('agents', [AgentController::class, 'index']);
@@ -39,6 +41,13 @@ Route::get('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'show'
 Route::put('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'update']);
 Route::delete('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'destroy']);
 Route::post('knowledge-sources/{slug}/index', [KnowledgeSourceController::class, 'indexDocuments']);
+
+Route::get('workflows', [WorkflowController::class, 'index']);
+Route::post('workflows', [WorkflowController::class, 'store']);
+Route::get('workflows/{slug}', [WorkflowController::class, 'show']);
+Route::put('workflows/{slug}', [WorkflowController::class, 'update']);
+Route::delete('workflows/{slug}', [WorkflowController::class, 'destroy']);
+Route::post('workflows/{slug}/execute', WorkflowExecuteController::class);
 
 Route::get('memories', [MemoryController::class, 'index']);
 Route::post('memories', [MemoryController::class, 'store']);
