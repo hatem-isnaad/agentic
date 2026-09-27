@@ -91,7 +91,7 @@ final class HttpToolDriver implements ToolDriver
      *     retry: array{times: int, sleep: int, statuses: list<int>, unsafe_methods: bool}
      *  }  $request
      */
-    private function send(array $request): \\Illuminate\\Http\\Client\\Response
+    private function send(array $request): \Illuminate\Http\Client\Response
     {
         /** @var PendingRequest $pending */
         $pending = Http::withHeaders($request['headers'])
@@ -139,7 +139,7 @@ final class HttpToolDriver implements ToolDriver
         string $url,
         array $query,
         mixed $body,
-    ): \\Illuminate\\Http\\Client\\Response {
+    ): \Illuminate\Http\Client\Response {
         if (in_array($method, ['get', 'head', 'delete'], true)) {
             return $pending->withQueryParameters($query)->{$method}($url);
         }
@@ -157,10 +157,10 @@ final class HttpToolDriver implements ToolDriver
         return $pending->withQueryParameters($query)->{$method}($url);
     }
 
-    private function formatHttpError(string $tool, \\Illuminate\\Http\\Client\\Response $response, array $mapping): string
+    private function formatHttpError(string $tool, \Illuminate\Http\Client\Response $response, array $mapping): string
     {
         $payload = $response->json() ?? $response->body();
-        $details = $mapping === [] ? $payload : (new ResponseMapper())->map($response, $mapping);
+        $details = $mapping === [] ? $payload : $this->responses->map($response, $mapping);
 
         $encoded = is_string($details) ? $details : json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 
