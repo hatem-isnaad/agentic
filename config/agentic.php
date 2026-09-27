@@ -116,6 +116,10 @@ return [
         'middleware' => ['api'],
     ],
 
+    'http' => [
+        'allow_private_hosts' => env('AGENTIC_HTTP_ALLOW_PRIVATE_HOSTS', false),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Tool drivers
