@@ -43,6 +43,8 @@ AGENTIC_API_REQUIRE_AUTH=true
 
 Install and configure Sanctum (or your guard). Enable `AGENTIC_API_RATE_LIMIT_ENABLED=true` in production.
 
+Workflow approvals: use `workflow_run_id` from execute/resume responses and `GET /api/agentic/workflow-runs/{uuid}` to inspect pending state before calling resume.
+
 Keep SSRF protections strict:
 
 ```env

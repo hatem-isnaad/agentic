@@ -28,18 +28,28 @@ final class WorkflowRunner
     /**
      * @param  array<string, mixed>  $input
      */
-    public function run(WorkflowDefinition $workflow, array $input = []): WorkflowResult
-    {
+    public function run(
+        WorkflowDefinition $workflow,
+        array $input = [],
+        ?WorkflowContinuation $continuation = null,
+    ): WorkflowResult {
         $steps = $workflow->steps;
 
         if ($steps === []) {
             return WorkflowResult::failed('Workflow has no steps.', [], []);
         }
 
-        $variables = ['input' => $input];
-        $trace = [];
+        if ($continuation !== null) {
+            $variables = $continuation->variables;
+            $trace = $continuation->trace;
+            $pointer = $continuation->pointer;
+        } else {
+            $variables = ['input' => $input];
+            $trace = [];
+            $pointer = 0;
+        }
+
         $indexes = $this->indexSteps($steps);
-        $pointer = 0;
         $maxSteps = max(1, (int) config('agentic.workflows.max_steps', 100));
         $iterations = 0;
 
@@ -366,7 +376,7 @@ final class WorkflowRunner
                 'approval_id' => $resumeId,
                 'resume_key' => $resumeKey,
                 'variables' => $variables,
-            ]);
+            ], $pointer);
         }
 
         $payload = is_array($step['payload'] ?? null)
@@ -398,7 +408,7 @@ final class WorkflowRunner
             'message' => $message,
             'resume_key' => $resumeKey,
             'variables' => $variables,
-        ]);
+        ], $pointer);
     }
 
     /**

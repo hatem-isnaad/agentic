@@ -21,7 +21,7 @@
 | Tools HTTP / Code / MCP | ✅ | Connections, OAuth2, SSRF limits |
 | Knowledge array + vector | ✅ | Chunking, ingest parsers, reindex |
 | Memory (scoped) | ✅ | API + context injection |
-| Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete; `POST .../resume` after approve |
+| Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete; persisted runs (`workflow_run_id`); `GET .../workflow-runs/{uuid}`; `POST .../resume` continues from saved step pointer |
 | Admin API | ✅ | Agents, skills, tools, knowledge, executions, widget settings |
 | Widget API | ✅ | Config, conversations, messages, approvals, realtime bridge |
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |

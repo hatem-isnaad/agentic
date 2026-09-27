@@ -15,7 +15,8 @@
     "filament/filament": "^4.0",
     "orchestra/testbench": "^10.0",
     "phpunit/phpunit": "^11.0",
-    "smalot/pdfparser": "^2.0"
+    "smalot/pdfparser": "^2.0",
+    "laravel/sanctum": "^4.0"
   },
   "suggest": {
     "filament/filament": "Required for the optional Agentic Filament admin panel (^4.0).",

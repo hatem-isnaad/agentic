@@ -17,6 +17,7 @@ use Agentic\Contracts\Repositories\MemoryRepository;
 use Agentic\Contracts\Repositories\SkillRepository;
 use Agentic\Contracts\Repositories\ToolRepository;
 use Agentic\Contracts\Repositories\WorkflowRepository;
+use Agentic\Contracts\Repositories\WorkflowRunRepository;
 use Agentic\Knowledge\Contracts\EmbeddingProvider;
 use Agentic\Knowledge\Contracts\VectorStore;
 use Agentic\Knowledge\Indexers\ArrayKnowledgeIndexer;
@@ -57,7 +58,10 @@ use Agentic\Persistence\InMemory\InMemoryExecutionRepository;
 use Agentic\Persistence\InMemory\InMemoryKnowledgeRepository;
 use Agentic\Persistence\InMemory\InMemoryMemoryRepository;
 use Agentic\Persistence\InMemory\InMemoryWorkflowRepository;
+use Agentic\Persistence\InMemory\InMemoryWorkflowRunRepository;
 use Agentic\Persistence\Eloquent\EloquentWorkflowRepository;
+use Agentic\Persistence\Eloquent\EloquentWorkflowRunRepository;
+use Agentic\Workflow\WorkflowExecutionService;
 use Agentic\Workflow\WorkflowResolver;
 use Agentic\Workflow\WorkflowRunner;
 use Agentic\Persistence\Eloquent\EloquentMemoryRepository;
@@ -190,6 +194,13 @@ final class AgenticServiceProvider extends ServiceProvider
                 : $app->make(EloquentWorkflowRepository::class);
         });
 
+        $this->app->bind(WorkflowRunRepository::class, function ($app) {
+            return config('agentic.workflows.driver', 'eloquent') === 'memory'
+                ? $app->make(InMemoryWorkflowRunRepository::class)
+                : $app->make(EloquentWorkflowRunRepository::class);
+        });
+
+        $this->app->singleton(WorkflowExecutionService::class);
         $this->app->singleton(WorkflowResolver::class);
         $this->app->singleton(WorkflowRunner::class);
 
