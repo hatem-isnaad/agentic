@@ -92,6 +92,86 @@ final class HttpToolDriverTest extends TestCase
         Http::assertSent(fn ($request) => $request['sku'] === 'ABC' && $request['qty'] === '2');
     }
 
+    public function test_http_tool_retries_retryable_status_for_idempotent_method(): void
+    {
+        Http::fakeSequence()
+            ->push(['message' => 'busy'], 429)
+            ->push(['id' => 42], 200);
+
+        $tool = new ConfiguredTool(
+            new ToolDefinition(
+                name: 'orders.get',
+                description: 'Get an order',
+                driver: 'http',
+                configuration: [
+                    'method' => 'GET',
+                    'url' => 'https://api.example.test/orders/42',
+                    'retry' => ['times' => 1, 'sleep' => 1],
+                ],
+            ),
+            app(DriverResolver::class),
+        );
+
+        $result = $tool->execute(new ToolExecutionContext());
+
+        $this->assertTrue($result->success);
+        $this->assertSame(['id' => 42], $result->data);
+        Http::assertSentCount(2);
+    }
+
+    public function test_http_tool_maps_api_error_payload(): void
+    {
+        Http::fake([
+            'https://api.example.test/orders/42' => Http::response([
+                'error' => ['code' => 'ORDER_NOT_FOUND', 'message' => 'Missing'],
+            ], 404),
+        ]);
+
+        $tool = new ConfiguredTool(
+            new ToolDefinition(
+                name: 'orders.get',
+                description: 'Get an order',
+                driver: 'http',
+                configuration: [
+                    'method' => 'GET',
+                    'url' => 'https://api.example.test/orders/42',
+                    'error_mapping' => [
+                        'code' => 'body.error.code',
+                        'message' => 'body.error.message',
+                    ],
+                ],
+            ),
+            app(DriverResolver::class),
+        );
+
+        $result = $tool->execute(new ToolExecutionContext());
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('ORDER_NOT_FOUND', (string) $result->error);
+        $this->assertStringContainsString('Missing', (string) $result->error);
+    }
+
+    public function test_http_tool_rejects_unresolved_url_placeholders(): void
+    {
+        $tool = new ConfiguredTool(
+            new ToolDefinition(
+                name: 'orders.get',
+                description: 'Get an order',
+                driver: 'http',
+                configuration: [
+                    'method' => 'GET',
+                    'url' => 'https://api.example.test/orders/{id}',
+                ],
+            ),
+            app(DriverResolver::class),
+        );
+
+        $result = $tool->execute(new ToolExecutionContext(arguments: []));
+
+        $this->assertFalse($result->success);
+        $this->assertStringContainsString('unresolved URL placeholders', (string) $result->error);
+    }
+
     public function test_http_tool_rejects_missing_required_input(): void
     {
         $tool = new ConfiguredTool(
