@@ -37,6 +37,15 @@ final class EloquentToolRepository implements ToolRepository
             ->all();
     }
 
+    public function all(): array
+    {
+        return Tool::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Tool $tool) => $this->toDefinition($tool))
+            ->all();
+    }
+
     public function save(array $attributes): ToolDefinition
     {
         $driver = $attributes['driver'];

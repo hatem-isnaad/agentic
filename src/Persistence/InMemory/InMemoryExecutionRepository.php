@@ -28,4 +28,15 @@ final class InMemoryExecutionRepository implements ExecutionRepository
 
         return $execution;
     }
+
+    public function recent(int $limit = 50): array
+    {
+        $items = array_values($this->executions);
+
+        if (count($items) <= $limit) {
+            return $items;
+        }
+
+        return array_slice($items, -$limit);
+    }
 }
