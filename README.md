@@ -224,9 +224,20 @@ PINECONE_API_KEY=...
 
 `pgvector` uses the `agentic_vector_entries` table with JSON vectors and cosine ranking (ideal for moderate corpora). `pinecone` delegates to the Pinecone HTTP API.
 
+## Web admin (placeholder Blade UI)
+
+When `AGENTIC_ADMIN_ENABLED=true` (default), the package registers web routes under `/agentic/admin` with placeholder Blade views. Controllers delegate to `Agentic\Admin\Services\*` and repository contracts — swap the views in your host app or publish and replace `resources/views/admin` after registering the `agentic` view namespace.
+
+```env
+AGENTIC_ADMIN_ENABLED=true
+AGENTIC_ADMIN_PREFIX=agentic/admin
+```
+
+Add your own `auth` middleware in `config/agentic.php` under `admin.middleware` before exposing this in production.
+
 ## Filament admin (optional)
 
-Install Filament in your app, then register the Agentic plugin on your panel:
+Filament is **off by default** (`AGENTIC_FILAMENT_ENABLED=false`). Install Filament in your app, then register the Agentic plugin on your panel:
 
 ```php
 use Agentic\Filament\AgenticPlugin;
@@ -237,7 +248,7 @@ public function panel(Panel $panel): Panel
 }
 ```
 
-Or set `AGENTIC_FILAMENT_PANELS=admin` so Agentic auto-registers on matching panel IDs when `filament/filament` is installed.
+Or set `AGENTIC_FILAMENT_ENABLED=true` and `AGENTIC_FILAMENT_PANELS=admin` so Agentic auto-registers on matching panel IDs when `filament/filament` is installed.
 
 ## Development
 

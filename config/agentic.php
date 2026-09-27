@@ -97,7 +97,24 @@ return [
     |
     */
     'filament' => [
-        'panels' => array_filter(explode(',', (string) env('AGENTIC_FILAMENT_PANELS', 'admin'))),
+        'enabled' => env('AGENTIC_FILAMENT_ENABLED', false),
+        'panels' => array_filter(explode(',', (string) env('AGENTIC_FILAMENT_PANELS', ''))),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Web admin (placeholder Blade UI)
+    |--------------------------------------------------------------------------
+    |
+    | Host apps typically replace these views with their own dashboard. Routes
+    | delegate to Admin services and repository contracts only.
+    |
+    */
+    'admin' => [
+        'enabled' => env('AGENTIC_ADMIN_ENABLED', true),
+        'prefix' => env('AGENTIC_ADMIN_PREFIX', 'agentic/admin'),
+        'middleware' => ['web'],
+        'route_name_prefix' => 'agentic.admin.',
     ],
 
     /*
