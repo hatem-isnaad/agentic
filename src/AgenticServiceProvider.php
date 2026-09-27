@@ -2,8 +2,11 @@
 
 namespace Agentic;
 
-use Illuminate\Support\ServiceProvider;
+use Agentic\Permission\AllowAllPermissionChecker;
+use Agentic\Permission\PermissionChecker;
+use Agentic\Skill\SkillRegistry;
 use Agentic\Tool\Registry\ToolRegistry;
+use Illuminate\Support\ServiceProvider;
 
 final class AgenticServiceProvider extends ServiceProvider
 {
@@ -12,6 +15,9 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->mergeConfigFrom(__DIR__.'/../config/agentic.php', 'agentic');
 
         $this->app->singleton(ToolRegistry::class);
+        $this->app->singleton(SkillRegistry::class);
+
+        $this->app->singleton(PermissionChecker::class, AllowAllPermissionChecker::class);
     }
 
     public function boot(): void
