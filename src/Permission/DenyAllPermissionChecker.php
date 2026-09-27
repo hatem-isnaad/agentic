@@ -2,9 +2,6 @@
 
 namespace Agentic\Permission;
 
-/**
- * Default-deny checker for security-sensitive environments and tests.
- */
 final class DenyAllPermissionChecker implements PermissionChecker
 {
     public function allows(string $ability, mixed $subject = null): bool
