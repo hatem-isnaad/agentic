@@ -156,6 +156,51 @@ app(McpToolRegistrar::class)->registerServer('warehouse', 'mcp.warehouse.');
 
 Every `AgentRuntime::run()` creates an execution with steps (`agent_start`, `llm_request`, `final_response`, …) and emits lifecycle events.
 
+## Context providers
+
+```php
+use Agentic\Context\ContextManager;
+use Agentic\Context\Providers\ArrayContextProvider;
+
+app(ContextManager::class)->extend(new ArrayContextProvider([
+    'tenant' => 'acme',
+    'locale' => 'en',
+]));
+```
+
+## Conversations
+
+```php
+use Agentic\Conversation\ConversationManager;
+use Agentic\Execution\AgentExecutionContext;
+
+$conversation = app(ConversationManager::class)->continueOrStart('support', userId: $user->id);
+
+$runtime->run($agent, new AgentExecutionContext(
+    message: 'Hello',
+    conversation: $conversation,
+));
+```
+
+## Routing
+
+```php
+use Agentic\Routing\AgentRouter;
+use Agentic\Routing\RoutingContext;
+use Agentic\Routing\Strategies\KeywordRoutingStrategy;
+use Agentic\Routing\Strategies\SlugRoutingStrategy;
+
+$router = app(AgentRouter::class)
+    ->use(new SlugRoutingStrategy())
+    ->use(new KeywordRoutingStrategy([
+        'support' => ['refund', 'help'],
+        'sales' => ['pricing', 'quote'],
+    ]));
+
+$result = $router->route(new RoutingContext(message: $request->input('message')));
+// Then: AgentResolver::resolve($result->agent) → AgentRuntime::run(...)
+```
+
 ## Development
 
 ```bash

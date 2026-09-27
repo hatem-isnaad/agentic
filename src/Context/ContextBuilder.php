@@ -3,7 +3,7 @@
 namespace Agentic\Context;
 
 use Agentic\Agent\AgentDefinition;
-use Agentic\Skill\SkillRegistry;
+use Agentic\Skill\SkillResolver;
 use Agentic\Tool\Registry\ToolRegistry;
 
 /**
@@ -13,7 +13,7 @@ final class ContextBuilder
 {
     public function __construct(
         private ToolRegistry $tools,
-        private SkillRegistry $skills,
+        private SkillResolver $skills,
     ) {}
 
     /**
@@ -27,20 +27,12 @@ final class ContextBuilder
     public function build(AgentDefinition $agent): array
     {
         $selectedSkills = [];
-        $skillTools = [];
 
-        foreach ($agent->skills as $skillName) {
-            if (! $this->skills->has($skillName)) {
-                continue;
-            }
-
-            $skill = $this->skills->get($skillName);
+        foreach ($this->skills->resolveMany($agent->skills) as $skill) {
             $tools = array_values(array_filter(
                 $skill->tools,
                 fn (string $tool) => $this->tools->has($tool),
             ));
-
-            $skillTools = array_merge($skillTools, $tools);
 
             $selectedSkills[] = [
                 'name' => $skill->name,
@@ -48,6 +40,8 @@ final class ContextBuilder
                 'tools' => $tools,
             ];
         }
+
+        $skillTools = $this->skills->composeTools($agent->skills);
 
         $directTools = array_values(array_filter(
             $agent->tools,

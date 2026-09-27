@@ -3,6 +3,7 @@
 namespace Agentic\Execution;
 
 use Agentic\Context\RuntimeContext;
+use Agentic\Conversation\Conversation;
 
 /**
  * Input for a single AgentRuntime invocation.
@@ -20,10 +21,18 @@ final readonly class AgentExecutionContext
         public array $variables = [],
         public array $messages = [],
         public ?RuntimeContext $runtime = null,
+        public ?Conversation $conversation = null,
+        public ?string $conversationId = null,
     ) {}
 
     public function runtime(): RuntimeContext
     {
-        return $this->runtime ?? new RuntimeContext();
+        $runtime = $this->runtime ?? new RuntimeContext();
+
+        if ($this->conversation !== null && ! $runtime->has('conversation')) {
+            $runtime = $runtime->with('conversation', $this->conversation);
+        }
+
+        return $runtime;
     }
 }
