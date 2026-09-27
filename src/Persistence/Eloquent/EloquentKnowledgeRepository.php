@@ -25,6 +25,29 @@ final class EloquentKnowledgeRepository implements KnowledgeRepository
             ->all();
     }
 
+    public function save(KnowledgeSourceDefinition $source): KnowledgeSourceDefinition
+    {
+        $status = $source->status ?? Status::Draft->value;
+
+        $model = KnowledgeSource::query()->updateOrCreate(
+            ['slug' => $source->slug],
+            [
+                'name' => $source->name,
+                'driver' => $source->driver,
+                'config' => $source->configuration,
+                'status' => $status,
+                'description' => $source->metadata['description'] ?? null,
+            ],
+        );
+
+        return $this->toDefinition($model);
+    }
+
+    public function delete(string $slug): bool
+    {
+        return KnowledgeSource::query()->where('slug', $slug)->delete() > 0;
+    }
+
     private function toDefinition(KnowledgeSource $model): KnowledgeSourceDefinition
     {
         $config = $model->config ?? [];
