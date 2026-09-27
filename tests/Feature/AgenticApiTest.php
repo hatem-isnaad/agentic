@@ -49,6 +49,11 @@ final class AgenticApiTest extends TestCase
                 return [];
             }
 
+            public function all(): array
+            {
+                return [];
+            }
+
             public function save(array $attributes): AgentDefinition
             {
                 unset($attributes);

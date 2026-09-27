@@ -16,6 +16,11 @@ interface SkillRepository
     public function allPublished(): array;
 
     /**
+     * @return list<SkillDefinition>
+     */
+    public function all(): array;
+
+    /**
      * @param  array{
      *     name: string,
      *     slug: string,

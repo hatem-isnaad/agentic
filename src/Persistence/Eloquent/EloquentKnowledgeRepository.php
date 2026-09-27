@@ -25,6 +25,15 @@ final class EloquentKnowledgeRepository implements KnowledgeRepository
             ->all();
     }
 
+    public function all(): array
+    {
+        return KnowledgeSource::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (KnowledgeSource $model) => $this->toDefinition($model))
+            ->all();
+    }
+
     public function save(KnowledgeSourceDefinition $source): KnowledgeSourceDefinition
     {
         $status = $source->status ?? Status::Draft->value;

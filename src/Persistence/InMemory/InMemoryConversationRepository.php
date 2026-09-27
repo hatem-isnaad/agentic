@@ -29,6 +29,17 @@ final class InMemoryConversationRepository implements ConversationRepository
         return $conversation;
     }
 
+    public function recent(int $limit = 50): array
+    {
+        $items = array_values($this->conversations);
+
+        if (count($items) <= $limit) {
+            return $items;
+        }
+
+        return array_slice($items, -$limit);
+    }
+
     public function findLatestFor(string $agent, string|int|null $userId = null, string|int|null $tenantId = null): ?Conversation
     {
         $matches = array_values(array_filter(
