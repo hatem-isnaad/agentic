@@ -42,11 +42,12 @@ final class HttpToolDriver implements ToolDriver
             $response = $this->send($request);
 
             if ($response->failed()) {
-                return ToolResult::failure(sprintf(
-                    'HTTP tool [%s] failed with status %d: %s',
+                return ToolResult::failure($this->formatHttpError(
                     $definition->name,
-                    $response->status(),
-                    $response->body(),
+                    $response,
+                    is_array($definition->configuration['error_mapping'] ?? null)
+                        ? $definition->configuration['error_mapping']
+                        : [],
                 ));
             }
 
@@ -87,25 +88,58 @@ final class HttpToolDriver implements ToolDriver
      *     query: array<string, mixed>,
      *     body: mixed,
      *     timeout: float|int,
-     *     retry: array{times: int, sleep: int}
+     *     retry: array{times: int, sleep: int, statuses: list<int>, unsafe_methods: bool}
      *  }  $request
      */
-    private function send(array $request): \Illuminate\Http\Client\Response
+    private function send(array $request): \\Illuminate\\Http\\Client\\Response
     {
         /** @var PendingRequest $pending */
         $pending = Http::withHeaders($request['headers'])
             ->timeout((float) $request['timeout'])
             ->acceptJson();
 
-        if ($request['retry']['times'] > 0) {
-            $pending = $pending->retry($request['retry']['times'], $request['retry']['sleep']);
-        }
-
         $method = strtolower($request['method']);
         $url = $request['url'];
         $query = $request['query'];
         $body = $request['body'];
+        $retry = $request['retry'];
+        $attempts = $retry['times'] + 1;
+        $retryableMethod = in_array($method, ['get', 'head', 'delete', 'put', 'options'], true)
+            || $retry['unsafe_methods'];
 
+        for ($attempt = 1; $attempt <= $attempts; $attempt++) {
+            try {
+                $response = $this->sendOnce($pending, $method, $url, $query, $body);
+
+                if (
+                    $attempt < $attempts
+                    && $retryableMethod
+                    && in_array($response->status(), $retry['statuses'], true)
+                ) {
+                    usleep($retry['sleep'] * 1000 * $attempt);
+                    continue;
+                }
+
+                return $response;
+            } catch (ConnectionException $exception) {
+                if ($attempt >= $attempts || ! $retryableMethod) {
+                    throw $exception;
+                }
+
+                usleep($retry['sleep'] * 1000 * $attempt);
+            }
+        }
+
+        throw new ConnectionException('HTTP request retry policy exhausted.');
+    }
+
+    private function sendOnce(
+        PendingRequest $pending,
+        string $method,
+        string $url,
+        array $query,
+        mixed $body,
+    ): \\Illuminate\\Http\\Client\\Response {
         if (in_array($method, ['get', 'head', 'delete'], true)) {
             return $pending->withQueryParameters($query)->{$method}($url);
         }
@@ -121,6 +155,21 @@ final class HttpToolDriver implements ToolDriver
         }
 
         return $pending->withQueryParameters($query)->{$method}($url);
+    }
+
+    private function formatHttpError(string $tool, \\Illuminate\\Http\\Client\\Response $response, array $mapping): string
+    {
+        $payload = $response->json() ?? $response->body();
+        $details = $mapping === [] ? $payload : (new ResponseMapper())->map($response, $mapping);
+
+        $encoded = is_string($details) ? $details : json_encode($details, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+        return sprintf(
+            'HTTP tool [%s] failed with status %d: %s',
+            $tool,
+            $response->status(),
+            $encoded ?: 'Unknown HTTP error.',
+        );
     }
 
     /**
