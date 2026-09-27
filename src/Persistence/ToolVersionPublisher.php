@@ -1,7 +1,8 @@
 <?php
 
-namespace Agentic\Tool;
+namespace Agentic\Persistence;
 
+use Agentic\Enums\Status;
 use Agentic\Models\Tool;
 use Agentic\Models\ToolVersion;
 use Illuminate\Support\Facades\DB;
@@ -19,7 +20,7 @@ final class ToolVersionPublisher
                 'published_at' => now(),
             ]);
 
-            $tool->forceFill(['status' => 'published'])->save();
+            $tool->forceFill(['status' => Status::Published])->save();
 
             return $version;
         });

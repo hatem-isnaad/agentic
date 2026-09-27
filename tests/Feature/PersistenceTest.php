@@ -2,12 +2,13 @@
 
 namespace Agentic\Tests\Feature;
 
+use Agentic\Enums\Status;
 use Agentic\Models\Agent;
 use Agentic\Models\Skill;
 use Agentic\Models\Tool;
 use Agentic\Models\ToolVersion;
+use Agentic\Persistence\ToolVersionPublisher;
 use Agentic\Tests\TestCase;
-use Agentic\Tool\ToolVersionPublisher;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 final class PersistenceTest extends TestCase
@@ -39,6 +40,6 @@ final class PersistenceTest extends TestCase
         $this->assertSame(1, $first->version);
         $this->assertSame(2, $second->version);
         $this->assertSame(2, $tool->fresh()->latestPublishedVersion->version);
-        $this->assertSame('published', $tool->fresh()->status->value);
+        $this->assertSame(Status::Published, $tool->fresh()->status);
     }
 }

@@ -1,10 +1,10 @@
 <?php
 
-namespace Agentic\Tool;
+namespace Agentic\Persistence;
 
+use Agentic\Exceptions\ToolNotFoundException;
 use Agentic\Models\Tool;
 use Agentic\Models\ToolVersion;
-use RuntimeException;
 
 final class ToolVersionResolver
 {
@@ -13,7 +13,7 @@ final class ToolVersionResolver
         $version = $tool->latestPublishedVersion()->first();
 
         if ($version === null) {
-            throw new RuntimeException("Tool [{$tool->slug}] has no published version.");
+            throw new ToolNotFoundException($tool->slug.'@published');
         }
 
         return $version;

@@ -2,9 +2,15 @@
 
 namespace Agentic\Tool\Registry;
 
+use Agentic\Exceptions\ToolNotFoundException;
 use Agentic\Tool\Contracts\ToolContract;
 use InvalidArgumentException;
 
+/**
+ * Unified in-memory Tool discovery and resolution.
+ *
+ * Sources (DB, code, MCP, packages) hydrate this registry for the Runtime.
+ */
 final class ToolRegistry
 {
     /** @var array<string, ToolContract> */
@@ -21,18 +27,33 @@ final class ToolRegistry
         $this->tools[$name] = $tool;
     }
 
-    public function has(string $name): bool
+    public function unregister(string $identifier): void
     {
-        return isset($this->tools[$name]);
+        unset($this->tools[$identifier]);
     }
 
-    public function get(string $name): ToolContract
+    public function has(string $identifier): bool
     {
-        if (! $this->has($name)) {
-            throw new InvalidArgumentException("Tool [{$name}] is not registered.");
+        return isset($this->tools[$identifier]);
+    }
+
+    public function resolve(string $identifier): ToolContract
+    {
+        return $this->get($identifier);
+    }
+
+    public function find(string $identifier): ?ToolContract
+    {
+        return $this->tools[$identifier] ?? null;
+    }
+
+    public function get(string $identifier): ToolContract
+    {
+        if (! $this->has($identifier)) {
+            throw new ToolNotFoundException($identifier);
         }
 
-        return $this->tools[$name];
+        return $this->tools[$identifier];
     }
 
     /** @return array<string, ToolContract> */

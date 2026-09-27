@@ -2,11 +2,11 @@
 
 namespace Agentic\Tests\Unit;
 
+use Agentic\Exceptions\ToolNotFoundException;
 use Agentic\Models\Tool;
+use Agentic\Persistence\ToolVersionResolver;
 use Agentic\Tests\TestCase;
-use Agentic\Tool\ToolVersionResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use RuntimeException;
 
 final class ToolVersionResolverTest extends TestCase
 {
@@ -21,7 +21,7 @@ final class ToolVersionResolverTest extends TestCase
             'driver' => 'http',
         ]);
 
-        $this->expectException(RuntimeException::class);
+        $this->expectException(ToolNotFoundException::class);
 
         app(ToolVersionResolver::class)->resolve($tool);
     }

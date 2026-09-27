@@ -19,4 +19,17 @@ final readonly class AgentExecutionResult
     {
         return new self(false, null, $error);
     }
+
+    public function text(): ?string
+    {
+        if (is_string($this->output)) {
+            return $this->output;
+        }
+
+        if (is_array($this->output) && isset($this->output['text']) && is_string($this->output['text'])) {
+            return $this->output['text'];
+        }
+
+        return null;
+    }
 }
