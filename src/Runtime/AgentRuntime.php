@@ -12,6 +12,8 @@ use Agentic\Execution\AgentExecutionResult;
 use Agentic\Execution\ExecutionManager;
 use Agentic\Execution\ExecutionStatus;
 use Agentic\Integrations\LaravelAi\LaravelAiSdkAdapter;
+use Agentic\Skill\Routing\SkillRouter;
+use Agentic\Skill\Routing\SkillRoutingContext;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\Registry\ToolRegistry;
 use Throwable;
@@ -32,6 +34,7 @@ final class AgentRuntime
         private ToolRegistry $tools,
         private LaravelAiSdkAdapter $ai,
         private ExecutionManager $executions,
+        private SkillRouter $skillRouter,
     ) {}
 
     public function run(AgentDefinition $agent, AgentExecutionContext $context): AgentExecutionResult
@@ -78,15 +81,22 @@ final class AgentRuntime
                 'conversation_id' => $conversation?->id,
             ]);
 
-            $built = $this->contextBuilder->build(
-                $agent,
-                $context->message,
-                $context->runtime(),
-            );
+            [$built, $skillRouting] = $this->buildContextWithSkillRouting($agent, $context);
+
+            if ($skillRouting !== null) {
+                $this->executions->addStep($execution, 'skill_routing', [
+                    'strategy' => $skillRouting->strategy,
+                    'confidence' => $skillRouting->confidence,
+                    'skills' => $skillRouting->skills,
+                    'metadata' => $skillRouting->metadata,
+                ]);
+            }
+
             $selectedTools = $this->resolveTools($built['tools']);
 
             $this->executions->addStep($execution, 'llm_request', [
                 'message' => $context->message,
+                'skills' => array_column($built['skills'], 'name'),
                 'tools' => array_map(fn (ToolContract $tool) => $tool->definition()->name, $selectedTools),
             ]);
 
@@ -106,6 +116,11 @@ final class AgentRuntime
                 'sdk_conversation_id' => $response->conversationId,
                 'usage' => $response->usage,
                 'execution_id' => $execution->id,
+                'skill_routing' => $skillRouting !== null ? [
+                    'strategy' => $skillRouting->strategy,
+                    'skills' => $skillRouting->skills,
+                    'confidence' => $skillRouting->confidence,
+                ] : null,
             ];
 
             $this->executions->addStep($execution, 'final_response', output: [
@@ -134,6 +149,39 @@ final class AgentRuntime
 
             return AgentExecutionResult::failure($message);
         }
+    }
+
+    /**
+     * @return array{0: array, 1: \Agentic\Skill\Routing\SkillRoutingResult|null}
+     */
+    private function buildContextWithSkillRouting(AgentDefinition $agent, AgentExecutionContext $context): array
+    {
+        $skillNames = null;
+        $routingResult = null;
+
+        if (config('agentic.skill_routing.enabled', true) && $agent->skills !== []) {
+            $routingResult = $this->skillRouter->route(new SkillRoutingContext(
+                agent: $agent,
+                message: (string) $context->message,
+                candidateSkills: $agent->skills,
+                runtime: $context->runtime(),
+                skillHint: is_string($context->metadata['skill'] ?? null)
+                    ? $context->metadata['skill']
+                    : null,
+                attributes: $context->metadata,
+            ));
+
+            $skillNames = $routingResult->skills;
+        }
+
+        $built = $this->contextBuilder->build(
+            $agent,
+            $context->message,
+            $context->runtime(),
+            $skillNames,
+        );
+
+        return [$built, $routingResult];
     }
 
     /**
