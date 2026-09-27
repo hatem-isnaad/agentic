@@ -117,14 +117,21 @@ final class ToolExecutor
                 : \Agentic\Execution\ExecutionStatus::Completed,
             metadata: ['tool' => $tool->definition()->name],
             toolId: $tool->definition()->id,
-            toolVersionId: $this->resolveToolVersionId($tool),
+            toolVersionId: $this->resolveToolVersionId($tool, $context),
             permissionAllowed: $permissionAllowed,
             durationMs: $durationMs,
         );
     }
 
-    private function resolveToolVersionId(ToolContract $tool): ?int
+    private function resolveToolVersionId(ToolContract $tool, ToolExecutionContext $context): ?int
     {
+        $name = $tool->definition()->name;
+        $pinned = $context->runtime()->get('tool_version_ids', []);
+
+        if (is_array($pinned) && isset($pinned[$name])) {
+            return is_int($pinned[$name]) ? $pinned[$name] : (int) $pinned[$name];
+        }
+
         $definition = $tool->definition();
 
         if ($definition->id === null || $definition->version === null) {
@@ -134,6 +141,7 @@ final class ToolExecutor
         return DB::table('agentic_tool_versions')
             ->where('tool_id', $definition->id)
             ->where('version', $definition->version)
+            ->whereNotNull('published_at')
             ->value('id');
     }
 
