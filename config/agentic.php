@@ -77,6 +77,9 @@ return [
     */
     'knowledge' => [
         'driver' => env('AGENTIC_KNOWLEDGE_DRIVER', 'eloquent'),
+        'embedding' => env('AGENTIC_KNOWLEDGE_EMBEDDING', 'null'),
+        'embedding_provider' => env('AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER'),
+        'embedding_model' => env('AGENTIC_KNOWLEDGE_EMBEDDING_MODEL'),
     ],
 
     /*
