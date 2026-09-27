@@ -214,12 +214,16 @@ return [
     'knowledge' => [
         'driver' => env('AGENTIC_KNOWLEDGE_DRIVER', 'eloquent'),
         'embedding' => env('AGENTIC_KNOWLEDGE_EMBEDDING', 'null'),
-        'embedding_provider' => env('AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER'),
-        'embedding_model' => env('AGENTIC_KNOWLEDGE_EMBEDDING_MODEL'),
+        'embedding_provider' => env('AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER', env('AGENTIC_AI_PROVIDER', 'openai')),
+        'embedding_model' => env('AGENTIC_KNOWLEDGE_EMBEDDING_MODEL', 'text-embedding-3-small'),
         'vector_store' => env('AGENTIC_VECTOR_STORE', 'array'),
+        'pgvector' => [
+            'dimensions' => (int) env('AGENTIC_PGVECTOR_DIMENSIONS', 1536),
+        ],
         'pinecone' => [
             'host' => env('PINECONE_HOST'),
             'api_key' => env('PINECONE_API_KEY'),
+            'dimensions' => (int) env('AGENTIC_PINECONE_DIMENSIONS', env('AGENTIC_PGVECTOR_DIMENSIONS', 1536)),
         ],
         'chunk_size' => (int) env('AGENTIC_KNOWLEDGE_CHUNK_SIZE', 800),
         'chunk_overlap' => (int) env('AGENTIC_KNOWLEDGE_CHUNK_OVERLAP', 120),

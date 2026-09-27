@@ -18,7 +18,7 @@ Agentic is a **Laravel package**, not a standalone SaaS product.
 | React (or other) **Admin SPA** | Host app |
 | React (or other) **Widget SPA** | Host app |
 | `laravel/sanctum`, passkeys, Pusher, etc. | Host `composer.json` |
-| Production embeddings + vector DB credentials | Host `.env` |
+| Production embeddings + vector DB credentials | Host `.env` + `php artisan agentic:rag-validate` |
 | Custom `PermissionChecker` or tuned `RuleBasedPermissionChecker` | Host policy |
 | End-to-end auth integration tests | Host test suite (package includes Sanctum smoke tests for auth + protected runtime/admin APIs) |
 | Queues workers when `AGENTIC_KNOWLEDGE_QUEUE_REINDEX=true` | Host `queue:work` |

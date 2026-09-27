@@ -4,6 +4,7 @@ namespace Agentic\Knowledge\Stores;
 
 use Agentic\Knowledge\Contracts\VectorStore;
 use Agentic\Knowledge\KnowledgeChunk;
+use Agentic\Knowledge\Support\EmbeddingVectorValidator;
 use Illuminate\Support\Facades\Http;
 use RuntimeException;
 
@@ -14,6 +15,9 @@ final class PineconeVectorStore implements VectorStore
 {
     public function upsert(string $id, array $vector, KnowledgeChunk $chunk, array $metadata = []): void
     {
+        $dimensions = (int) config('agentic.knowledge.pinecone.dimensions', 1536);
+        EmbeddingVectorValidator::assertUsable($vector, $dimensions);
+
         $namespace = is_string($metadata['namespace'] ?? null) ? $metadata['namespace'] : '';
 
         $response = Http::withHeaders($this->headers())

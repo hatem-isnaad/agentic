@@ -8,6 +8,7 @@ use Agentic\Knowledge\Contracts\VectorStore;
 use Agentic\Knowledge\Documents\DocumentCollector;
 use Agentic\Knowledge\KnowledgeChunk;
 use Agentic\Knowledge\KnowledgeSourceDefinition;
+use Agentic\Knowledge\Support\EmbeddingVectorValidator;
 
 /**
  * Chunks documents, embeds them, and upserts into the configured vector store.
@@ -37,9 +38,20 @@ final class VectorKnowledgeIndexer implements Indexer
             ? $source->configuration['tenant']
             : null;
 
-        foreach ($this->documents->collect($source) as $index => $content) {
+        $contents = array_values($this->documents->collect($source));
+
+        if ($contents === []) {
+            return;
+        }
+
+        $vectors = $this->embeddings->embedMany($contents);
+        $expectedDimensions = $this->expectedDimensions();
+
+        foreach ($contents as $index => $content) {
+            $vector = $vectors[$index] ?? [];
+            $this->assertEmbeddingVector($vector, $expectedDimensions);
+
             $id = $source->slug.':chunk:'.$index;
-            $vector = $this->embeddings->embed($content);
 
             $this->store->upsert(
                 $id,
@@ -55,5 +67,26 @@ final class VectorKnowledgeIndexer implements Indexer
                 ],
             );
         }
+    }
+
+    private function expectedDimensions(): ?int
+    {
+        return match (config('agentic.knowledge.vector_store')) {
+            'postgres' => (int) config('agentic.knowledge.pgvector.dimensions', 1536),
+            'pinecone' => (int) config('agentic.knowledge.pinecone.dimensions', 1536),
+            default => null,
+        };
+    }
+
+    /**
+     * @param  list<float|int>  $vector
+     */
+    private function assertEmbeddingVector(array $vector, ?int $expectedDimensions): void
+    {
+        if (config('agentic.knowledge.embedding', 'null') === 'null') {
+            return;
+        }
+
+        EmbeddingVectorValidator::assertUsable($vector, $expectedDimensions);
     }
 }

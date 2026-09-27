@@ -62,7 +62,19 @@ AGENTIC_KNOWLEDGE_EMBEDDING=laravel_ai
 AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER=openai
 AGENTIC_KNOWLEDGE_EMBEDDING_MODEL=text-embedding-3-small
 AGENTIC_VECTOR_STORE=pgvector
-# or AGENTIC_VECTOR_STORE=pinecone + PINECONE_HOST / PINECONE_API_KEY
+# Native Postgres extension (recommended at scale on RDS/self-hosted Postgres):
+# AGENTIC_VECTOR_STORE=postgres
+# AGENTIC_PGVECTOR_DIMENSIONS=1536
+# Hosted index:
+# AGENTIC_VECTOR_STORE=pinecone
+# PINECONE_HOST / PINECONE_API_KEY / AGENTIC_PINECONE_DIMENSIONS=1536
+```
+
+Verify retrieval after migrate + env:
+
+```bash
+php artisan agentic:rag-validate              # real embeddings (needs AI API key)
+php artisan agentic:rag-validate --offline    # smoke test without API calls
 ```
 
 Run ingest + reindex via admin/runtime API or Filament. For large corpora:

@@ -19,7 +19,7 @@
 | Agent runtime + Laravel AI SDK | ✅ | Deferred tools, approvals, execution trace |
 | Skills + routing (keyword + AI) | ✅ | Configurable |
 | Tools HTTP / Code / MCP | ✅ | Connections, OAuth2, SSRF limits |
-| Knowledge array + vector | ✅ | Chunking, ingest parsers, reindex |
+| Knowledge array + vector | ✅ | Laravel AI embeddings, pgvector JSON / native Postgres / Pinecone, `agentic:rag-validate`, ingest + search tests |
 | Memory (scoped) | ✅ | API + context injection |
 | Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete; persisted runs (`workflow_run_id`); `GET .../workflow-runs` + `GET .../workflow-runs/{uuid}`; admin API parity; `POST .../resume` continues from saved step pointer |
 | Admin API | ✅ | Agents, skills, tools, knowledge, workflows (CRUD + execute/resume), workflow runs, executions, widget settings |

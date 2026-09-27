@@ -25,7 +25,11 @@ use Agentic\Knowledge\Indexers\VectorKnowledgeIndexer;
 use Agentic\Knowledge\Documents\DocumentUrlFetcher;
 use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
+use Agentic\Console\RagValidateCommand;
 use Agentic\Console\SyncMcpToolsCommand;
+use Agentic\Knowledge\Providers\DeterministicEmbeddingProvider;
+use Agentic\Knowledge\RagValidator;
+use Agentic\Knowledge\Stores\PostgresPgvectorStore;
 use Agentic\Mcp\McpAgentKnowledgeEnricher;
 use Agentic\Mcp\McpServerService;
 use Agentic\Mcp\McpToolSyncService;
@@ -207,20 +211,34 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(EmbeddingProvider::class, function ($app) {
             $driver = config('agentic.knowledge.embedding', 'null');
 
-            return $driver === 'laravel_ai'
-                ? $app->make(LaravelAiEmbeddingProvider::class)
-                : $app->make(NullEmbeddingProvider::class);
+            if ($driver === 'laravel_ai') {
+                return $app->make(LaravelAiEmbeddingProvider::class);
+            }
+
+            if ($driver === 'deterministic') {
+                $store = (string) config('agentic.knowledge.vector_store', 'array');
+                $dimensions = in_array($store, ['postgres', 'pinecone'], true)
+                    ? (int) config('agentic.knowledge.pgvector.dimensions', 1536)
+                    : 32;
+
+                return new DeterministicEmbeddingProvider($dimensions);
+            }
+
+            return $app->make(NullEmbeddingProvider::class);
         });
         $this->app->singleton(ArrayVectorStore::class);
         $this->app->singleton(PgVectorStore::class);
+        $this->app->singleton(PostgresPgvectorStore::class);
         $this->app->singleton(PineconeVectorStore::class);
         $this->app->singleton(VectorStore::class, function ($app) {
             return match (config('agentic.knowledge.vector_store', 'array')) {
                 'pgvector' => $app->make(PgVectorStore::class),
+                'postgres' => $app->make(PostgresPgvectorStore::class),
                 'pinecone' => $app->make(PineconeVectorStore::class),
                 default => $app->make(ArrayVectorStore::class),
             };
         });
+        $this->app->singleton(RagValidator::class);
 
         $this->app->singleton(KnowledgeOrchestrator::class, function ($app) {
             $orchestrator = new KnowledgeOrchestrator(
@@ -330,6 +348,7 @@ final class AgenticServiceProvider extends ServiceProvider
         if ($this->app->runningInConsole()) {
             $this->commands([
                 SyncMcpToolsCommand::class,
+                RagValidateCommand::class,
             ]);
         }
 

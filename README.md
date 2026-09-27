@@ -433,10 +433,26 @@ app(ContextManager::class)->extend(new ArrayContextProvider([
 ```env
 AGENTIC_KNOWLEDGE_DRIVER=eloquent
 AGENTIC_KNOWLEDGE_EMBEDDING=laravel_ai
+AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER=openai
 AGENTIC_KNOWLEDGE_EMBEDDING_MODEL=text-embedding-3-small
-AGENTIC_VECTOR_STORE=array          # array | pgvector | pinecone
+AGENTIC_VECTOR_STORE=pgvector       # array | pgvector | postgres | pinecone
+AGENTIC_PGVECTOR_DIMENSIONS=1536    # required for postgres + pinecone index size
 PINECONE_HOST=https://index.svc.pinecone.io
 PINECONE_API_KEY=...
+```
+
+| Store | When to use |
+|-------|-------------|
+| `array` | Tests / tiny corpora (in-memory) |
+| `pgvector` | Portable DB storage + PHP cosine ranking (`agentic_vector_entries.vector` JSON) |
+| `postgres` | **Native** `pgvector` column + SQL distance (Postgres only, run package migrations) |
+| `pinecone` | Hosted index (dimensions must match `AGENTIC_PINECONE_DIMENSIONS`) |
+
+Validate end-to-end retrieval after configuring embeddings:
+
+```bash
+php artisan agentic:rag-validate --offline   # no API key (deterministic embeddings)
+php artisan agentic:rag-validate             # uses AGENTIC_KNOWLEDGE_EMBEDDING=laravel_ai + your AI keys
 ```
 
 **Admin API — index and search** (after creating a knowledge source):
@@ -453,7 +469,7 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" \
   https://your-app.test/api/agentic/admin/knowledge-sources/product-docs/search | jq .
 ```
 
-`pgvector` stores vectors in `agentic_vector_entries`; `pinecone` uses the hosted index API.
+`pgvector` stores JSON vectors in `agentic_vector_entries`; `postgres` uses the `embedding vector(n)` column; `pinecone` uses the hosted index API.
 
 **Ingest with parsers** (`text`, `markdown`, `html`, `json`) — parses content, updates the source, then re-indexes:
 
