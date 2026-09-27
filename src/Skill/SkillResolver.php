@@ -5,22 +5,24 @@ namespace Agentic\Skill;
 use Agentic\Contracts\Repositories\SkillRepository;
 use Agentic\Exceptions\SkillNotFoundException;
 use Agentic\Tool\Registry\ToolRegistry;
+use Agentic\Tool\ToolFactory;
 
-/**
- * Resolves Skills and composes their tools for Agent activation.
- */
 final class SkillResolver
 {
     public function __construct(
         private SkillRegistry $registry,
         private ToolRegistry $tools,
         private ?SkillRepository $repository = null,
+        private ?ToolFactory $toolFactory = null,
     ) {}
 
     public function resolve(string $name): SkillDefinition
     {
         if ($this->registry->has($name)) {
-            return $this->registry->get($name);
+            $skill = $this->registry->get($name);
+            $this->hydrateTools($skill);
+
+            return $skill;
         }
 
         if ($this->repository !== null) {
@@ -28,6 +30,7 @@ final class SkillResolver
 
             if ($skill !== null) {
                 $this->registry->register($skill);
+                $this->hydrateTools($skill);
 
                 return $skill;
             }
@@ -60,8 +63,6 @@ final class SkillResolver
     }
 
     /**
-     * Compose the unique active tool names contributed by the given skills.
-     *
      * @param  list<string>  $skillNames
      * @return list<string>
      */
@@ -71,7 +72,7 @@ final class SkillResolver
 
         foreach ($this->resolveMany($skillNames) as $skill) {
             foreach ($skill->tools as $tool) {
-                if ($this->tools->has($tool)) {
+                if ($this->toolFactory?->ensureRegistered($tool) ?? $this->tools->has($tool)) {
                     $tools[] = $tool;
                 }
             }
@@ -80,14 +81,13 @@ final class SkillResolver
         return array_values(array_unique($tools));
     }
 
-    /**
-     * Activate a skill into the registry (idempotent).
-     */
     public function activate(SkillDefinition $skill): void
     {
         if (! $this->registry->has($skill->name)) {
             $this->registry->register($skill);
         }
+
+        $this->hydrateTools($skill);
     }
 
     public function isActive(SkillDefinition $skill): bool
@@ -99,5 +99,16 @@ final class SkillResolver
         }
 
         return ($skill->metadata['active'] ?? true) !== false;
+    }
+
+    private function hydrateTools(SkillDefinition $skill): void
+    {
+        if ($this->toolFactory === null) {
+            return;
+        }
+
+        foreach ($skill->tools as $tool) {
+            $this->toolFactory->ensureRegistered($tool);
+        }
     }
 }
