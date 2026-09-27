@@ -135,6 +135,54 @@ return [
     */
     'routing' => [
         'fallback_agent' => env('AGENTIC_FALLBACK_AGENT'),
+        'slug_hint' => env('AGENTIC_ROUTING_SLUG_HINT', true),
+        'keyword_map' => [
+            // 'support' => ['refund', 'help'],
+            // 'sales' => ['pricing', 'quote'],
+        ],
+        'llm' => [
+            'enabled' => env('AGENTIC_AGENT_ROUTING_LLM', false),
+            'provider' => env('AGENTIC_AGENT_ROUTING_LLM_PROVIDER'),
+            'model' => env('AGENTIC_AGENT_ROUTING_LLM_MODEL'),
+            'use_agent_repository' => env('AGENTIC_AGENT_ROUTING_LLM_USE_REPOSITORY', true),
+            'catalog' => [
+                // ['slug' => 'support', 'label' => 'Support', 'description' => 'Orders & refunds'],
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Skill routing (runtime — limits tools sent to the LLM)
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, SkillRouter selects a subset of the agent's skills before
+    | ContextBuilder composes tools/instructions. Deterministic strategies run
+    | first; optional LLM strategy is registered last when llm.enabled=true.
+    |
+    | fallback: all | core | first | none
+    |
+    */
+    'skill_routing' => [
+        'enabled' => env('AGENTIC_SKILL_ROUTING_ENABLED', true),
+        'fallback' => env('AGENTIC_SKILL_ROUTING_FALLBACK', 'all'),
+        'always_on' => array_filter(explode(',', (string) env('AGENTIC_SKILL_ROUTING_ALWAYS_ON', ''))),
+        'use_skill_metadata' => env('AGENTIC_SKILL_ROUTING_USE_SKILL_METADATA', true),
+        'keyword_map' => [
+            // 'orders' => ['order', 'refund', 'shipping'],
+            // 'billing' => ['invoice', 'payment'],
+        ],
+        'lexical' => [
+            'enabled' => env('AGENTIC_SKILL_ROUTING_LEXICAL', true),
+            'min_score' => (float) env('AGENTIC_SKILL_ROUTING_LEXICAL_MIN_SCORE', 0.12),
+            'max_skills' => (int) env('AGENTIC_SKILL_ROUTING_LEXICAL_MAX_SKILLS', 3),
+        ],
+        'llm' => [
+            'enabled' => env('AGENTIC_SKILL_ROUTING_LLM', false),
+            'provider' => env('AGENTIC_SKILL_ROUTING_LLM_PROVIDER'),
+            'model' => env('AGENTIC_SKILL_ROUTING_LLM_MODEL'),
+            'min_confidence' => (float) env('AGENTIC_SKILL_ROUTING_LLM_MIN_CONFIDENCE', 0.25),
+        ],
     ],
 
     /*
