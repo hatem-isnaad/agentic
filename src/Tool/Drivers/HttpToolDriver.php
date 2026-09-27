@@ -93,8 +93,11 @@ final class HttpToolDriver implements ToolDriver
      */
     private function send(array $request): \Illuminate\Http\Client\Response
     {
+        $allowRedirects = (bool) config('agentic.http.allow_redirects', false);
+
         /** @var PendingRequest $pending */
         $pending = Http::withHeaders($request['headers'])
+            ->withOptions(['allow_redirects' => $allowRedirects])
             ->timeout((float) $request['timeout'])
             ->acceptJson();
 
@@ -110,6 +113,7 @@ final class HttpToolDriver implements ToolDriver
         for ($attempt = 1; $attempt <= $attempts; $attempt++) {
             try {
                 $response = $this->sendOnce($pending, $method, $url, $query, $body);
+                $this->guardResponseSize($response);
 
                 if (
                     $attempt < $attempts
@@ -131,6 +135,21 @@ final class HttpToolDriver implements ToolDriver
         }
 
         throw new ConnectionException('HTTP request retry policy exhausted.');
+    }
+
+    private function guardResponseSize(\Illuminate\Http\Client\Response $response): void
+    {
+        $maxBytes = max(0, (int) config('agentic.http.max_response_bytes', 0));
+
+        if ($maxBytes === 0) {
+            return;
+        }
+
+        $body = $response->body();
+
+        if (strlen($body) > $maxBytes) {
+            throw new ConnectionException('HTTP response exceeded the configured size limit.');
+        }
     }
 
     private function sendOnce(

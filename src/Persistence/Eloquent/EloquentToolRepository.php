@@ -37,6 +37,15 @@ final class EloquentToolRepository implements ToolRepository
             ->all();
     }
 
+    public function all(): array
+    {
+        return Tool::query()
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Tool $tool) => $this->toDefinition($tool))
+            ->all();
+    }
+
     public function save(array $attributes): ToolDefinition
     {
         $driver = $attributes['driver'];
@@ -73,6 +82,8 @@ final class EloquentToolRepository implements ToolRepository
         $version = $tool->latestPublishedVersion()->first();
         $definition = $version?->definition ?? [];
 
+        $connection = $definition['connection'] ?? null;
+
         return new ToolDefinition(
             name: $tool->slug,
             description: (string) ($tool->description ?? $tool->name),
@@ -84,8 +95,8 @@ final class EloquentToolRepository implements ToolRepository
             status: $tool->status instanceof Status ? $tool->status->value : (string) $tool->status,
             runtime: $definition['runtime'] ?? [],
             version: $version?->version,
-            connection: is_string($definition['connection'] ?? null) ? $definition['connection'] : null,
-            id: $tool->getKey(),
+            connection: is_string($connection) && $connection !== '' ? $connection : null,
+            id: $tool->id,
             approval: is_string($definition['approval'] ?? null) ? $definition['approval'] : null,
         );
     }

@@ -143,6 +143,10 @@ return [
 
     'http' => [
         'allow_private_hosts' => env('AGENTIC_HTTP_ALLOW_PRIVATE_HOSTS', false),
+        'allow_unresolved_hosts' => env('AGENTIC_HTTP_ALLOW_UNRESOLVED_HOSTS', false),
+        'allow_redirects' => env('AGENTIC_HTTP_ALLOW_REDIRECTS', false),
+        'max_response_bytes' => (int) env('AGENTIC_HTTP_MAX_RESPONSE_BYTES', 5 * 1024 * 1024),
+        'max_request_body_bytes' => (int) env('AGENTIC_HTTP_MAX_REQUEST_BODY_BYTES', 1024 * 1024),
     ],
 
     /*

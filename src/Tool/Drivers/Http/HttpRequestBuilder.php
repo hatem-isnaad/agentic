@@ -99,6 +99,20 @@ final class HttpRequestBuilder
 
         $retry = is_array($config['retry'] ?? null) ? $config['retry'] : [];
 
+        $maxRequestBodyBytes = max(0, (int) config('agentic.http.max_request_body_bytes', 0));
+
+        if ($maxRequestBodyBytes > 0) {
+            $encodedBody = is_string($body)
+                ? $body
+                : json_encode($body, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+
+            if (is_string($encodedBody) && strlen($encodedBody) > $maxRequestBodyBytes) {
+                throw new InvalidArgumentException(
+                    "HTTP tool [{$definition->name}] request body exceeds the configured size limit."
+                );
+            }
+        }
+
         return [
             'method' => $method,
             'url' => $url,

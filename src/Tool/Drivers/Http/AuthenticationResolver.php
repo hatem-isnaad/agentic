@@ -4,6 +4,7 @@ namespace Agentic\Tool\Drivers\Http;
 
 use Agentic\Contracts\Connections\ConnectionResolver;
 use Agentic\Connections\OAuth2TokenManager;
+use Agentic\Models\Connection;
 use InvalidArgumentException;
 
 final class AuthenticationResolver
@@ -30,6 +31,17 @@ final class AuthenticationResolver
 
             if (! is_array($credentials)) {
                 throw new InvalidArgumentException("HTTP connection [{$connection}] has no credentials.");
+            }
+
+            if ($this->usesOAuth2($model)) {
+                if ($this->oauth2 === null) {
+                    throw new InvalidArgumentException('OAuth2 token manager is not configured.');
+                }
+
+                return [
+                    'headers' => ['Authorization' => 'Bearer '.$this->oauth2->accessToken($model)],
+                    'query' => [],
+                ];
             }
 
             $auth = array_merge($model->config ?? [], $credentials);
@@ -70,5 +82,16 @@ final class AuthenticationResolver
         }
 
         return $value;
+    }
+
+    private function usesOAuth2(Connection $connection): bool
+    {
+        if (strtolower((string) $connection->type) === 'oauth2') {
+            return true;
+        }
+
+        $config = is_array($connection->config) ? $connection->config : [];
+
+        return strtolower((string) ($config['type'] ?? '')) === 'oauth2';
     }
 }

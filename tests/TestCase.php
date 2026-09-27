@@ -21,5 +21,6 @@ abstract class TestCase extends Orchestra
         $app['config']->set('app.key', 'base64:'.base64_encode(random_bytes(32)));
         $app['config']->set('agentic.execution.driver', 'memory');
         $app['config']->set('agentic.conversation.driver', 'memory');
+        $app['config']->set('agentic.http.allow_unresolved_hosts', true);
     }
 }
