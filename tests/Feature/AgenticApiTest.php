@@ -48,6 +48,20 @@ final class AgenticApiTest extends TestCase
             {
                 return [];
             }
+
+            public function save(array $attributes): AgentDefinition
+            {
+                unset($attributes);
+
+                throw new \BadMethodCallException();
+            }
+
+            public function delete(string $slug): bool
+            {
+                unset($slug);
+
+                return false;
+            }
         });
 
         $response = $this->postJson('/api/agentic/agents/support/execute', [
