@@ -73,6 +73,61 @@ use Agentic\Agent\AgentResolver;
 $definition = app(AgentResolver::class)->resolve('support');
 ```
 
+## HTTP tools
+
+```php
+use Agentic\Tool\ToolFactory;
+use Agentic\Tool\ToolDefinition;
+use Agentic\Tool\ToolExecutionContext;
+
+app(ToolFactory::class)->register(new ToolDefinition(
+    name: 'orders.get',
+    description: 'Fetch an order by id',
+    inputSchema: ['id' => ['type' => 'integer', 'required' => true]],
+    driver: 'http',
+    configuration: [
+        'method' => 'GET',
+        'url' => 'https://api.example.com/orders/{id}',
+        'auth' => ['type' => 'bearer', 'token' => 'env:ORDERS_API_TOKEN'],
+        'timeout' => 10,
+        'retry' => ['times' => 2, 'sleep' => 100],
+        'response_mapping' => [
+            'order_id' => 'body.id',
+            'status' => 'body.status',
+        ],
+    ],
+));
+
+$result = app(\Agentic\Tool\Registry\ToolRegistry::class)
+    ->resolve('orders.get')
+    ->execute(new ToolExecutionContext(arguments: ['id' => 42]));
+```
+
+## Code tools
+
+Register trusted handlers in a service provider — never pass raw PHP from the UI.
+
+```php
+use Agentic\Tool\Handlers\HandlerRegistry;
+use Agentic\Tool\Contracts\CodeToolHandler;
+use Agentic\Tool\ToolExecutionContext;
+use Agentic\Tool\ToolResult;
+
+app(HandlerRegistry::class)->register('orders.search', new class implements CodeToolHandler {
+    public function handle(ToolExecutionContext $context): ToolResult
+    {
+        return ToolResult::success(['hits' => []]);
+    }
+});
+
+app(ToolFactory::class)->register(new ToolDefinition(
+    name: 'orders.search',
+    description: 'Search orders',
+    driver: 'code',
+    configuration: ['handler' => 'orders.search'],
+));
+```
+
 ## Extending tool drivers
 
 ```php

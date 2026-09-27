@@ -6,13 +6,12 @@ use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\Contracts\ToolDriver;
 use Agentic\Tool\ToolExecutionContext;
 use Agentic\Tool\ToolResult;
-use RuntimeException;
 
 /**
  * MCP tool driver boundary.
  *
  * MCP protocol execution is delegated to Laravel AI SDK / laravel/mcp.
- * This driver establishes the Agentic integration surface for the Tool Registry.
+ * This driver keeps MCP tools addressable through the unified Tool Registry.
  */
 final class McpToolDriver implements ToolDriver
 {
@@ -23,8 +22,14 @@ final class McpToolDriver implements ToolDriver
 
     public function execute(ToolContract $tool, ToolExecutionContext $context): ToolResult
     {
-        throw new RuntimeException(
-            'MCP tool execution is not implemented yet. Register an MCP-backed ToolContract or wait for the MCP driver PR.'
-        );
+        $server = $tool->definition()->configuration['server'] ?? null;
+        $mcpTool = $tool->definition()->configuration['tool'] ?? $tool->definition()->name;
+
+        return ToolResult::failure(sprintf(
+            'MCP tool [%s] is not executable yet (server=%s, tool=%s). Wire laravel/mcp in the MCP driver PR.',
+            $tool->definition()->name,
+            is_string($server) ? $server : 'null',
+            is_string($mcpTool) ? $mcpTool : 'null',
+        ));
     }
 }
