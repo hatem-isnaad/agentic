@@ -54,7 +54,9 @@ php artisan vendor:publish --tag=agentic-config
 php artisan migrate
 ```
 
-Copy variables from [`.env.example`](.env.example) into your application `.env`. The package ships **no production UI** (Filament removed); you consume JSON APIs from your own React apps.
+Copy variables from [`.env.example`](.env.example) into your application `.env`. The package ships **no production React UI** — build Admin and Widget SPAs against the JSON APIs (see [Frontend documentation](#frontend-documentation)). Optional **Filament** CRUD is available via `Agentic\Filament\AgenticPlugin` when `filament/filament` is installed.
+
+Before production, follow **[docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md)**.
 
 ---
 
@@ -475,21 +477,17 @@ See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the full 
 
 ## Permissions & tool approval
 
-Default permission mode is **deny** — tools must be explicitly allowed.
+Default permission mode is **deny** — tools must be explicitly allowed via agent/skill allow-lists, Laravel `Gate`, or a custom `PermissionChecker`.
 
-```php
-// config/agentic.php
-'permissions' => [
-    'default' => env('AGENTIC_PERMISSION_DEFAULT', 'deny'),
-    'gates' => [
-        'tool:orders.read' => 'auth',
-        'tool:orders.write' => 'auth',
-    ],
-    'rules' => [
-        ['pattern' => 'tool:public.*', 'effect' => 'allow'],
-    ],
-],
+**Pattern-based checker** (typical for production):
+
+```env
+AGENTIC_PERMISSION_CHECKER=Agentic\Permission\RuleBasedPermissionChecker
+AGENTIC_PERMISSION_ALLOW_PATTERNS=orders.*,crm.*
+AGENTIC_PERMISSION_DENY_PATTERNS=*.delete,secrets.*
 ```
+
+Or bind your own `Agentic\Permission\PermissionChecker` in the host app service provider.
 
 **Human-in-the-loop** for destructive tools (widget + runtime):
 
@@ -655,6 +653,8 @@ The package does not ship production React UI. Implement two apps against the JS
 | [docs/FRONTEND_IMPLEMENTATION_GUIDE.md](docs/FRONTEND_IMPLEMENTATION_GUIDE.md) | **Source of truth** — every route, header, event, block type |
 | [docs/COPY_PROMPT_FOR_AI.md](docs/COPY_PROMPT_FOR_AI.md) | Paste into Cursor/Claude to scaffold Admin + Widget |
 | [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) | Sequence diagrams (approval, realtime, auth) |
+| [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) | Host app setup, auth, RAG, MCP, launch verification |
+| [docs/SECURITY.md](docs/SECURITY.md) | Secure defaults and SSRF notes |
 | [.env.example](.env.example) | Backend environment reference |
 
 ---
@@ -666,7 +666,7 @@ composer install
 ./vendor/bin/phpunit
 ```
 
-Package tests use Orchestra Testbench with in-memory drivers by default. Auth tests cover Sanctum session routes, passkey login options, and optional admin API protection.
+Package tests use Orchestra Testbench with in-memory drivers by default. Install `laravel/sanctum` and `laravel/passkeys` in your host app and add integration tests for auth routes and protected admin/runtime APIs.
 
 ---
 

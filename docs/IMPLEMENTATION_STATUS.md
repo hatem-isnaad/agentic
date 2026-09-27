@@ -27,7 +27,8 @@
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |
 | MCP discovery | ✅ | Tool sync + resources/prompts catalog API |
 | API rate limiting | ✅ | `throttle:agentic-api` on runtime routes |
-| Filament UI | ✅ | `AgenticPlugin` + tools/skills/knowledge resources (`AGENTIC_FILAMENT_PANELS`) |
+| Filament UI (optional) | 🟡 | `AgenticPlugin`: agents, skills, tools, knowledge, workflows — basic CRUD, no relation managers |
+| Rule-based tool permissions | ✅ | `RuleBasedPermissionChecker` + allow/deny fnmatch patterns |
 | Multi-tenant contract | ✅ | `TenantResolver`, request/conversation context providers |
 
 ## Knowledge ingest
@@ -47,4 +48,4 @@
 3. Tools register in `ToolRegistry` with optional `AGENTIC_MCP_TOOL_PREFIX`.
 4. Catalog (no sync): `GET .../tools`, `GET .../resources`, `POST .../resources/read`, `GET .../prompts`, `POST .../prompts/{name}`.
 
-See [SECURITY.md](./SECURITY.md) for production hardening defaults.
+See [SECURITY.md](./SECURITY.md) for production hardening defaults and [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md) for host-app launch steps.

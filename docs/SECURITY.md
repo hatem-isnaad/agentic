@@ -10,6 +10,7 @@
 | Response size cap | 5 MB | `AGENTIC_HTTP_MAX_RESPONSE_BYTES` |
 | Runtime API rate limit | 120/min per user/IP | `AGENTIC_API_RATE_LIMIT_*` |
 | Tool approval heuristics | enabled | `AGENTIC_TOOL_APPROVAL_ENABLED` |
+| Permission checker | deny-all class | `AGENTIC_PERMISSION_CHECKER` (use `RuleBasedPermissionChecker` + patterns in prod) |
 
 ## Host responsibilities
 

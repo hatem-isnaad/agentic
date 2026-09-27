@@ -161,8 +161,10 @@ return [
     */
     'permissions' => [
         'default' => env('AGENTIC_PERMISSION_DEFAULT', 'deny'),
-        'checker' => Agentic\Permission\DenyAllPermissionChecker::class,
-        'denial_message' => 'Permission denied for tool [:tool].',
+        'checker' => env('AGENTIC_PERMISSION_CHECKER', Agentic\Permission\DenyAllPermissionChecker::class),
+        'denial_message' => env('AGENTIC_PERMISSION_DENIAL_MESSAGE', 'Permission denied for tool [:tool].'),
+        'allow_patterns' => array_filter(explode(',', (string) env('AGENTIC_PERMISSION_ALLOW_PATTERNS', ''))),
+        'deny_patterns' => array_filter(explode(',', (string) env('AGENTIC_PERMISSION_DENY_PATTERNS', ''))),
     ],
 
     /*
