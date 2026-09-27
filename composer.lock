@@ -1,1 +1,1 @@
-@include(/tmp/composer.lock.compact)
+$include:/tmp/composer.lock.compact
