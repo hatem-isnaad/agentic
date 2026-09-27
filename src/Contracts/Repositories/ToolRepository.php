@@ -14,4 +14,20 @@ interface ToolRepository
      * @return list<ToolDefinition>
      */
     public function allPublished(): array;
+
+    /**
+     * @param  array{
+     *     name: string,
+     *     slug: string,
+     *     driver: string,
+     *     description?: string|null,
+     *     status?: string,
+     *     config?: array<string, mixed>,
+     *     definition?: array<string, mixed>,
+     *     publish?: bool
+     * }  $attributes
+     */
+    public function save(array $attributes): ToolDefinition;
+
+    public function delete(string $slug): bool;
 }

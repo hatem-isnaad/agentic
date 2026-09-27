@@ -14,4 +14,20 @@ interface SkillRepository
      * @return list<SkillDefinition>
      */
     public function allPublished(): array;
+
+    /**
+     * @param  array{
+     *     name: string,
+     *     slug: string,
+     *     description?: string|null,
+     *     instructions?: string|null,
+     *     status?: string,
+     *     tools?: list<string>,
+     *     knowledge?: list<mixed>,
+     *     config?: array<string, mixed>
+     * }  $attributes
+     */
+    public function save(array $attributes): SkillDefinition;
+
+    public function delete(string $slug): bool;
 }
