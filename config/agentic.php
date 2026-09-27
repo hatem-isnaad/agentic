@@ -69,6 +69,33 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Knowledge
+    |--------------------------------------------------------------------------
+    |
+    | driver: eloquent | memory
+    |
+    */
+    'knowledge' => [
+        'driver' => env('AGENTIC_KNOWLEDGE_DRIVER', 'eloquent'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | HTTP API (optional)
+    |--------------------------------------------------------------------------
+    |
+    | When enabled, registers JSON routes for agents, routing, executions,
+    | and conversations. Host apps should apply their own authentication.
+    |
+    */
+    'api' => [
+        'enabled' => env('AGENTIC_API_ENABLED', false),
+        'prefix' => env('AGENTIC_API_PREFIX', 'api/agentic'),
+        'middleware' => ['api'],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Tool drivers
     |--------------------------------------------------------------------------
     |
