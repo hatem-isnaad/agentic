@@ -22,6 +22,7 @@ final class LaravelAiSdkAdapter
 {
     public function __construct(
         private ToolExecutor $executor,
+        private LaravelAiToolSetBuilder $toolSets,
     ) {}
 
     /**
@@ -74,6 +75,9 @@ final class LaravelAiSdkAdapter
             fn (ToolContract $tool) => new AgenticLaravelTool($tool, $this->executor, $baseToolContext),
             $tools,
         );
+
+        $provider = $agent->provider ?? config('agentic.ai.provider');
+        $laravelTools = $this->toolSets->build($laravelTools, is_string($provider) ? $provider : null);
 
         return agent(
             instructions: $this->composeInstructions($agent, $builtContext),

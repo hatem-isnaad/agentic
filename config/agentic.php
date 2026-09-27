@@ -15,6 +15,12 @@ return [
     'ai' => [
         'provider' => env('AGENTIC_AI_PROVIDER'),
         'model' => env('AGENTIC_AI_MODEL'),
+        'deferred_tools' => [
+            'enabled' => env('AGENTIC_DEFERRED_TOOLS', false),
+            'deferred_count' => env('AGENTIC_DEFERRED_TOOL_COUNT', 10),
+            'direct_tools' => env('AGENTIC_DIRECT_TOOL_COUNT', 1),
+            'strategy' => env('AGENTIC_DEFERRED_TOOL_STRATEGY'),
+        ],
     ],
 
     /*
