@@ -3,6 +3,7 @@
 namespace Agentic\Connections;
 
 use Agentic\Models\Connection;
+use Agentic\Tool\Drivers\Http\HttpUrlValidator;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
 use InvalidArgumentException;
@@ -10,6 +11,10 @@ use RuntimeException;
 
 final class OAuth2TokenManager
 {
+    public function __construct(
+        private HttpUrlValidator $urls = new HttpUrlValidator(),
+    ) {}
+
     public function accessToken(Connection $connection): string
     {
         $credentials = is_array($connection->credentials) ? $connection->credentials : [];
@@ -51,6 +56,8 @@ final class OAuth2TokenManager
                 throw new InvalidArgumentException('OAuth2 connection is missing [token_url].');
             }
 
+            $this->urls->validate($tokenUrl);
+
             $grantType = (string) ($config['grant_type'] ?? 'refresh_token');
             if (! in_array($grantType, ['refresh_token', 'client_credentials'], true)) {
                 throw new InvalidArgumentException("Unsupported OAuth2 grant type [{$grantType}].");
@@ -84,6 +91,7 @@ final class OAuth2TokenManager
             }
 
             $response = Http::asForm()
+                ->withOptions(['allow_redirects' => false])
                 ->acceptJson()
                 ->timeout((float) ($config['timeout'] ?? 15))
                 ->post($tokenUrl, $form);
