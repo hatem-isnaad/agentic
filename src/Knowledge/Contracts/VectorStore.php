@@ -20,4 +20,6 @@ interface VectorStore
      * @return list<KnowledgeChunk>
      */
     public function search(array $vector, int $limit = 5, ?string $namespace = null): array;
+
+    public function deleteNamespace(string $namespace): void;
 }

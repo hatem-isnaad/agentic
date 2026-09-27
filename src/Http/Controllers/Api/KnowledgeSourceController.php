@@ -67,12 +67,48 @@ final class KnowledgeSourceController
         return response()->json(null, 204);
     }
 
-    public function indexDocuments(string $slug): JsonResponse
+    public function indexDocuments(Request $request, string $slug): JsonResponse
     {
         $source = $this->sources->findBySlug($slug);
 
         if ($source === null) {
             return response()->json(['message' => 'Knowledge source not found.'], 404);
+        }
+
+        $payload = $request->validate([
+            'documents' => ['nullable', 'array'],
+            'raw_text' => ['nullable', 'string'],
+            'chunk_size' => ['nullable', 'integer', 'min:100', 'max:8000'],
+            'chunk_overlap' => ['nullable', 'integer', 'min:0', 'max:2000'],
+        ]);
+
+        if ($payload !== []) {
+            $configuration = $source->configuration;
+
+            if (isset($payload['documents'])) {
+                $configuration['documents'] = $payload['documents'];
+            }
+
+            if (isset($payload['raw_text'])) {
+                $configuration['raw_text'] = $payload['raw_text'];
+            }
+
+            if (isset($payload['chunk_size'])) {
+                $configuration['chunk_size'] = $payload['chunk_size'];
+            }
+
+            if (isset($payload['chunk_overlap'])) {
+                $configuration['chunk_overlap'] = $payload['chunk_overlap'];
+            }
+
+            $source = $this->sources->save(new KnowledgeSourceDefinition(
+                slug: $source->slug,
+                name: $source->name,
+                driver: $source->driver,
+                configuration: $configuration,
+                status: $source->status,
+                metadata: $source->metadata,
+            ));
         }
 
         $this->knowledge->index($source);

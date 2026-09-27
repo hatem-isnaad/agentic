@@ -75,6 +75,19 @@ final class PineconeVectorStore implements VectorStore
         return $chunks;
     }
 
+    public function deleteNamespace(string $namespace): void
+    {
+        $response = Http::withHeaders($this->headers())
+            ->post($this->endpoint('/vectors/delete'), [
+                'deleteAll' => true,
+                'namespace' => $namespace,
+            ]);
+
+        if (! $response->successful()) {
+            throw new RuntimeException('Pinecone delete failed: '.$response->body());
+        }
+    }
+
     /**
      * @return array<string, string>
      */

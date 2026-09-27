@@ -5,6 +5,7 @@ namespace Agentic\Knowledge\Indexers;
 use Agentic\Knowledge\Contracts\EmbeddingProvider;
 use Agentic\Knowledge\Contracts\Indexer;
 use Agentic\Knowledge\Contracts\VectorStore;
+use Agentic\Knowledge\Documents\DocumentCollector;
 use Agentic\Knowledge\KnowledgeChunk;
 use Agentic\Knowledge\KnowledgeSourceDefinition;
 
@@ -16,6 +17,7 @@ final class VectorKnowledgeIndexer implements Indexer
     public function __construct(
         private EmbeddingProvider $embeddings,
         private VectorStore $store,
+        private DocumentCollector $documents = new DocumentCollector(),
     ) {}
 
     public function supports(KnowledgeSourceDefinition $source): bool
@@ -25,32 +27,32 @@ final class VectorKnowledgeIndexer implements Indexer
 
     public function index(KnowledgeSourceDefinition $source): void
     {
-        $documents = $source->configuration['documents'] ?? [];
         $namespace = is_string($source->configuration['namespace'] ?? null)
             ? $source->configuration['namespace']
             : $source->slug;
 
-        if (! is_array($documents)) {
-            return;
-        }
+        $this->store->deleteNamespace($namespace);
 
-        foreach ($documents as $index => $document) {
-            $content = is_string($document)
-                ? $document
-                : (string) (is_array($document) ? ($document['content'] ?? '') : '');
+        $tenant = is_string($source->configuration['tenant'] ?? null)
+            ? $source->configuration['tenant']
+            : null;
 
-            if ($content === '') {
-                continue;
-            }
-
-            $id = $source->slug.':'.$index;
+        foreach ($this->documents->collect($source) as $index => $content) {
+            $id = $source->slug.':chunk:'.$index;
             $vector = $this->embeddings->embed($content);
 
             $this->store->upsert(
                 $id,
                 $vector,
-                new KnowledgeChunk($content, $source->slug),
-                ['namespace' => $namespace, 'index' => $index],
+                new KnowledgeChunk($content, $source->slug, metadata: [
+                    'chunk' => $index,
+                    'tenant' => $tenant,
+                ]),
+                [
+                    'namespace' => $namespace,
+                    'chunk' => $index,
+                    'tenant' => $tenant,
+                ],
             );
         }
     }

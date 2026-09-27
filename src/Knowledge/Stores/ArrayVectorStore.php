@@ -24,12 +24,33 @@ final class ArrayVectorStore implements VectorStore
 
     public function search(array $vector, int $limit = 5, ?string $namespace = null): array
     {
-        unset($namespace);
+        $matches = [];
 
-        return array_slice(
-            array_map(fn (array $entry) => $entry['chunk'], $this->entries),
-            0,
-            $limit,
-        );
+        foreach ($this->entries as $entry) {
+            $entryNamespace = is_string($entry['metadata']['namespace'] ?? null)
+                ? $entry['metadata']['namespace']
+                : 'default';
+
+            if ($namespace !== null && $namespace !== '' && $entryNamespace !== $namespace) {
+                continue;
+            }
+
+            $matches[] = $entry['chunk'];
+        }
+
+        return array_slice($matches, 0, $limit);
+    }
+
+    public function deleteNamespace(string $namespace): void
+    {
+        foreach ($this->entries as $id => $entry) {
+            $entryNamespace = is_string($entry['metadata']['namespace'] ?? null)
+                ? $entry['metadata']['namespace']
+                : 'default';
+
+            if ($entryNamespace === $namespace) {
+                unset($this->entries[$id]);
+            }
+        }
     }
 }

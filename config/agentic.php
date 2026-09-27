@@ -111,6 +111,8 @@ return [
             'host' => env('PINECONE_HOST'),
             'api_key' => env('PINECONE_API_KEY'),
         ],
+        'chunk_size' => (int) env('AGENTIC_KNOWLEDGE_CHUNK_SIZE', 800),
+        'chunk_overlap' => (int) env('AGENTIC_KNOWLEDGE_CHUNK_OVERLAP', 120),
     ],
 
     /*
