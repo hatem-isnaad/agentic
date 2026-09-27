@@ -63,4 +63,9 @@ final class PgVectorStore implements VectorStore
 
         return array_slice($scored, 0, $limit);
     }
+
+    public function deleteNamespace(string $namespace): void
+    {
+        VectorEntry::query()->where('namespace', $namespace)->delete();
+    }
 }

@@ -30,13 +30,57 @@ final class VectorKnowledgeRetriever implements Retriever
         int $limit = 5,
         ?RuntimeContext $runtime = null,
     ): array {
-        unset($runtime);
-
         $vector = $this->embeddings->embed($query);
         $namespace = is_string($source->configuration['namespace'] ?? null)
             ? $source->configuration['namespace']
             : $source->slug;
 
-        return $this->store->search($vector, $limit, $namespace);
+        $chunks = $this->store->search($vector, $limit, $namespace);
+        $tenant = $this->tenantKey($runtime);
+
+        if ($tenant === null) {
+            return $chunks;
+        }
+
+        return array_values(array_filter(
+            $chunks,
+            fn (KnowledgeChunk $chunk): bool => $this->chunkVisibleForTenant($chunk, $tenant),
+        ));
+    }
+
+    private function tenantKey(?RuntimeContext $runtime): ?string
+    {
+        if ($runtime === null) {
+            return null;
+        }
+
+        $tenant = $runtime->tenant();
+
+        if (is_string($tenant) && $tenant !== '') {
+            return $tenant;
+        }
+
+        if (is_int($tenant)) {
+            return (string) $tenant;
+        }
+
+        if (is_object($tenant) && isset($tenant->id)) {
+            return (string) $tenant->id;
+        }
+
+        $tenantId = $runtime->get('tenant_id');
+
+        return is_string($tenantId) || is_int($tenantId) ? (string) $tenantId : null;
+    }
+
+    private function chunkVisibleForTenant(KnowledgeChunk $chunk, string $tenant): bool
+    {
+        $chunkTenant = $chunk->metadata['tenant'] ?? null;
+
+        if ($chunkTenant === null || $chunkTenant === '') {
+            return true;
+        }
+
+        return (string) $chunkTenant === $tenant;
     }
 }
