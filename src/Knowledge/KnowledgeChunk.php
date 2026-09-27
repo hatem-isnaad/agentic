@@ -10,4 +10,14 @@ final readonly class KnowledgeChunk
         public ?float $score = null,
         public array $metadata = [],
     ) {}
+
+    public function toContextArray(): array
+    {
+        return [
+            'content' => $this->content,
+            'source' => $this->source,
+            'score' => $this->score,
+            'metadata' => $this->metadata,
+        ];
+    }
 }
