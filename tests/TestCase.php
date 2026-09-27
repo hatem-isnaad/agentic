@@ -15,4 +15,9 @@ abstract class TestCase extends Orchestra
             AgenticServiceProvider::class,
         ];
     }
+
+    protected function defineEnvironment($app): void
+    {
+        $app['config']->set('agentic.execution.driver', 'memory');
+    }
 }
