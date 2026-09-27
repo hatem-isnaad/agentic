@@ -1,0 +1,15 @@
+{
+    "repositories": [
+        {
+            "type": "path",
+            "url": "../agentic",
+            "options": {
+                "symlink": true
+            }
+        }
+    ],
+    "require": {
+        "hatem-isnaad/agentic": "*",
+        "laravel/ai": "^1.0"
+    }
+}

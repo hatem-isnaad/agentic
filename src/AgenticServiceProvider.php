@@ -25,6 +25,8 @@ use Agentic\Knowledge\Indexers\VectorKnowledgeIndexer;
 use Agentic\Knowledge\Documents\DocumentUrlFetcher;
 use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
+use Agentic\Console\InstallAgenticCommand;
+use Agentic\Console\PruneWorkflowRunsCommand;
 use Agentic\Console\RagValidateCommand;
 use Agentic\Console\SyncMcpToolsCommand;
 use Agentic\Knowledge\Providers\DeterministicEmbeddingProvider;
@@ -347,8 +349,10 @@ final class AgenticServiceProvider extends ServiceProvider
 
         if ($this->app->runningInConsole()) {
             $this->commands([
-                SyncMcpToolsCommand::class,
+                InstallAgenticCommand::class,
+                PruneWorkflowRunsCommand::class,
                 RagValidateCommand::class,
+                SyncMcpToolsCommand::class,
             ]);
         }
 

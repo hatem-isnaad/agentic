@@ -4,12 +4,15 @@ Agentic is a **Laravel package**, not a standalone SaaS product.
 
 ## Included in the package (complete)
 
-- Runtime orchestration on Laravel AI SDK
+- Runtime orchestration on Laravel AI SDK (OpenAI, Anthropic, Gemini, Ollama, …)
 - Persistence, APIs (runtime, admin, widget, auth hooks)
 - Tools, skills, knowledge, memory, workflows, MCP sync + catalog
+- RAG: Laravel AI embeddings, pgvector / Postgres native / Pinecone, `agentic:rag-validate`
 - Security defaults, rate limits, production checklist
-- Optional Filament ops UI (CRUD + executions viewer + agent↔skills)
+- Artisan: `agentic:install`, `agentic:rag-validate`, `agentic:prune-workflow-runs`, `agentic:mcp-sync`
+- Optional Filament ops UI (CRUD + executions + workflow runs)
 - PHPUnit coverage for core and API paths
+- [HOST_BOOTSTRAP.md](./HOST_BOOTSTRAP.md) for host wiring
 
 ## Required in the host application
 

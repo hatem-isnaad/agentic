@@ -90,6 +90,13 @@ final class EloquentWorkflowRunRepository implements WorkflowRunRepository
         return $query->count();
     }
 
+    public function deleteOlderThan(\DateTimeInterface $cutoff): int
+    {
+        return WorkflowRun::query()
+            ->where('updated_at', '<', $cutoff)
+            ->delete();
+    }
+
     private function toRecord(WorkflowRun $model): WorkflowRunRecord
     {
         return new WorkflowRunRecord(

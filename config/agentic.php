@@ -295,6 +295,9 @@ return [
         'driver' => env('AGENTIC_WORKFLOW_DRIVER', 'eloquent'),
         'max_steps' => (int) env('AGENTIC_WORKFLOW_MAX_STEPS', 100),
         'max_parallel_branches' => (int) env('AGENTIC_WORKFLOW_MAX_PARALLEL_BRANCHES', 10),
+        'runs' => [
+            'retention_days' => (int) env('AGENTIC_WORKFLOW_RUN_RETENTION_DAYS', 90),
+        ],
     ],
 
     /*

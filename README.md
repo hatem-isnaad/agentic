@@ -49,12 +49,14 @@ LLM provider
 - [`laravel/ai`](https://github.com/laravel/ai) ^1.0
 
 ```bash
-composer require hatem-isnaad/agentic
-php artisan vendor:publish --tag=agentic-config
+composer require hatem-isnaad/agentic laravel/ai
+php artisan agentic:install
+php artisan vendor:publish --tag=ai-config
 php artisan migrate
+php artisan agentic:rag-validate --offline
 ```
 
-Copy variables from [`.env.example`](.env.example) into your application `.env`. The package ships **no production React UI** — build Admin and Widget SPAs against the JSON APIs (see [Frontend documentation](#frontend-documentation)). Optional **Filament** CRUD is available via `Agentic\Filament\AgenticPlugin` when `filament/filament` is installed.
+Copy variables from [`.env.example`](.env.example) into your application `.env`. See [docs/HOST_BOOTSTRAP.md](docs/HOST_BOOTSTRAP.md) for the full host checklist. The package ships **no production React UI** — build Admin and Widget SPAs against the JSON APIs (see [Frontend documentation](#frontend-documentation)). Optional **Filament** CRUD is available via `Agentic\Filament\AgenticPlugin` when `filament/filament` is installed.
 
 Before production, follow **[docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md)**.
 

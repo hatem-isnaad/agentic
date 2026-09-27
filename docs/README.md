@@ -2,6 +2,8 @@
 
 | Document | Audience |
 |----------|----------|
+| [HOST_BOOTSTRAP.md](./HOST_BOOTSTRAP.md) | **Start here in a Laravel host app** — install, env, validate, first agent |
+| [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md) | Launch hardening before go-live |
 | [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) | **What is actually in the repo** — routes, features, gaps |
 | [FRONTEND_IMPLEMENTATION_GUIDE.md](./FRONTEND_IMPLEMENTATION_GUIDE.md) | **Complete API + UI spec** — routes, events, blocks, admin/widget screens |
 | [COPY_PROMPT_FOR_AI.md](./COPY_PROMPT_FOR_AI.md) | **Copy-paste prompt** for Cursor/Claude to build React apps |

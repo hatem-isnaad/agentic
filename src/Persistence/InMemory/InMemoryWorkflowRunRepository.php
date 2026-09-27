@@ -69,4 +69,11 @@ final class InMemoryWorkflowRunRepository implements WorkflowRunRepository
                 && ($status === null || $run->status === $status),
         ));
     }
+
+    public function deleteOlderThan(\DateTimeInterface $cutoff): int
+    {
+        unset($cutoff);
+
+        return 0;
+    }
 }
