@@ -86,6 +86,7 @@ final class EloquentToolRepository implements ToolRepository
             version: $version?->version,
             connection: is_string($definition['connection'] ?? null) ? $definition['connection'] : null,
             id: $tool->getKey(),
+            approval: is_string($definition['approval'] ?? null) ? $definition['approval'] : null,
         );
     }
 }

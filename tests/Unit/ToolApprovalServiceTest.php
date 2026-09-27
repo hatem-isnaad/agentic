@@ -13,18 +13,32 @@ final class ToolApprovalServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_write_pattern_requires_approval(): void
+    public function test_explicit_always_policy_requires_approval(): void
     {
         app(ToolFactory::class)->register(new ToolDefinition(
-            name: 'orders.write',
-            description: 'Write order',
+            name: 'orders.update',
+            description: 'Update order',
+            driver: 'code',
+            configuration: ['handler' => 'noop'],
+            approval: 'always',
+        ));
+
+        $tool = app(ToolRegistry::class)->resolve('orders.update');
+
+        $this->assertTrue(app(ToolApprovalService::class)->requiresApproval($tool));
+    }
+
+    public function test_tools_without_an_approval_policy_do_not_use_name_heuristics(): void
+    {
+        app(ToolFactory::class)->register(new ToolDefinition(
+            name: 'orders.delete',
+            description: 'Delete order',
             driver: 'code',
             configuration: ['handler' => 'noop'],
         ));
 
-        $tool = app(ToolRegistry::class)->resolve('orders.write');
-        $service = app(ToolApprovalService::class);
+        $tool = app(ToolRegistry::class)->resolve('orders.delete');
 
-        $this->assertTrue($service->requiresApproval($tool));
+        $this->assertFalse(app(ToolApprovalService::class)->requiresApproval($tool));
     }
 }

@@ -23,6 +23,14 @@ return [
         ],
     ],
 
+    'approvals' => [
+        'default' => env('AGENTIC_TOOL_APPROVAL_DEFAULT', 'never'),
+        'reason' => env(
+            'AGENTIC_TOOL_APPROVAL_REASON',
+            'This tool requires human approval before execution.',
+        ),
+    ],
+
     'skill_routing' => [
         'enabled' => env('AGENTIC_SKILL_ROUTING', true),
         'limit' => env('AGENTIC_SKILL_ROUTING_LIMIT', 3),

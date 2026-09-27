@@ -24,5 +24,6 @@ final readonly class ToolDefinition
         public ?int $version = null,
         public ?string $connection = null,
         public ?int $id = null,
+        public ?string $approval = null,
     ) {}
 }
