@@ -18,12 +18,7 @@ final class PersistenceTest extends TestCase
     {
         $agent = Agent::create(['name' => 'Support', 'slug' => 'support']);
         $skill = Skill::create(['name' => 'Orders', 'slug' => 'orders']);
-        $tool = Tool::create([
-            'name' => 'Get Order',
-            'slug' => 'get-order',
-            'type' => 'http',
-            'driver' => 'http',
-        ]);
+        $tool = Tool::create(['name' => 'Get Order', 'slug' => 'get-order', 'type' => 'http', 'driver' => 'http']);
 
         $agent->skills()->attach($skill, ['position' => 0]);
         $skill->tools()->attach($tool, ['position' => 0]);
@@ -34,14 +29,9 @@ final class PersistenceTest extends TestCase
 
     public function test_publishing_creates_incremental_versions(): void
     {
-        $tool = Tool::create([
-            'name' => 'Get Order',
-            'slug' => 'get-order',
-            'type' => 'http',
-            'driver' => 'http',
-        ]);
-
+        $tool = Tool::create(['name' => 'Get Order', 'slug' => 'get-order', 'type' => 'http', 'driver' => 'http']);
         $publisher = app(ToolVersionPublisher::class);
+
         $first = $publisher->publish($tool, ['method' => 'GET', 'url' => '/orders/{id}']);
         $second = $publisher->publish($tool->fresh(), ['method' => 'GET', 'url' => '/orders/{id}/items']);
 
@@ -49,6 +39,6 @@ final class PersistenceTest extends TestCase
         $this->assertSame(1, $first->version);
         $this->assertSame(2, $second->version);
         $this->assertSame(2, $tool->fresh()->latestPublishedVersion->version);
-        $this->assertSame('published', $tool->fresh()->status);
+        $this->assertSame('published', $tool->fresh()->status->value);
     }
 }
