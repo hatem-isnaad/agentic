@@ -53,6 +53,10 @@ final class ExecutionManager
         mixed $output = null,
         ExecutionStatus $status = ExecutionStatus::Completed,
         array $metadata = [],
+        ?int $toolId = null,
+        ?int $toolVersionId = null,
+        ?bool $permissionAllowed = null,
+        ?int $durationMs = null,
     ): Execution {
         $step = new ExecutionStep(
             id: (string) Str::uuid(),
@@ -64,6 +68,10 @@ final class ExecutionManager
             metadata: $metadata,
             startedAt: now()->toISOString(),
             completedAt: $status === ExecutionStatus::Running ? null : now()->toISOString(),
+            toolId: $toolId,
+            toolVersionId: $toolVersionId,
+            permissionAllowed: $permissionAllowed,
+            durationMs: $durationMs,
         );
 
         $execution->steps[] = $step;
