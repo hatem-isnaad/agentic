@@ -19,4 +19,27 @@ interface AgentRepository
      * @return list<AgentDefinition>
      */
     public function allPublished(): array;
+
+    /**
+     * @param  array{
+     *     name: string,
+     *     slug: string,
+     *     description?: string|null,
+     *     instructions?: string|null,
+     *     status?: string,
+     *     provider?: string|null,
+     *     model?: string|null,
+     *     temperature?: float|null,
+     *     max_tokens?: int|null,
+     *     skills?: list<string>,
+     *     tools?: list<string>,
+     *     knowledge?: list<mixed>,
+     *     permissions?: list<string>,
+     *     runtime?: array<string, mixed>,
+     *     config?: array<string, mixed>
+     * }  $attributes
+     */
+    public function save(array $attributes): AgentDefinition;
+
+    public function delete(string $slug): bool;
 }

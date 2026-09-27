@@ -80,6 +80,24 @@ return [
         'embedding' => env('AGENTIC_KNOWLEDGE_EMBEDDING', 'null'),
         'embedding_provider' => env('AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER'),
         'embedding_model' => env('AGENTIC_KNOWLEDGE_EMBEDDING_MODEL'),
+        'vector_store' => env('AGENTIC_VECTOR_STORE', 'array'),
+        'pinecone' => [
+            'host' => env('PINECONE_HOST'),
+            'api_key' => env('PINECONE_API_KEY'),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Filament admin (optional)
+    |--------------------------------------------------------------------------
+    |
+    | When filament/filament is installed, register the Agentic plugin on panels
+    | listed here (panel IDs). Leave empty to skip auto-registration.
+    |
+    */
+    'filament' => [
+        'panels' => array_filter(explode(',', (string) env('AGENTIC_FILAMENT_PANELS', 'admin'))),
     ],
 
     /*

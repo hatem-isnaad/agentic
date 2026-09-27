@@ -16,10 +16,13 @@ use Agentic\Knowledge\Contracts\VectorStore;
 use Agentic\Knowledge\Indexers\ArrayKnowledgeIndexer;
 use Agentic\Knowledge\Indexers\VectorKnowledgeIndexer;
 use Agentic\Knowledge\KnowledgeOrchestrator;
+use Agentic\Knowledge\Providers\LaravelAiEmbeddingProvider;
 use Agentic\Knowledge\Providers\NullEmbeddingProvider;
 use Agentic\Knowledge\Retrievers\ArrayKnowledgeRetriever;
 use Agentic\Knowledge\Retrievers\VectorKnowledgeRetriever;
 use Agentic\Knowledge\Stores\ArrayVectorStore;
+use Agentic\Knowledge\Stores\PgVectorStore;
+use Agentic\Knowledge\Stores\PineconeVectorStore;
 use Agentic\Conversation\ConversationManager;
 use Agentic\Execution\ExecutionManager;
 use Agentic\Integrations\LaravelAi\LaravelAiSdkAdapter;
@@ -116,9 +119,23 @@ final class AgenticServiceProvider extends ServiceProvider
                 : $app->make(EloquentKnowledgeRepository::class);
         });
 
-        $this->app->singleton(EmbeddingProvider::class, NullEmbeddingProvider::class);
+        $this->app->singleton(EmbeddingProvider::class, function ($app) {
+            $driver = config('agentic.knowledge.embedding', 'null');
+
+            return $driver === 'laravel_ai'
+                ? $app->make(LaravelAiEmbeddingProvider::class)
+                : $app->make(NullEmbeddingProvider::class);
+        });
         $this->app->singleton(ArrayVectorStore::class);
-        $this->app->singleton(VectorStore::class, fn ($app) => $app->make(ArrayVectorStore::class));
+        $this->app->singleton(PgVectorStore::class);
+        $this->app->singleton(PineconeVectorStore::class);
+        $this->app->singleton(VectorStore::class, function ($app) {
+            return match (config('agentic.knowledge.vector_store', 'array')) {
+                'pgvector' => $app->make(PgVectorStore::class),
+                'pinecone' => $app->make(PineconeVectorStore::class),
+                default => $app->make(ArrayVectorStore::class),
+            };
+        });
 
         $this->app->singleton(KnowledgeOrchestrator::class, function ($app) {
             $orchestrator = new KnowledgeOrchestrator(
@@ -161,6 +178,10 @@ final class AgenticServiceProvider extends ServiceProvider
             Route::prefix($prefix)
                 ->middleware($middleware)
                 ->group(__DIR__.'/../routes/api.php');
+        }
+
+        if (class_exists(\Filament\Panel::class)) {
+            $this->app->register(AgenticFilamentServiceProvider::class);
         }
     }
 }

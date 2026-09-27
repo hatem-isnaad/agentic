@@ -201,6 +201,44 @@ $result = $router->route(new RoutingContext(message: $request->input('message'))
 // Then: AgentResolver::resolve($result->agent) → AgentRuntime::run(...)
 ```
 
+## HTTP API
+
+Enable JSON management and execution endpoints:
+
+```env
+AGENTIC_API_ENABLED=true
+AGENTIC_API_PREFIX=api/agentic
+```
+
+Agents, skills, tools, and knowledge sources support list/show/create/update/delete. Executions and conversations are read-only. Agent execution and routing endpoints remain available as documented above.
+
+## Vector stores
+
+Configure knowledge vector retrieval:
+
+```env
+AGENTIC_VECTOR_STORE=array   # array | pgvector | pinecone
+PINECONE_HOST=https://your-index.svc.pinecone.io
+PINECONE_API_KEY=...
+```
+
+`pgvector` uses the `agentic_vector_entries` table with JSON vectors and cosine ranking (ideal for moderate corpora). `pinecone` delegates to the Pinecone HTTP API.
+
+## Filament admin (optional)
+
+Install Filament in your app, then register the Agentic plugin on your panel:
+
+```php
+use Agentic\Filament\AgenticPlugin;
+
+public function panel(Panel $panel): Panel
+{
+    return $panel->plugin(AgenticPlugin::make());
+}
+```
+
+Or set `AGENTIC_FILAMENT_PANELS=admin` so Agentic auto-registers on matching panel IDs when `filament/filament` is installed.
+
 ## Development
 
 ```bash
