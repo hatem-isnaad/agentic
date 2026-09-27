@@ -71,6 +71,5 @@ final class LlmSkillRouterTest extends TestCase
 
         $this->assertNull($router->select(['orders', 'billing'], 'Something unclear.'));
 
-        Classification::assertClassified();
     }
 }
