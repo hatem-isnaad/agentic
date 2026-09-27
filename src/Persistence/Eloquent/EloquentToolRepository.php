@@ -83,6 +83,7 @@ final class EloquentToolRepository implements ToolRepository
             permissions: $definition['permissions'] ?? [],
             status: $tool->status instanceof Status ? $tool->status->value : (string) $tool->status,
             runtime: $definition['runtime'] ?? [],
+            version: $version?->version,
         );
     }
 }
