@@ -47,6 +47,7 @@ use Agentic\Runtime\AgentRuntime;
 use Agentic\Skill\SkillRegistry;
 use Agentic\Skill\SkillResolver;
 use Agentic\Skill\SkillRouter;
+use Agentic\Skill\LlmSkillRouter;
 use Agentic\Tool\Contracts\McpClientGateway;
 use Agentic\Tool\DriverResolver;
 use Agentic\Tool\Drivers\CodeToolDriver;
@@ -76,6 +77,7 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(ToolRegistry::class);
         $this->app->singleton(SkillRegistry::class);
         $this->app->singleton(SkillResolver::class);
+        $this->app->singleton(LlmSkillRouter::class);
         $this->app->singleton(SkillRouter::class);
         $this->app->singleton(HandlerRegistry::class);
         $this->app->singleton(DriverResolver::class);
