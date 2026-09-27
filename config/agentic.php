@@ -26,6 +26,12 @@ return [
     'skill_routing' => [
         'enabled' => env('AGENTIC_SKILL_ROUTING', true),
         'limit' => env('AGENTIC_SKILL_ROUTING_LIMIT', 3),
+        'ai' => [
+            'enabled' => env('AGENTIC_AI_SKILL_ROUTING', false),
+            'provider' => env('AGENTIC_AI_SKILL_ROUTING_PROVIDER'),
+            'model' => env('AGENTIC_AI_SKILL_ROUTING_MODEL'),
+            'min_confidence' => env('AGENTIC_AI_SKILL_ROUTING_MIN_CONFIDENCE', 0.75),
+        ],
     ],
 
     /*
