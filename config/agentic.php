@@ -21,10 +21,26 @@ return [
     |--------------------------------------------------------------------------
     | Permission denial
     |--------------------------------------------------------------------------
+    |
+    | default: deny | allow
+    | Denied tools never reach a ToolDriver.
+    |
     */
     'permissions' => [
-        'default' => 'deny',
+        'default' => env('AGENTIC_PERMISSION_DEFAULT', 'deny'),
         'denial_message' => 'Permission denied for tool [:tool].',
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Execution tracking
+    |--------------------------------------------------------------------------
+    |
+    | driver: eloquent | memory
+    |
+    */
+    'execution' => [
+        'driver' => env('AGENTIC_EXECUTION_DRIVER', 'eloquent'),
     ],
 
     /*
