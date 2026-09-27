@@ -41,7 +41,20 @@ use Agentic\Persistence\InMemory\InMemoryKnowledgeRepository;
 use Agentic\Persistence\ToolVersionPublisher;
 use Agentic\Persistence\ToolVersionResolver;
 use Agentic\Routing\AgentRouter;
+use Agentic\Routing\RoutingConfigurator;
+use Agentic\Routing\Support\AgentCatalogBuilder;
+use Agentic\Routing\Support\AgentLlmSelector;
 use Agentic\Runtime\AgentRuntime;
+use Agentic\Skill\Routing\SkillRouter;
+use Agentic\Skill\Routing\SkillRoutingConfigurator;
+use Agentic\Skill\Routing\Strategies\DynamicKeywordSkillRoutingStrategy;
+use Agentic\Skill\Routing\Strategies\LexicalSkillRoutingStrategy;
+use Agentic\Skill\Routing\Support\LexicalSkillScorer;
+use Agentic\Skill\Routing\Support\SkillKeywordMapBuilder;
+use Agentic\Skill\Routing\Support\SkillLlmSelector;
+use Agentic\Tool\ToolApprovalService;
+use Agentic\Widget\Reply\HtmlReplyRenderer;
+use Agentic\Widget\Reply\StructuredReplyBuilder;
 use Agentic\Skill\SkillRegistry;
 use Agentic\Skill\SkillResolver;
 use Agentic\Tool\Contracts\McpClientGateway;
@@ -80,12 +93,35 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(ConversationManager::class);
         $this->app->singleton(PermissionResolver::class);
         $this->app->singleton(ToolExecutor::class);
+        $this->app->singleton(ToolApprovalService::class);
+        $this->app->singleton(HtmlReplyRenderer::class);
+        $this->app->singleton(StructuredReplyBuilder::class);
         $this->app->singleton(LaravelAiSdkAdapter::class);
         $this->app->singleton(AgentRuntime::class);
         $this->app->singleton(AgentResolver::class);
         $this->app->singleton(AgentRouter::class, function ($app) {
-            return new AgentRouter(config('agentic.routing.fallback_agent'));
+            $router = new AgentRouter(config('agentic.routing.fallback_agent'));
+            $app->make(RoutingConfigurator::class)->configure($router);
+
+            return $router;
         });
+
+        $this->app->singleton(SkillRouter::class, function ($app) {
+            $router = new SkillRouter((string) config('agentic.skill_routing.fallback', 'all'));
+            $app->make(SkillRoutingConfigurator::class)->configure($router);
+
+            return $router;
+        });
+
+        $this->app->singleton(SkillLlmSelector::class);
+        $this->app->singleton(SkillKeywordMapBuilder::class);
+        $this->app->singleton(DynamicKeywordSkillRoutingStrategy::class);
+        $this->app->singleton(LexicalSkillScorer::class);
+        $this->app->singleton(LexicalSkillRoutingStrategy::class);
+        $this->app->singleton(AgentLlmSelector::class);
+        $this->app->singleton(AgentCatalogBuilder::class);
+        $this->app->singleton(SkillRoutingConfigurator::class);
+        $this->app->singleton(RoutingConfigurator::class);
         $this->app->singleton(ToolFactory::class);
         $this->app->singleton(ToolVersionPublisher::class);
         $this->app->singleton(ToolVersionResolver::class);
@@ -100,6 +136,10 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->bind(AgentRepository::class, EloquentAgentRepository::class);
         $this->app->bind(SkillRepository::class, EloquentSkillRepository::class);
         $this->app->bind(ToolRepository::class, EloquentToolRepository::class);
+
+        $this->app->singleton(InMemoryExecutionRepository::class);
+        $this->app->singleton(InMemoryConversationRepository::class);
+        $this->app->singleton(InMemoryKnowledgeRepository::class);
 
         $this->app->bind(ExecutionRepository::class, function ($app) {
             return config('agentic.execution.driver', 'eloquent') === 'memory'
@@ -178,6 +218,17 @@ final class AgenticServiceProvider extends ServiceProvider
             Route::prefix($prefix)
                 ->middleware($middleware)
                 ->group(__DIR__.'/../routes/api.php');
+        }
+
+        if (config('agentic.admin.enabled') && config('agentic.admin.api.enabled', true)) {
+            $prefix = trim((string) config('agentic.admin.api.prefix', 'api/agentic/admin'), '/');
+            $middleware = config('agentic.admin.api.middleware', ['api']);
+            $namePrefix = (string) config('agentic.admin.api.route_name_prefix', 'agentic.admin.api.');
+
+            Route::prefix($prefix)
+                ->middleware($middleware)
+                ->name($namePrefix)
+                ->group(__DIR__.'/../routes/admin-api.php');
         }
 
         if (class_exists(\Filament\Panel::class)) {
