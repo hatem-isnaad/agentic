@@ -5,6 +5,7 @@ namespace Agentic\Persistence\Eloquent;
 use Agentic\Contracts\Repositories\SkillRepository;
 use Agentic\Enums\Status;
 use Agentic\Models\Skill;
+use Agentic\Models\Tool;
 use Agentic\Skill\SkillDefinition;
 
 final class EloquentSkillRepository implements SkillRepository
@@ -34,6 +35,48 @@ final class EloquentSkillRepository implements SkillRepository
             ->get()
             ->map(fn (Skill $skill) => $this->toDefinition($skill))
             ->all();
+    }
+
+    public function save(array $attributes): SkillDefinition
+    {
+        $config = $attributes['config'] ?? [];
+
+        if (isset($attributes['knowledge'])) {
+            $config['knowledge'] = $attributes['knowledge'];
+        }
+
+        $model = Skill::query()->updateOrCreate(
+            ['slug' => $attributes['slug']],
+            [
+                'name' => $attributes['name'],
+                'description' => $attributes['description'] ?? null,
+                'instructions' => $attributes['instructions'] ?? null,
+                'config' => $config,
+                'status' => $attributes['status'] ?? Status::Draft->value,
+            ],
+        );
+
+        if (array_key_exists('tools', $attributes)) {
+            $toolIds = Tool::query()
+                ->whereIn('slug', $attributes['tools'] ?? [])
+                ->pluck('id', 'slug');
+
+            $sync = [];
+            foreach ($attributes['tools'] ?? [] as $position => $slug) {
+                if ($toolIds->has($slug)) {
+                    $sync[$toolIds[$slug]] = ['position' => $position];
+                }
+            }
+
+            $model->tools()->sync($sync);
+        }
+
+        return $this->toDefinition($model->fresh(['tools']));
+    }
+
+    public function delete(string $slug): bool
+    {
+        return Skill::query()->where('slug', $slug)->delete() > 0;
     }
 
     private function toDefinition(Skill $skill): SkillDefinition

@@ -29,4 +29,22 @@ final class InMemoryKnowledgeRepository implements KnowledgeRepository
             fn (KnowledgeSourceDefinition $source) => ($source->status ?? 'published') === 'published',
         ));
     }
+
+    public function save(KnowledgeSourceDefinition $source): KnowledgeSourceDefinition
+    {
+        $this->sources[$source->slug] = $source;
+
+        return $source;
+    }
+
+    public function delete(string $slug): bool
+    {
+        if (! isset($this->sources[$slug])) {
+            return false;
+        }
+
+        unset($this->sources[$slug]);
+
+        return true;
+    }
 }
