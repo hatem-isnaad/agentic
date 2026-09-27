@@ -5,6 +5,7 @@ namespace Agentic\Integrations\LaravelAi;
 use Agentic\Agent\AgentDefinition;
 use Agentic\Execution\AgentExecutionContext;
 use Agentic\Tool\Contracts\ToolContract;
+use Agentic\Tool\ToolApprovalService;
 use Agentic\Tool\ToolExecutionContext;
 use Agentic\Tool\ToolExecutor;
 use Laravel\Ai\Contracts\Agent as LaravelAgent;
@@ -12,28 +13,14 @@ use Laravel\Ai\Responses\AgentResponse;
 
 use function Laravel\Ai\agent;
 
-/**
- * Integration boundary between Agentic orchestration and Laravel AI SDK execution.
- *
- * Agentic owns configuration, tools, permissions, and context.
- * Laravel AI SDK owns provider communication and LLM execution.
- */
 final class LaravelAiSdkAdapter
 {
     public function __construct(
         private ToolExecutor $executor,
+        private ToolApprovalService $approvals,
         private LaravelAiToolSetBuilder $toolSets,
     ) {}
 
-    /**
-     * @param  array{
-     *     instructions: string,
-     *     skills: list<array{name: string, description: string, tools: list<string>}>,
-     *     knowledge: list<mixed>,
-     *     tools?: list<string>
-     *  }  $builtContext
-     * @param  list<ToolContract>  $tools
-     */
     public function prompt(
         AgentDefinition $agent,
         array $builtContext,
@@ -49,15 +36,6 @@ final class LaravelAiSdkAdapter
         );
     }
 
-    /**
-     * @param  array{
-     *     instructions: string,
-     *     skills: list<array{name: string, description: string, tools: list<string>}>,
-     *     knowledge: list<mixed>,
-     *     tools?: list<string>
-     *  }  $builtContext
-     * @param  list<ToolContract>  $tools
-     */
     public function makeAgent(
         AgentDefinition $agent,
         array $builtContext,
@@ -72,7 +50,12 @@ final class LaravelAiSdkAdapter
         );
 
         $laravelTools = array_map(
-            fn (ToolContract $tool) => new AgenticLaravelTool($tool, $this->executor, $baseToolContext),
+            fn (ToolContract $tool) => new AgenticLaravelTool(
+                $tool,
+                $this->executor,
+                $this->approvals,
+                $baseToolContext,
+            ),
             $tools,
         );
 
@@ -86,13 +69,6 @@ final class LaravelAiSdkAdapter
         );
     }
 
-    /**
-     * @param  array{
-     *     instructions: string,
-     *     skills: list<array{name: string, description: string, tools: list<string>}>,
-     *     knowledge: list<mixed>
-     *  }  $builtContext
-     */
     private function composeInstructions(AgentDefinition $agent, array $builtContext): string
     {
         $parts = [
@@ -103,13 +79,9 @@ final class LaravelAiSdkAdapter
 
         if ($builtContext['skills'] !== []) {
             $skillLines = array_map(
-                function (array $skill): string {
-                    $tools = $skill['tools'] === []
-                        ? 'none'
-                        : implode(', ', $skill['tools']);
-
-                    return "- {$skill['name']}: {$skill['description']} (tools: {$tools})";
-                },
+                fn (array $skill): string => "- {$skill['name']}: {$skill['description']} (tools: ".(
+                    $skill['tools'] === [] ? 'none' : implode(', ', $skill['tools'])
+                ).')',
                 $builtContext['skills'],
             );
 
