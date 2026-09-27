@@ -221,6 +221,26 @@ return [
         ],
         'chunk_size' => (int) env('AGENTIC_KNOWLEDGE_CHUNK_SIZE', 800),
         'chunk_overlap' => (int) env('AGENTIC_KNOWLEDGE_CHUNK_OVERLAP', 120),
+        'fetch' => [
+            'enabled' => env('AGENTIC_KNOWLEDGE_URL_FETCH', true),
+            'timeout' => (int) env('AGENTIC_KNOWLEDGE_URL_FETCH_TIMEOUT', 15),
+            'max_bytes' => (int) env('AGENTIC_KNOWLEDGE_URL_FETCH_MAX_BYTES', 5 * 1024 * 1024),
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Multi-tenant resolution
+    |--------------------------------------------------------------------------
+    |
+    | Bind Agentic\Contracts\TenantResolver in the host app to customize tenant
+    | detection. Defaults read X-Agentic-Tenant-Id and the authenticated user's
+    | tenant_id attribute.
+    |
+    */
+    'tenant' => [
+        'header' => env('AGENTIC_TENANT_HEADER', 'X-Agentic-Tenant-Id'),
+        'user_attribute' => env('AGENTIC_TENANT_USER_ATTRIBUTE', 'tenant_id'),
     ],
 
     /*

@@ -3,6 +3,7 @@
 namespace Agentic\Http\Controllers\Api;
 
 use Agentic\Agent\AgentResolver;
+use Agentic\Context\RuntimeContext;
 use Agentic\Exceptions\AgentNotFoundException;
 use Agentic\Execution\AgentExecutionContext;
 use Agentic\Runtime\AgentRuntime;
@@ -37,6 +38,7 @@ final class AgentExecuteController
                 message: $validated['message'],
                 metadata: $validated['metadata'] ?? [],
                 variables: $validated['variables'] ?? [],
+                runtime: new RuntimeContext(['request' => $request]),
                 conversationId: $validated['conversation_id'] ?? null,
             ),
         );

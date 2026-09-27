@@ -5,6 +5,7 @@ namespace Agentic\Knowledge;
 use Agentic\Contracts\Repositories\KnowledgeRepository;
 use Agentic\Knowledge\Documents\DocumentCollector;
 use Agentic\Knowledge\Documents\DocumentParserResolver;
+use Agentic\Knowledge\Documents\DocumentUrlFetcher;
 
 final class KnowledgeIngestor
 {
@@ -13,6 +14,7 @@ final class KnowledgeIngestor
         private KnowledgeOrchestrator $orchestrator,
         private DocumentParserResolver $parsers = new DocumentParserResolver(),
         private DocumentCollector $collector = new DocumentCollector(),
+        private DocumentUrlFetcher $urlFetcher,
     ) {}
 
     /**
@@ -27,10 +29,16 @@ final class KnowledgeIngestor
         }
 
         $format = strtolower((string) ($payload['format'] ?? 'text'));
-        $documents = $this->parsers->parse(
-            $format,
-            $payload['documents'] ?? ($payload['raw_text'] ?? $payload['content'] ?? []),
-        );
+        $documentPayload = $payload['documents'] ?? ($payload['raw_text'] ?? $payload['content'] ?? []);
+
+        if (isset($payload['urls']) && is_array($payload['urls']) && $payload['urls'] !== []) {
+            $fetched = $this->urlFetcher->fetchMany($payload['urls']);
+            $documentPayload = is_array($documentPayload)
+                ? array_merge($fetched, $documentPayload)
+                : $fetched;
+        }
+
+        $documents = $this->parsers->parse($format, $documentPayload);
 
         if ($documents === [] && is_string($payload['raw_text'] ?? null) && $payload['raw_text'] !== '') {
             $documents = [$payload['raw_text']];

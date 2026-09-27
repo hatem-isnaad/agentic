@@ -5,6 +5,10 @@ namespace Agentic;
 use Agentic\Agent\AgentResolver;
 use Agentic\Context\ContextBuilder;
 use Agentic\Context\ContextManager;
+use Agentic\Context\Providers\ConversationContextProvider;
+use Agentic\Context\Providers\HttpRequestContextProvider;
+use Agentic\Contracts\TenantResolver;
+use Agentic\Tenancy\HttpRequestTenantResolver;
 use Agentic\Contracts\Repositories\AgentRepository;
 use Agentic\Contracts\Repositories\ConversationRepository;
 use Agentic\Contracts\Repositories\ExecutionRepository;
@@ -17,6 +21,7 @@ use Agentic\Knowledge\Contracts\EmbeddingProvider;
 use Agentic\Knowledge\Contracts\VectorStore;
 use Agentic\Knowledge\Indexers\ArrayKnowledgeIndexer;
 use Agentic\Knowledge\Indexers\VectorKnowledgeIndexer;
+use Agentic\Knowledge\Documents\DocumentUrlFetcher;
 use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
 use Agentic\Console\SyncMcpToolsCommand;
@@ -102,6 +107,7 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(DriverResolver::class);
         $this->app->singleton(ContextBuilder::class);
         $this->app->singleton(ContextManager::class);
+        $this->app->singleton(TenantResolver::class, HttpRequestTenantResolver::class);
         $this->app->singleton(ConversationManager::class);
         $this->app->singleton(PermissionResolver::class);
         $this->app->singleton(ToolExecutor::class);
@@ -218,6 +224,7 @@ final class AgenticServiceProvider extends ServiceProvider
             return $orchestrator;
         });
 
+        $this->app->singleton(DocumentUrlFetcher::class);
         $this->app->singleton(KnowledgeIngestor::class);
         $this->app->singleton(McpToolSyncService::class);
 
@@ -232,6 +239,11 @@ final class AgenticServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        $this->callAfterResolving(ContextManager::class, function (ContextManager $manager): void {
+            $manager->extend($this->app->make(HttpRequestContextProvider::class));
+            $manager->extend($this->app->make(ConversationContextProvider::class));
+        });
+
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
         $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'agentic');
 

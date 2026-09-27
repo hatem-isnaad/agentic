@@ -27,7 +27,7 @@
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |
 | MCP discovery | ✅ | `agentic:mcp-sync`, `POST .../mcp/servers/{server}/sync` |
 | Filament UI | 🟡 | Config only; no bundled panel |
-| Multi-tenant contract | 🟡 | Tenant metadata on knowledge chunks; host resolves tenant |
+| Multi-tenant contract | ✅ | `TenantResolver`, request/conversation context providers |
 
 ## Knowledge ingest
 
@@ -35,6 +35,7 @@
 
 - `format`: `text`, `markdown`, `html`, `json`
 - `documents` or `raw_text`
+- optional `urls` — HTTPS fetch (SSRF-safe, size-limited) merged before parsing
 - optional `chunk_size`, `chunk_overlap`, `tenant`
 - `reindex` (default `true`) — purges vector namespace then re-embeds
 

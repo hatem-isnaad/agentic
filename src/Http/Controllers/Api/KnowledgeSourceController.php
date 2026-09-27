@@ -128,6 +128,8 @@ final class KnowledgeSourceController
             'format' => ['nullable', 'string', 'in:text,plain,txt,markdown,html,json'],
             'documents' => ['nullable'],
             'raw_text' => ['nullable', 'string'],
+            'urls' => ['nullable', 'array'],
+            'urls.*' => ['url', 'max:2048'],
             'chunk_size' => ['nullable', 'integer', 'min:100', 'max:8000'],
             'chunk_overlap' => ['nullable', 'integer', 'min:0', 'max:2000'],
             'tenant' => ['nullable', 'string', 'max:191'],
@@ -136,7 +138,7 @@ final class KnowledgeSourceController
 
         try {
             $source = $this->ingestor->ingest($slug, $payload, (bool) ($payload['reindex'] ?? true));
-        } catch (\InvalidArgumentException $exception) {
+        } catch (\InvalidArgumentException|\RuntimeException $exception) {
             return response()->json(['message' => $exception->getMessage()], 422);
         }
 

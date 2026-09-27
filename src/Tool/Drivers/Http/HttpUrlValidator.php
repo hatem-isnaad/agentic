@@ -26,6 +26,10 @@ final class HttpUrlValidator
 
         $this->rejectBlockedHostnames($host);
 
+        if (config('agentic.http.allow_unresolved_hosts', false)) {
+            return;
+        }
+
         if (filter_var($host, FILTER_VALIDATE_IP)) {
             $this->rejectNonPublicIp($host);
 
