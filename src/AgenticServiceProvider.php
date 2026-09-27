@@ -26,7 +26,9 @@ use Agentic\Knowledge\Stores\PineconeVectorStore;
 use Agentic\Conversation\ConversationManager;
 use Agentic\Execution\ExecutionManager;
 use Agentic\Integrations\LaravelAi\LaravelAiSdkAdapter;
-use Agentic\Permission\AllowAllPermissionChecker;
+use Agentic\Permission\DenyAllPermissionChecker;
+use Agentic\Contracts\Connections\ConnectionResolver;
+use Agentic\Connections\EloquentConnectionResolver;
 use Agentic\Permission\PermissionChecker;
 use Agentic\Permission\PermissionResolver;
 use Agentic\Persistence\Eloquent\EloquentAgentRepository;
@@ -95,11 +97,13 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(McpToolRegistrar::class);
         $this->app->singleton(ExecutionManager::class);
 
-        $this->app->singleton(PermissionChecker::class, function ($app) {\n            return $app->make(config('agentic.permissions.checker', DenyAllPermissionChecker::class));\n        });
+        $this->app->singleton(PermissionChecker::class, function ($app) {
+            return $app->make(config('agentic.permissions.checker', DenyAllPermissionChecker::class));\n        });
 
         $this->app->bind(AgentRepository::class, EloquentAgentRepository::class);
         $this->app->bind(SkillRepository::class, EloquentSkillRepository::class);
         $this->app->bind(ToolRepository::class, EloquentToolRepository::class);
+        $this->app->bind(ConnectionResolver::class, EloquentConnectionResolver::class);
 
         $this->app->bind(ExecutionRepository::class, function ($app) {
             return config('agentic.execution.driver', 'eloquent') === 'memory'
