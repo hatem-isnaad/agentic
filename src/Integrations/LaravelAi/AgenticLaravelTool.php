@@ -3,25 +3,27 @@
 namespace Agentic\Integrations\LaravelAi;
 
 use Agentic\Tool\Contracts\ToolContract;
+use Agentic\Tool\ToolApprovalService;
 use Agentic\Tool\ToolExecutionContext;
 use Agentic\Tool\ToolExecutor;
 use Agentic\Tool\ToolResult;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
+use Laravel\Ai\Approvals\Approval;
+use Laravel\Ai\Concerns\InteractsWithApprovals;
+use Laravel\Ai\Contracts\Approvable;
 use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Tools\Request;
 use Stringable;
 
-/**
- * Adapts an Agentic ToolContract into a Laravel AI SDK Tool.
- *
- * Permission checks happen in ToolExecutor — before the tool/driver runs.
- */
-final class AgenticLaravelTool implements Tool
+final class AgenticLaravelTool implements Approvable, Tool
 {
+    use InteractsWithApprovals;
+
     public function __construct(
         private ToolContract $tool,
         private ToolExecutor $executor,
+        private ToolApprovalService $approvals,
         private ?ToolExecutionContext $baseContext = null,
     ) {}
 
@@ -33,6 +35,11 @@ final class AgenticLaravelTool implements Tool
     public function description(): Stringable|string
     {
         return $this->tool->definition()->description;
+    }
+
+    protected function needsApproval(Request $request): Approval|bool
+    {
+        return $this->approvals->decision($this->tool);
     }
 
     public function handle(Request $request): Stringable|string
