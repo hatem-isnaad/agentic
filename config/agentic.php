@@ -28,7 +28,7 @@ return [
     */
     'permissions' => [
         'default' => env('AGENTIC_PERMISSION_DEFAULT', 'deny'),
-        'checker' => Agentic\\Permission\\DenyAllPermissionChecker::class,
+        'checker' => Agentic\Permission\DenyAllPermissionChecker::class,
         'denial_message' => 'Permission denied for tool [:tool].',
     ],
 

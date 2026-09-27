@@ -98,7 +98,8 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(ExecutionManager::class);
 
         $this->app->singleton(PermissionChecker::class, function ($app) {
-            return $app->make(config('agentic.permissions.checker', DenyAllPermissionChecker::class));\n        });
+            return $app->make(config('agentic.permissions.checker', DenyAllPermissionChecker::class));
+        });
 
         $this->app->bind(AgentRepository::class, EloquentAgentRepository::class);
         $this->app->bind(SkillRepository::class, EloquentSkillRepository::class);
@@ -184,8 +185,5 @@ final class AgenticServiceProvider extends ServiceProvider
                 ->group(__DIR__.'/../routes/api.php');
         }
 
-        if (class_exists(\Filament\Panel::class)) {
-            $this->app->register(AgenticFilamentServiceProvider::class);
-        }
     }
 }
