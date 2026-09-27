@@ -13,6 +13,11 @@ interface KnowledgeRepository
      */
     public function allPublished(): array;
 
+    /**
+     * @return list<KnowledgeSourceDefinition>
+     */
+    public function all(): array;
+
     public function save(KnowledgeSourceDefinition $source): KnowledgeSourceDefinition;
 
     public function delete(string $slug): bool;
