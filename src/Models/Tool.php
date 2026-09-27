@@ -2,6 +2,7 @@
 
 namespace Agentic\Models;
 
+use Agentic\Enums\Status;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,7 +15,7 @@ class Tool extends Model
 
     protected function casts(): array
     {
-        return ['config' => 'array'];
+        return ['status' => Status::class, 'config' => 'array'];
     }
 
     public function skills(): BelongsToMany
@@ -42,6 +43,6 @@ class Tool extends Model
 
     public function scopePublished($query)
     {
-        return $query->where('status', 'published');
+        return $query->where('status', Status::Published);
     }
 }
