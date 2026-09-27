@@ -53,6 +53,8 @@ use Agentic\Tool\Contracts\McpClientGateway;
 use Agentic\Tool\DriverResolver;
 use Agentic\Tool\Drivers\CodeToolDriver;
 use Agentic\Tool\Drivers\HttpToolDriver;
+use Agentic\Tool\Drivers\Http\AuthenticationResolver;
+use Agentic\Tool\Drivers\Http\HttpRequestBuilder;
 use Agentic\Tool\Drivers\Mcp\LaravelMcpClientGateway;
 use Agentic\Tool\Drivers\Mcp\McpToolRegistrar;
 use Agentic\Tool\Drivers\McpToolDriver;
@@ -96,7 +98,22 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(ToolFactory::class);
         $this->app->singleton(ToolVersionPublisher::class);
         $this->app->singleton(ToolVersionResolver::class);
-        $this->app->singleton(HttpToolDriver::class);
+        $this->app->singleton(AuthenticationResolver::class, function ($app) {
+            return new AuthenticationResolver(
+                $app->make(ConnectionResolver::class),
+                $app->make(OAuth2TokenManager::class),
+            );
+        });
+        $this->app->singleton(HttpRequestBuilder::class, function ($app) {
+            return new HttpRequestBuilder(
+                $app->make(AuthenticationResolver::class),
+            );
+        });
+        $this->app->singleton(HttpToolDriver::class, function ($app) {
+            return new HttpToolDriver(
+                $app->make(HttpRequestBuilder::class),
+            );
+        });
         $this->app->singleton(CodeToolDriver::class);
         $this->app->singleton(McpToolDriver::class);
         $this->app->singleton(McpToolRegistrar::class);
