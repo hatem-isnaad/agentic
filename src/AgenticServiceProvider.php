@@ -185,8 +185,5 @@ final class AgenticServiceProvider extends ServiceProvider
                 ->group(__DIR__.'/../routes/api.php');
         }
 
-        if (class_exists(\Filament\Panel::class)) {
-            $this->app->register(AgenticFilamentServiceProvider::class);
-        }
     }
 }
