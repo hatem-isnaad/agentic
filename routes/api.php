@@ -7,6 +7,7 @@ use Agentic\Http\Controllers\Api\ConversationController;
 use Agentic\Http\Controllers\Api\ExecutionController;
 use Agentic\Http\Controllers\Api\KnowledgeSourceController;
 use Agentic\Http\Controllers\Api\MemoryController;
+use Agentic\Http\Controllers\Api\McpServerController;
 use Agentic\Http\Controllers\Api\SkillController;
 use Agentic\Http\Controllers\Api\ToolController;
 use Agentic\Http\Controllers\Api\WorkflowController;
@@ -41,6 +42,10 @@ Route::get('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'show'
 Route::put('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'update']);
 Route::delete('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'destroy']);
 Route::post('knowledge-sources/{slug}/index', [KnowledgeSourceController::class, 'indexDocuments']);
+Route::post('knowledge-sources/{slug}/ingest', [KnowledgeSourceController::class, 'ingest']);
+
+Route::get('mcp/servers', [McpServerController::class, 'index']);
+Route::post('mcp/servers/{server}/sync', [McpServerController::class, 'sync']);
 
 Route::get('workflows', [WorkflowController::class, 'index']);
 Route::post('workflows', [WorkflowController::class, 'store']);

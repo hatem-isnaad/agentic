@@ -32,6 +32,7 @@ LLM provider
 - [Tools (HTTP, code, MCP)](#tools-http-code-mcp)
 - [Skills, routing & conversations](#skills-routing--conversations)
 - [Knowledge & vector stores](#knowledge--vector-stores)
+- [Memory, workflows & MCP](#memory-workflows--mcp)
 - [Permissions & tool approval](#permissions--tool-approval)
 - [Admin API (SPA dashboard)](#admin-api-spa-dashboard)
 - [Widget API (embeddable chat)](#widget-api-embeddable-chat)
@@ -451,6 +452,24 @@ curl -s -X POST -H "Authorization: Bearer $TOKEN" \
 ```
 
 `pgvector` stores vectors in `agentic_vector_entries`; `pinecone` uses the hosted index API.
+
+**Ingest with parsers** (`text`, `markdown`, `html`, `json`) — parses content, updates the source, then re-indexes:
+
+```bash
+curl -s -X POST -H "Content-Type: application/json" \
+  -d '{"format":"markdown","raw_text":"# Returns\n\nWithin 30 days."}' \
+  https://your-app.test/api/agentic/knowledge-sources/product-docs/ingest
+```
+
+See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the full route matrix.
+
+---
+
+## Memory, workflows & MCP
+
+- **Memory** — `POST/GET /api/agentic/memories` (scoped facts injected into agent context).
+- **Workflows** — `POST /api/agentic/workflows/{slug}/execute` with steps: `set`, `tool`, `agent`, `condition`, `complete`.
+- **MCP** — configure `config/mcp.php` in the host app, then `php artisan agentic:mcp-sync {server}` or `POST /api/agentic/mcp/servers/{server}/sync`.
 
 ---
 

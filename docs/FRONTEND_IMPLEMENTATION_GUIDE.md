@@ -214,7 +214,8 @@ Same CRUD pattern as agents:
 
 | Method | Path | Body |
 |--------|------|------|
-| `POST` | `/knowledge-sources/{slug}/index` | Re-index documents |
+| `POST` | `/knowledge-sources/{slug}/index` | Re-index stored documents (vector sources purge namespace first) |
+| `POST` | `/knowledge-sources/{slug}/ingest` | `{ "format": "markdown\|html\|text\|json", "documents"?, "raw_text"?, "reindex?": true }` → parse, save, re-embed |
 | `POST` | `/knowledge-sources/{slug}/search` | `{ "query": "...", "limit?": 5 }` → `{ "data": [ { "content", "source?", "score?", "metadata?" } ] }` |
 
 ### 4.4 Widget settings (DB per agent)

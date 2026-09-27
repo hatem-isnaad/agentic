@@ -17,7 +17,10 @@ use Agentic\Knowledge\Contracts\EmbeddingProvider;
 use Agentic\Knowledge\Contracts\VectorStore;
 use Agentic\Knowledge\Indexers\ArrayKnowledgeIndexer;
 use Agentic\Knowledge\Indexers\VectorKnowledgeIndexer;
+use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
+use Agentic\Console\SyncMcpToolsCommand;
+use Agentic\Mcp\McpToolSyncService;
 use Agentic\Knowledge\Providers\LaravelAiEmbeddingProvider;
 use Agentic\Knowledge\Providers\NullEmbeddingProvider;
 use Agentic\Knowledge\Retrievers\ArrayKnowledgeRetriever;
@@ -215,6 +218,9 @@ final class AgenticServiceProvider extends ServiceProvider
             return $orchestrator;
         });
 
+        $this->app->singleton(KnowledgeIngestor::class);
+        $this->app->singleton(McpToolSyncService::class);
+
         $this->app->singleton(McpClientGateway::class, function ($app) {
             if ($app->bound(ClientManager::class)) {
                 return $app->make(LaravelMcpClientGateway::class);
@@ -279,6 +285,12 @@ final class AgenticServiceProvider extends ServiceProvider
                 ->middleware($middleware)
                 ->name($namePrefix)
                 ->group(__DIR__.'/../routes/auth-api.php');
+        }
+
+        if ($this->app->runningInConsole()) {
+            $this->commands([
+                SyncMcpToolsCommand::class,
+            ]);
         }
     }
 

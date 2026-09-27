@@ -305,4 +305,19 @@ return [
         'code' => Agentic\Tool\Drivers\CodeToolDriver::class,
         'mcp' => Agentic\Tool\Drivers\McpToolDriver::class,
     ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | MCP tool discovery
+    |--------------------------------------------------------------------------
+    |
+    | MCP servers are configured in the host app's config/mcp.php (laravel/mcp).
+    | Use agentic:mcp-sync or POST /api/agentic/mcp/servers/{server}/sync.
+    |
+    */
+    'mcp' => [
+        'enabled' => env('AGENTIC_MCP_ENABLED', true),
+        'tool_prefix' => env('AGENTIC_MCP_TOOL_PREFIX', ''),
+        'servers' => [],
+    ],
 ];
