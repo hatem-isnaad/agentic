@@ -279,7 +279,7 @@ Same CRUD pattern as agents:
 ### 5.2 Conversations
 
 | Method | Path | Body / query |
-|--------|------|--------------|
+|--------|------|----------------|
 | `GET` | `/conversations` | Query: `agent` (required) |
 | `POST` | `/conversations` | `{ "agent", "locale?", "metadata?" }` → 201 |
 | `GET` | `/conversations/{id}/messages` | Message history (no `system` role messages) |
