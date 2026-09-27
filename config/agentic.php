@@ -45,6 +45,30 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Conversations
+    |--------------------------------------------------------------------------
+    |
+    | Agentic conversation records associate agent/user/tenant metadata.
+    | Laravel AI SDK remains responsible for provider-level message history.
+    |
+    | driver: eloquent | memory
+    |
+    */
+    'conversation' => [
+        'driver' => env('AGENTIC_CONVERSATION_DRIVER', 'eloquent'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Routing
+    |--------------------------------------------------------------------------
+    */
+    'routing' => [
+        'fallback_agent' => env('AGENTIC_FALLBACK_AGENT'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Tool drivers
     |--------------------------------------------------------------------------
     |
