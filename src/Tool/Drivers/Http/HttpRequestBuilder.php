@@ -3,6 +3,7 @@
 namespace Agentic\Tool\Drivers\Http;
 
 use Agentic\Tool\Support\TemplateInterpolator;
+use Agentic\Tool\Drivers\Http\HttpUrlValidator;
 use Agentic\Tool\ToolDefinition;
 use Agentic\Tool\ToolExecutionContext;
 use InvalidArgumentException;
@@ -14,6 +15,7 @@ final class HttpRequestBuilder
 {
     public function __construct(
         private AuthenticationResolver $authentication = new AuthenticationResolver(),
+        private HttpUrlValidator $urls = new HttpUrlValidator(),
     ) {}
 
     /**
@@ -50,6 +52,7 @@ final class HttpRequestBuilder
         }
 
         $url = TemplateInterpolator::string($url, $values);
+        $this->urls->validate($url);
 
         $headers = TemplateInterpolator::array(
             $this->stringMap($config['headers'] ?? []),
@@ -83,7 +86,8 @@ final class HttpRequestBuilder
         }
 
         $auth = $this->authentication->resolve(
-            is_array($config['auth'] ?? null) ? $config['auth'] : null
+            is_array($config['auth'] ?? null) ? $config['auth'] : null,
+            $definition->connection,
         );
 
         $headers = array_merge($headers, $auth['headers']);

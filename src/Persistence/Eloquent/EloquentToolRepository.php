@@ -84,6 +84,7 @@ final class EloquentToolRepository implements ToolRepository
             status: $tool->status instanceof Status ? $tool->status->value : (string) $tool->status,
             runtime: $definition['runtime'] ?? [],
             version: $version?->version,
+            connection: is_string($definition['connection'] ?? null) ? $definition['connection'] : null,
         );
     }
 }

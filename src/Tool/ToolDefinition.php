@@ -22,5 +22,6 @@ final readonly class ToolDefinition
         public ?string $status = null,
         public array $runtime = [],
         public ?int $version = null,
+        public ?string $connection = null,
     ) {}
 }
