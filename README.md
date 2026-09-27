@@ -1,1 +1,1 @@
-@LOAD:/tmp/gh-push-1.json:files[0].content
+PLACEHOLDER_WILL_REPLACE
