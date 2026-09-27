@@ -243,6 +243,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Workflows
+    |--------------------------------------------------------------------------
+    |
+    | driver: eloquent | memory
+    |
+    */
+    'workflows' => [
+        'enabled' => env('AGENTIC_WORKFLOWS_ENABLED', true),
+        'driver' => env('AGENTIC_WORKFLOW_DRIVER', 'eloquent'),
+        'max_steps' => (int) env('AGENTIC_WORKFLOW_MAX_STEPS', 100),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Filament admin (optional)
     |--------------------------------------------------------------------------
     |
