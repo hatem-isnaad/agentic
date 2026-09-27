@@ -2,6 +2,7 @@
 
 namespace Agentic\Tests\Unit;
 
+use Agentic\Exceptions\ToolNotFoundException;
 use Agentic\Tests\TestCase;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\Registry\ToolRegistry;
@@ -11,7 +12,7 @@ use Agentic\Tool\ToolResult;
 
 final class ToolRegistryTest extends TestCase
 {
-    public function test_tool_can_be_registered_and_resolved(): void
+    public function test_tool_can_be_registered_resolved_and_unregistered(): void
     {
         $registry = new ToolRegistry();
 
@@ -30,6 +31,14 @@ final class ToolRegistryTest extends TestCase
         $registry->register($tool);
 
         $this->assertTrue($registry->has('ping'));
-        $this->assertSame($tool, $registry->get('ping'));
+        $this->assertSame($tool, $registry->resolve('ping'));
+        $this->assertSame($tool, $registry->find('ping'));
+
+        $registry->unregister('ping');
+
+        $this->assertFalse($registry->has('ping'));
+        $this->assertNull($registry->find('ping'));
+        $this->expectException(ToolNotFoundException::class);
+        $registry->get('ping');
     }
 }
