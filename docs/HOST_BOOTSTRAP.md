@@ -10,20 +10,26 @@ Use this once when embedding Agentic in a **new or existing Laravel 12** app. Th
 composer require hatem-isnaad/agentic laravel/ai
 ```
 
-**Local path (monorepo):**
+**Local path (monorepo):** use the reference app at `laravel-host/` (sibling of `agentic/`):
+
+```bash
+cd laravel-host
+composer install
+php artisan migrate
+php artisan db:seed
+php artisan serve
+```
+
+Or wire your own app with:
 
 ```json
 "repositories": [
     { "type": "path", "url": "../agentic", "options": { "symlink": true } }
 ],
 "require": {
-    "hatem-isnaad/agentic": "*",
+    "hatem-isnaad/agentic": "@dev",
     "laravel/ai": "^1.0"
 }
-```
-
-```bash
-composer update hatem-isnaad/agentic
 ```
 
 ## 2. Install & migrate
