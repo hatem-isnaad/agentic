@@ -5,6 +5,7 @@ namespace Agentic\Context;
 use Agentic\Agent\AgentDefinition;
 use Agentic\Knowledge\KnowledgeChunk;
 use Agentic\Knowledge\KnowledgeOrchestrator;
+use Agentic\Memory\MemoryManager;
 use Agentic\Skill\SkillResolver;
 use Agentic\Tool\Registry\ToolRegistry;
 
@@ -17,6 +18,7 @@ final class ContextBuilder
         private ToolRegistry $tools,
         private SkillResolver $skills,
         private ?KnowledgeOrchestrator $knowledge = null,
+        private ?MemoryManager $memory = null,
     ) {}
 
     /**
@@ -25,6 +27,7 @@ final class ContextBuilder
      *     instructions: string,
      *     skills: list<array{name: string, description: string, tools: list<string>}>,
      *     knowledge: list<mixed>,
+     *     memory: list<mixed>,
      *     tools: list<string>
      * }
      */
@@ -69,10 +72,20 @@ final class ContextBuilder
             );
         }
 
+        $memory = [];
+
+        if ($this->memory !== null && $runtime !== null) {
+            $memory = array_map(
+                fn ($record) => $record->toContextArray(),
+                $this->memory->recallForRuntime($runtime, $agent->identifier()),
+            );
+        }
+
         return [
             'instructions' => $agent->instructions,
             'skills' => $selectedSkills,
             'knowledge' => $knowledge,
+            'memory' => $memory,
             'tools' => array_values(array_unique(array_merge($directTools, $skillTools))),
         ];
     }
