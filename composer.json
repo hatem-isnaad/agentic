@@ -1,0 +1,33 @@
+{
+  "name": "hatem-isnaad/agentic",
+  "description": "A configuration-driven AI agent runtime and extensibility platform for Laravel.",
+  "type": "library",
+  "license": "MIT",
+  "require": {
+    "php": "^8.2",
+    "illuminate/support": "^11.0|^12.0"
+  },
+  "require-dev": {
+    "orchestra/testbench": "^9.0|^10.0",
+    "phpunit/phpunit": "^11.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "Agentic\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Agentic\\Tests\\": "tests/"
+    }
+  },
+  "extra": {
+    "laravel": {
+      "providers": [
+        "Agentic\\AgenticServiceProvider"
+      ]
+    }
+  },
+  "minimum-stability": "stable",
+  "prefer-stable": true
+}
