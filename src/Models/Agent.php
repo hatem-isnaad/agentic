@@ -2,6 +2,7 @@
 
 namespace Agentic\Models;
 
+use Agentic\Enums\Status;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
@@ -12,7 +13,7 @@ class Agent extends Model
 
     protected function casts(): array
     {
-        return ['model_config' => 'array', 'config' => 'array'];
+        return ['status' => Status::class, 'model_config' => 'array', 'config' => 'array'];
     }
 
     public function skills(): BelongsToMany
@@ -23,6 +24,6 @@ class Agent extends Model
 
     public function scopePublished($query)
     {
-        return $query->where('status', 'published');
+        return $query->where('status', Status::Published);
     }
 }
