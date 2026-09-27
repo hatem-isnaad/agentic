@@ -12,6 +12,7 @@ use Agentic\Execution\AgentExecutionResult;
 use Agentic\Execution\ExecutionManager;
 use Agentic\Execution\ExecutionStatus;
 use Agentic\Integrations\LaravelAi\LaravelAiSdkAdapter;
+use Agentic\Persistence\ToolVersionResolver;
 use Agentic\Skill\SkillRouter;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\Registry\ToolRegistry;
@@ -34,6 +35,7 @@ final class AgentRuntime
         private LaravelAiSdkAdapter $ai,
         private ExecutionManager $executions,
         private SkillRouter $skillRouter,
+        private ToolVersionResolver $toolVersions,
     ) {}
 
     public function run(AgentDefinition $agent, AgentExecutionContext $context): AgentExecutionResult
@@ -109,10 +111,26 @@ final class AgentRuntime
                 $skillSelection?->skills,
             );
             $selectedTools = $this->resolveTools($built['tools']);
+            $pinnedVersions = $this->pinToolVersions($selectedTools);
+
+            $context = new AgentExecutionContext(
+                message: $context->message,
+                metadata: $context->metadata,
+                variables: $context->variables,
+                messages: $context->messages,
+                runtime: $context->runtime->with('tool_version_ids', $pinnedVersions),
+                conversation: $context->conversation,
+                conversationId: $context->conversationId,
+                executionId: $execution->id,
+            );
 
             $this->executions->addStep($execution, 'skill_selection', output: [
                 'skills' => $skillSelection?->skills ?? $agent->skills,
                 'matches' => $skillSelection?->matches ?? [],
+            ]);
+
+            $this->executions->addStep($execution, 'tool_version_pin', output: [
+                'versions' => $pinnedVersions,
             ]);
 
             $this->executions->addStep($execution, 'llm_request', [
@@ -181,5 +199,24 @@ final class AgentRuntime
         }
 
         return $resolved;
+    }
+
+    /**
+     * @param  list<ToolContract>  $tools
+     * @return array<string, int>
+     */
+    private function pinToolVersions(array $tools): array
+    {
+        $pinned = [];
+
+        foreach ($tools as $tool) {
+            $id = $this->toolVersions->resolveId($tool->definition());
+
+            if ($id !== null) {
+                $pinned[$tool->definition()->name] = $id;
+            }
+        }
+
+        return $pinned;
     }
 }
