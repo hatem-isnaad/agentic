@@ -37,6 +37,16 @@ final class EloquentSkillRepository implements SkillRepository
             ->all();
     }
 
+    public function all(): array
+    {
+        return Skill::query()
+            ->with(['tools'])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Skill $skill) => $this->toDefinition($skill))
+            ->all();
+    }
+
     public function save(array $attributes): SkillDefinition
     {
         $config = $attributes['config'] ?? [];

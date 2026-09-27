@@ -65,8 +65,11 @@ use Agentic\Tool\Drivers\Mcp\McpToolRegistrar;
 use Agentic\Tool\Drivers\McpToolDriver;
 use Agentic\Tool\Handlers\HandlerRegistry;
 use Agentic\Tool\Registry\ToolRegistry;
+use Agentic\Tool\ToolApprovalExecutionService;
 use Agentic\Tool\ToolExecutor;
 use Agentic\Tool\ToolFactory;
+use Agentic\Widget\Broadcast\DatabaseWidgetBroadcastDriver;
+use Agentic\Widget\Broadcast\WidgetBroadcastDriver;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
 use Laravel\Mcp\Client\ClientManager;
@@ -124,6 +127,8 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(McpToolRegistrar::class);
         $this->app->singleton(ExecutionManager::class);
         $this->app->singleton(OAuth2TokenManager::class);
+        $this->app->singleton(WidgetBroadcastDriver::class, DatabaseWidgetBroadcastDriver::class);
+        $this->app->singleton(ToolApprovalExecutionService::class);
 
         $this->app->singleton(PermissionChecker::class, function ($app) {
             return $app->make(config('agentic.permissions.checker', DenyAllPermissionChecker::class));
@@ -208,6 +213,7 @@ final class AgenticServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->loadMigrationsFrom(__DIR__.'/../database/migrations');
+        $this->loadTranslationsFrom(__DIR__.'/../resources/lang', 'agentic');
 
         $this->publishes([
             __DIR__.'/../config/agentic.php' => config_path('agentic.php'),
@@ -215,12 +221,63 @@ final class AgenticServiceProvider extends ServiceProvider
 
         if (config('agentic.api.enabled')) {
             $prefix = trim((string) config('agentic.api.prefix', 'api/agentic'), '/');
-            $middleware = config('agentic.api.middleware', ['api']);
+            $middleware = $this->resolveMiddleware(
+                config('agentic.api.middleware', ['api']),
+                (bool) config('agentic.auth.protect.runtime_api', false),
+            );
 
             Route::prefix($prefix)
                 ->middleware($middleware)
                 ->group(__DIR__.'/../routes/api.php');
         }
 
+        if (config('agentic.admin.enabled') && config('agentic.admin.api.enabled', true)) {
+            $prefix = trim((string) config('agentic.admin.api.prefix', 'api/agentic/admin'), '/');
+            $middleware = $this->resolveMiddleware(
+                config('agentic.admin.api.middleware', ['api']),
+                (bool) config('agentic.auth.protect.admin_api', false),
+            );
+            $namePrefix = (string) config('agentic.admin.api.route_name_prefix', 'agentic.admin.');
+
+            Route::prefix($prefix)
+                ->middleware($middleware)
+                ->name($namePrefix)
+                ->group(__DIR__.'/../routes/admin-api.php');
+        }
+
+        if (config('agentic.widget.enabled', true)) {
+            $prefix = trim((string) config('agentic.widget.prefix', 'api/agentic/widget'), '/');
+            $middleware = config('agentic.widget.middleware', ['api']);
+            $namePrefix = (string) config('agentic.widget.route_name_prefix', 'agentic.widget.');
+
+            Route::prefix($prefix)
+                ->middleware($middleware)
+                ->name($namePrefix)
+                ->group(__DIR__.'/../routes/widget-api.php');
+        }
+
+        if (config('agentic.auth.enabled', true) && class_exists(\Laravel\Sanctum\SanctumServiceProvider::class)) {
+            $prefix = trim((string) config('agentic.auth.prefix', 'api/agentic/auth'), '/');
+            $middleware = config('agentic.auth.middleware', ['api']);
+            $namePrefix = (string) config('agentic.auth.route_name_prefix', 'agentic.auth.');
+
+            Route::prefix($prefix)
+                ->middleware($middleware)
+                ->name($namePrefix)
+                ->group(__DIR__.'/../routes/auth-api.php');
+        }
+    }
+
+    /**
+     * @param  list<string|class-string>  $middleware
+     * @return list<string|class-string>
+     */
+    private function resolveMiddleware(array $middleware, bool $requireAuth): array
+    {
+        if (! $requireAuth || ! class_exists(\Laravel\Sanctum\SanctumServiceProvider::class)) {
+            return $middleware;
+        }
+
+        return array_merge($middleware, ['auth:sanctum']);
     }
 }

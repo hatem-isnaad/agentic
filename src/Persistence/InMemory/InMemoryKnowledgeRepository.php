@@ -30,6 +30,11 @@ final class InMemoryKnowledgeRepository implements KnowledgeRepository
         ));
     }
 
+    public function all(): array
+    {
+        return array_values($this->sources);
+    }
+
     public function save(KnowledgeSourceDefinition $source): KnowledgeSourceDefinition
     {
         $this->sources[$source->slug] = $source;

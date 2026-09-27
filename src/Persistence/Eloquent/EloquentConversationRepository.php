@@ -43,6 +43,16 @@ final class EloquentConversationRepository implements ConversationRepository
         return $this->toDto($model->fresh());
     }
 
+    public function recent(int $limit = 50): array
+    {
+        return Conversation::query()
+            ->latest('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Conversation $model) => $this->toDto($model))
+            ->all();
+    }
+
     public function findLatestFor(string $agent, string|int|null $userId = null, string|int|null $tenantId = null): ?ConversationDto
     {
         $model = Conversation::query()

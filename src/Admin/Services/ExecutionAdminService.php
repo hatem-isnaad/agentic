@@ -14,7 +14,7 @@ final class ExecutionAdminService
     /**
      * @return list<ExecutionData>
      */
-    public function list(int $limit = 200): array
+    public function list(int $limit = 50): array
     {
         return array_map(
             fn ($execution) => ExecutionData::fromExecution($execution),

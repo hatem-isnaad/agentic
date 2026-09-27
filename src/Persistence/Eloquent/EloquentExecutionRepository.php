@@ -42,6 +42,17 @@ final class EloquentExecutionRepository implements ExecutionRepository
         return $model ? $this->toDto($model) : null;
     }
 
+    public function recent(int $limit = 50): array
+    {
+        return Execution::query()
+            ->with('steps')
+            ->latest('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Execution $model) => $this->toDto($model))
+            ->all();
+    }
+
     public function update(ExecutionDto $execution): ExecutionDto
     {
         $model = Execution::query()->where('uuid', $execution->id)->firstOrFail();
@@ -71,8 +82,6 @@ final class EloquentExecutionRepository implements ExecutionRepository
     {
         ExecutionStep::query()->create([
             'execution_id' => $executionId,
-            'tool_id' => $step->toolId,
-            'tool_version_id' => $step->toolVersionId,
             'uuid' => $step->id !== '' ? $step->id : (string) Str::uuid(),
             'type' => $step->type,
             'status' => $step->status,
@@ -81,8 +90,6 @@ final class EloquentExecutionRepository implements ExecutionRepository
             'metadata' => $step->metadata,
             'started_at' => $step->startedAt,
             'completed_at' => $step->completedAt,
-            'permission_allowed' => $step->permissionAllowed,
-            'duration_ms' => $step->durationMs,
         ]);
     }
 
@@ -107,10 +114,6 @@ final class EloquentExecutionRepository implements ExecutionRepository
                 metadata: $step->metadata ?? [],
                 startedAt: optional($step->started_at)?->toISOString(),
                 completedAt: optional($step->completed_at)?->toISOString(),
-                toolId: $step->tool_id,
-                toolVersionId: $step->tool_version_id,
-                permissionAllowed: $step->permission_allowed,
-                durationMs: $step->duration_ms,
             ))->all(),
             startedAt: optional($model->started_at)?->toISOString(),
             completedAt: optional($model->completed_at)?->toISOString(),

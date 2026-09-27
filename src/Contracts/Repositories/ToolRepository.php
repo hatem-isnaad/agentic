@@ -16,6 +16,11 @@ interface ToolRepository
     public function allPublished(): array;
 
     /**
+     * @return list<ToolDefinition>
+     */
+    public function all(): array;
+
+    /**
      * @param  array{
      *     name: string,
      *     slug: string,

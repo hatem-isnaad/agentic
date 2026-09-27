@@ -15,6 +15,16 @@ return [
     'ai' => [
         'provider' => env('AGENTIC_AI_PROVIDER'),
         'model' => env('AGENTIC_AI_MODEL'),
+        'providers' => [
+            'openai' => [
+                'label' => 'OpenAI',
+                'models' => array_filter(explode(',', (string) env('AGENTIC_OPENAI_MODELS', 'gpt-4.1-mini,gpt-4o'))),
+            ],
+            'anthropic' => [
+                'label' => 'Anthropic',
+                'models' => array_filter(explode(',', (string) env('AGENTIC_ANTHROPIC_MODELS', 'claude-sonnet-4-20250514'))),
+            ],
+        ],
         'deferred_tools' => [
             'enabled' => env('AGENTIC_DEFERRED_TOOLS', false),
             'deferred_count' => env('AGENTIC_DEFERRED_TOOL_COUNT', 10),
@@ -29,6 +39,104 @@ return [
             'AGENTIC_TOOL_APPROVAL_REASON',
             'This tool requires human approval before execution.',
         ),
+    ],
+
+    'tool_approval' => [
+        'enabled' => env('AGENTIC_TOOL_APPROVAL_ENABLED', true),
+        'tool_patterns' => array_filter(explode(',', (string) env(
+            'AGENTIC_TOOL_APPROVAL_PATTERNS',
+            '*.write,*.create,*.update,*.delete',
+        ))),
+        'auto_execute_on_approve' => env('AGENTIC_TOOL_APPROVAL_AUTO_EXECUTE', true),
+        'auto_resume_after_execute' => env('AGENTIC_TOOL_APPROVAL_AUTO_RESUME', true),
+    ],
+
+    'auth' => [
+        'enabled' => env('AGENTIC_AUTH_ENABLED', true),
+        'prefix' => env('AGENTIC_AUTH_PREFIX', 'api/agentic/auth'),
+        'route_name_prefix' => 'agentic.auth.',
+        'middleware' => ['api'],
+        'protect' => [
+            'admin_api' => env('AGENTIC_ADMIN_REQUIRE_AUTH', false),
+            'runtime_api' => env('AGENTIC_API_REQUIRE_AUTH', false),
+        ],
+        'sanctum' => [
+            'stateful_widget' => env('AGENTIC_AUTH_STATEFUL_WIDGET', true),
+            'issue_token_on_passkey_login' => env('AGENTIC_AUTH_ISSUE_TOKEN_ON_PASSKEY_LOGIN', true),
+            'token_name' => env('AGENTIC_AUTH_TOKEN_NAME', 'agentic'),
+            'token_abilities' => ['*'],
+        ],
+    ],
+
+    'admin' => [
+        'enabled' => env('AGENTIC_ADMIN_ENABLED', true),
+        'api' => [
+            'enabled' => env('AGENTIC_ADMIN_API_ENABLED', true),
+            'prefix' => env('AGENTIC_ADMIN_API_PREFIX', 'api/agentic/admin'),
+            'middleware' => [
+                'api',
+                Agentic\Http\Middleware\SetAdminLocale::class,
+            ],
+            'route_name_prefix' => 'agentic.admin.',
+        ],
+        'default_locale' => env('AGENTIC_ADMIN_LOCALE', 'en'),
+        'locales' => ['en', 'ar'],
+        'rtl_locales' => ['ar'],
+    ],
+
+    'widget' => [
+        'enabled' => env('AGENTIC_WIDGET_ENABLED', true),
+        'prefix' => env('AGENTIC_WIDGET_PREFIX', 'api/agentic/widget'),
+        'middleware' => [
+            'api',
+            Agentic\Http\Middleware\SetAdminLocale::class,
+            Agentic\Http\Middleware\EnsureWidgetAccess::class,
+        ],
+        'route_name_prefix' => 'agentic.widget.',
+        'auth' => [
+            'mode' => env('AGENTIC_WIDGET_AUTH_MODE', 'both'),
+            'allow_guest' => env('AGENTIC_WIDGET_ALLOW_GUEST', true),
+            'allow_authenticated' => env('AGENTIC_WIDGET_ALLOW_AUTH', true),
+        ],
+        'conversation' => [
+            'max_open_per_user' => (int) env('AGENTIC_WIDGET_MAX_CONVERSATIONS', 10),
+        ],
+        'intake' => [
+            'enabled' => env('AGENTIC_WIDGET_INTAKE_ENABLED', false),
+            'welcome_message' => env('AGENTIC_WIDGET_WELCOME_MESSAGE'),
+            'questions' => [],
+        ],
+        'locale' => [
+            'default' => env('AGENTIC_WIDGET_LOCALE', 'en'),
+            'supported' => ['en', 'ar'],
+            'agent_language' => env('AGENTIC_WIDGET_AGENT_LANGUAGE'),
+        ],
+        'theme' => [
+            'default' => env('AGENTIC_WIDGET_THEME', 'light'),
+            'direction' => env('AGENTIC_WIDGET_THEME_DIRECTION', 'auto'),
+            'custom' => [],
+            'sounds' => [],
+        ],
+        'reply' => [
+            'formats' => ['text', 'html', 'table', 'list', 'card', 'code', 'blocks', 'actions'],
+        ],
+        'broadcast' => [
+            'driver' => env('AGENTIC_WIDGET_BROADCAST_DRIVER', 'polling'),
+            'channel_prefix' => env('AGENTIC_WIDGET_BROADCAST_PREFIX', 'agentic-widget'),
+            'polling' => [
+                'interval_ms' => (int) env('AGENTIC_WIDGET_BROADCAST_POLL_MS', 3000),
+            ],
+            'pusher' => [
+                'key' => env('PUSHER_APP_KEY'),
+                'cluster' => env('PUSHER_APP_CLUSTER', 'mt1'),
+            ],
+            'socketio' => [
+                'url' => env('AGENTIC_WIDGET_SOCKETIO_URL'),
+                'token' => env('AGENTIC_WIDGET_SOCKETIO_TOKEN'),
+                'timeout' => (int) env('AGENTIC_WIDGET_SOCKETIO_TIMEOUT', 5),
+            ],
+        ],
+        'agents' => [],
     ],
 
     'skill_routing' => [
