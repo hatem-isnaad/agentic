@@ -83,7 +83,8 @@ final class HttpRequestBuilder
         }
 
         $auth = $this->authentication->resolve(
-            is_array($config['auth'] ?? null) ? $config['auth'] : null
+            is_array($config['auth'] ?? null) ? $config['auth'] : null,
+            $definition->connection,
         );
 
         $headers = array_merge($headers, $auth['headers']);
