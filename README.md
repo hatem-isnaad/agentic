@@ -136,7 +136,25 @@ use Agentic\Tool\DriverResolver;
 app(DriverResolver::class)->extend('custom', App\Agentic\CustomDriver::class);
 ```
 
-Built-in driver names: `http`, `code`, `mcp` (MCP protocol delegated to Laravel AI SDK / `laravel/mcp`).
+Built-in driver names: `http`, `code`, `mcp` (MCP protocol delegated to `laravel/mcp`).
+
+## MCP tools
+
+Register an MCP client (via `laravel/mcp`), then import tools into Agentic:
+
+```php
+use Laravel\Mcp\Facades\Mcp;
+use Laravel\Mcp\Client;
+use Agentic\Tool\Drivers\Mcp\McpToolRegistrar;
+
+Mcp::registerClient('warehouse', fn () => Client::web('https://mcp.example.com'));
+
+app(McpToolRegistrar::class)->registerServer('warehouse', 'mcp.warehouse.');
+```
+
+## Execution tracking
+
+Every `AgentRuntime::run()` creates an execution with steps (`agent_start`, `llm_request`, `final_response`, …) and emits lifecycle events.
 
 ## Development
 

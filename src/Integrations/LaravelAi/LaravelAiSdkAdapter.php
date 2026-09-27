@@ -4,9 +4,9 @@ namespace Agentic\Integrations\LaravelAi;
 
 use Agentic\Agent\AgentDefinition;
 use Agentic\Execution\AgentExecutionContext;
-use Agentic\Permission\PermissionChecker;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\ToolExecutionContext;
+use Agentic\Tool\ToolExecutor;
 use Laravel\Ai\Contracts\Agent as LaravelAgent;
 use Laravel\Ai\Responses\AgentResponse;
 
@@ -21,7 +21,7 @@ use function Laravel\Ai\agent;
 final class LaravelAiSdkAdapter
 {
     public function __construct(
-        private PermissionChecker $permissions,
+        private ToolExecutor $executor,
     ) {}
 
     /**
@@ -71,7 +71,7 @@ final class LaravelAiSdkAdapter
         );
 
         $laravelTools = array_map(
-            fn (ToolContract $tool) => new AgenticLaravelTool($tool, $this->permissions, $baseToolContext),
+            fn (ToolContract $tool) => new AgenticLaravelTool($tool, $this->executor, $baseToolContext),
             $tools,
         );
 
