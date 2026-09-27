@@ -2,9 +2,11 @@
 
 namespace Agentic\Filament;
 
+use Agentic\Filament\Resources\AgentResource;
 use Agentic\Filament\Resources\KnowledgeSourceResource;
 use Agentic\Filament\Resources\SkillResource;
 use Agentic\Filament\Resources\ToolResource;
+use Agentic\Filament\Resources\WorkflowResource;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
 
@@ -23,9 +25,11 @@ final class AgenticPlugin implements Plugin
     public function register(Panel $panel): void
     {
         $panel->resources([
+            AgentResource::class,
             KnowledgeSourceResource::class,
-            ToolResource::class,
             SkillResource::class,
+            ToolResource::class,
+            WorkflowResource::class,
         ]);
     }
 

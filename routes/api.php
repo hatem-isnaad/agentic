@@ -7,6 +7,7 @@ use Agentic\Http\Controllers\Api\ConversationController;
 use Agentic\Http\Controllers\Api\ExecutionController;
 use Agentic\Http\Controllers\Api\KnowledgeSourceController;
 use Agentic\Http\Controllers\Api\MemoryController;
+use Agentic\Http\Controllers\Api\McpCatalogController;
 use Agentic\Http\Controllers\Api\McpServerController;
 use Agentic\Http\Controllers\Api\SkillController;
 use Agentic\Http\Controllers\Api\ToolController;
@@ -46,6 +47,11 @@ Route::post('knowledge-sources/{slug}/ingest', [KnowledgeSourceController::class
 
 Route::get('mcp/servers', [McpServerController::class, 'index']);
 Route::post('mcp/servers/{server}/sync', [McpServerController::class, 'sync']);
+Route::get('mcp/servers/{server}/tools', [McpCatalogController::class, 'tools']);
+Route::get('mcp/servers/{server}/resources', [McpCatalogController::class, 'resources']);
+Route::post('mcp/servers/{server}/resources/read', [McpCatalogController::class, 'readResource']);
+Route::get('mcp/servers/{server}/prompts', [McpCatalogController::class, 'prompts']);
+Route::post('mcp/servers/{server}/prompts/{name}', [McpCatalogController::class, 'prompt']);
 
 Route::get('workflows', [WorkflowController::class, 'index']);
 Route::post('workflows', [WorkflowController::class, 'store']);

@@ -273,6 +273,7 @@ return [
         'enabled' => env('AGENTIC_WORKFLOWS_ENABLED', true),
         'driver' => env('AGENTIC_WORKFLOW_DRIVER', 'eloquent'),
         'max_steps' => (int) env('AGENTIC_WORKFLOW_MAX_STEPS', 100),
+        'max_parallel_branches' => (int) env('AGENTIC_WORKFLOW_MAX_PARALLEL_BRANCHES', 10),
     ],
 
     /*
@@ -301,6 +302,10 @@ return [
         'enabled' => env('AGENTIC_API_ENABLED', false),
         'prefix' => env('AGENTIC_API_PREFIX', 'api/agentic'),
         'middleware' => ['api'],
+        'rate_limit' => [
+            'enabled' => env('AGENTIC_API_RATE_LIMIT_ENABLED', true),
+            'per_minute' => (int) env('AGENTIC_API_RATE_LIMIT_PER_MINUTE', 120),
+        ],
     ],
 
     'http' => [

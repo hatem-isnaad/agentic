@@ -25,7 +25,10 @@ use Agentic\Knowledge\Documents\DocumentUrlFetcher;
 use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
 use Agentic\Console\SyncMcpToolsCommand;
+use Agentic\Mcp\McpServerService;
 use Agentic\Mcp\McpToolSyncService;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Support\Facades\RateLimiter;
 use Agentic\Knowledge\Providers\LaravelAiEmbeddingProvider;
 use Agentic\Knowledge\Providers\NullEmbeddingProvider;
 use Agentic\Knowledge\Retrievers\ArrayKnowledgeRetriever;
@@ -227,6 +230,7 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(DocumentUrlFetcher::class);
         $this->app->singleton(KnowledgeIngestor::class);
         $this->app->singleton(McpToolSyncService::class);
+        $this->app->singleton(McpServerService::class);
 
         $this->app->singleton(McpClientGateway::class, function ($app) {
             if ($app->bound(ClientManager::class)) {
@@ -251,10 +255,21 @@ final class AgenticServiceProvider extends ServiceProvider
             __DIR__.'/../config/agentic.php' => config_path('agentic.php'),
         ], 'agentic-config');
 
+        RateLimiter::for('agentic-api', function ($request) {
+            return Limit::perMinute((int) config('agentic.api.rate_limit.per_minute', 120))
+                ->by($request->user()?->getAuthIdentifier() ?: $request->ip());
+        });
+
         if (config('agentic.api.enabled')) {
             $prefix = trim((string) config('agentic.api.prefix', 'api/agentic'), '/');
+            $apiMiddleware = config('agentic.api.middleware', ['api']);
+
+            if ((bool) config('agentic.api.rate_limit.enabled', true)) {
+                $apiMiddleware[] = 'throttle:agentic-api';
+            }
+
             $middleware = $this->resolveMiddleware(
-                config('agentic.api.middleware', ['api']),
+                $apiMiddleware,
                 (bool) config('agentic.auth.protect.runtime_api', false),
             );
 

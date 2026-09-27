@@ -145,4 +145,43 @@ final class WorkflowRunnerTest extends TestCase
         $this->assertTrue($completed->success);
         $this->assertSame(['ok' => true], $completed->output);
     }
+
+    public function test_parallel_step_runs_branches_and_merges_results(): void
+    {
+        $result = app(WorkflowRunner::class)->run(
+            new WorkflowDefinition(
+                slug: 'parallel-greet',
+                name: 'Parallel Greet',
+                steps: [
+                    [
+                        'id' => 'fanout',
+                        'type' => 'parallel',
+                        'branches' => [
+                            [
+                                'save_as' => 'left',
+                                'step' => ['type' => 'set', 'variables' => ['label' => 'L']],
+                            ],
+                            [
+                                'save_as' => 'right',
+                                'step' => ['type' => 'set', 'variables' => ['label' => 'R']],
+                            ],
+                        ],
+                    ],
+                    [
+                        'id' => 'done',
+                        'type' => 'complete',
+                        'output' => [
+                            'left' => '{left.label}',
+                            'right' => '{right.label}',
+                        ],
+                    ],
+                ],
+            ),
+            [],
+        );
+
+        $this->assertTrue($result->success);
+        $this->assertSame('L', $result->output['left']);
+        $this->assertSame('R', $result->output['right']);
+    }
 }

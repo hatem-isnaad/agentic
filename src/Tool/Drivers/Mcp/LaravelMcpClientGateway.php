@@ -30,11 +30,7 @@ final class LaravelMcpClientGateway implements McpClientGateway
 
     public function listTools(string $server): array
     {
-        $client = $this->clients->client($server);
-
-        if (! $client->connected()) {
-            $client->connect();
-        }
+        $client = $this->connectedClient($server);
 
         return $client->tools()->map(fn ($tool) => [
             'name' => $tool->name,
@@ -42,6 +38,53 @@ final class LaravelMcpClientGateway implements McpClientGateway
             'input_schema' => $tool->inputSchema,
             'output_schema' => $tool->outputSchema,
         ])->values()->all();
+    }
+
+    public function listResources(string $server): array
+    {
+        $client = $this->connectedClient($server);
+
+        return $client->resources()->map(fn ($resource) => [
+            'uri' => (string) $resource->uri,
+            'name' => (string) ($resource->name ?? $resource->uri),
+            'description' => isset($resource->description) ? (string) $resource->description : null,
+            'mime_type' => isset($resource->mimeType) ? (string) $resource->mimeType : null,
+        ])->values()->all();
+    }
+
+    public function readResource(string $server, string $uri): array
+    {
+        $client = $this->connectedClient($server);
+        $result = $client->readResource($uri);
+
+        return [
+            'uri' => $uri,
+            'mime_type' => $result->mimeType(),
+            'text' => $result->content(),
+            'contents' => $result->contents,
+        ];
+    }
+
+    public function listPrompts(string $server): array
+    {
+        $client = $this->connectedClient($server);
+
+        return $client->prompts()->map(fn ($prompt) => [
+            'name' => (string) $prompt->name,
+            'description' => isset($prompt->description) ? (string) $prompt->description : null,
+            'arguments' => is_array($prompt->arguments ?? null) ? $prompt->arguments : [],
+        ])->values()->all();
+    }
+
+    public function getPrompt(string $server, string $name, array $arguments = []): array
+    {
+        $client = $this->connectedClient($server);
+        $result = $client->getPrompt($name, $arguments);
+
+        return [
+            'description' => $result->description,
+            'messages' => $result->messages,
+        ];
     }
 
     public function callTool(string $server, string $tool, array $arguments = []): array
@@ -78,5 +121,16 @@ final class LaravelMcpClientGateway implements McpClientGateway
                 'error' => $exception->getMessage(),
             ];
         }
+    }
+
+    private function connectedClient(string $server)
+    {
+        $client = $this->clients->client($server);
+
+        if (! $client->connected()) {
+            $client->connect();
+        }
+
+        return $client;
     }
 }

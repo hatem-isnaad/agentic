@@ -21,11 +21,12 @@
 | Tools HTTP / Code / MCP | ✅ | Connections, OAuth2, SSRF limits |
 | Knowledge array + vector | ✅ | Chunking, ingest parsers, reindex |
 | Memory (scoped) | ✅ | API + context injection |
-| Workflows | ✅ | set / tool / agent / condition / approval / complete |
+| Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete |
 | Admin API | ✅ | Agents, skills, tools, knowledge, executions, widget settings |
 | Widget API | ✅ | Config, conversations, messages, approvals, realtime bridge |
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |
-| MCP discovery | ✅ | `agentic:mcp-sync`, `POST .../mcp/servers/{server}/sync` |
+| MCP discovery | ✅ | Tool sync + resources/prompts catalog API |
+| API rate limiting | ✅ | `throttle:agentic-api` on runtime routes |
 | Filament UI | ✅ | `AgenticPlugin` + tools/skills/knowledge resources (`AGENTIC_FILAMENT_PANELS`) |
 | Multi-tenant contract | ✅ | `TenantResolver`, request/conversation context providers |
 
@@ -44,3 +45,6 @@
 1. Configure servers in host `config/mcp.php` (Laravel MCP).
 2. Run `php artisan agentic:mcp-sync {server}` or call the runtime API sync endpoint.
 3. Tools register in `ToolRegistry` with optional `AGENTIC_MCP_TOOL_PREFIX`.
+4. Catalog (no sync): `GET .../tools`, `GET .../resources`, `POST .../resources/read`, `GET .../prompts`, `POST .../prompts/{name}`.
+
+See [SECURITY.md](./SECURITY.md) for production hardening defaults.

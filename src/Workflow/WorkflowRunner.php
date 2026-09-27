@@ -59,9 +59,10 @@ final class WorkflowRunner
                 $outcome = match ($type) {
                     'set' => $this->runSet($step, $variables, $pointer, $steps, $indexes),
                     'tool' => $this->runTool($step, $variables, $pointer, $steps, $indexes),
-                    'agent' => $this->runAgent($step, $variables, $pointer, $steps, $indexes),
+                    'agent' => $this->runAgent($workflow, $step, $variables, $pointer, $steps, $indexes),
                     'condition' => $this->runCondition($step, $variables, $pointer, $steps, $indexes),
                     'approval' => $this->runApproval($workflow, $step, $variables, $pointer, $steps, $indexes, $trace, $started),
+                    'parallel' => $this->runParallel($workflow, $step, $variables, $pointer, $steps, $indexes),
                     'complete' => $this->runComplete($step, $variables, $trace, $started),
 
                     default => throw new WorkflowExecutionException("Unsupported workflow step type [{$type}]."),
@@ -124,6 +125,17 @@ final class WorkflowRunner
      */
     private function runSet(array $step, array &$variables, int $pointer, array $steps, array $indexes): int
     {
+        $this->applySet($step, $variables);
+
+        return $this->resolveNext($step, $pointer, $steps, $indexes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $step
+     * @param  array<string, mixed>  $variables
+     */
+    private function applySet(array $step, array &$variables): void
+    {
         $payload = $step['variables'] ?? [];
 
         if (! is_array($payload)) {
@@ -131,8 +143,6 @@ final class WorkflowRunner
         }
 
         $variables = array_merge($variables, TemplateInterpolator::array($payload, $variables));
-
-        return $this->resolveNext($step, $pointer, $steps, $indexes);
     }
 
     /**
@@ -142,6 +152,17 @@ final class WorkflowRunner
      * @param  array<string, int>  $indexes
      */
     private function runTool(array $step, array &$variables, int $pointer, array $steps, array $indexes): int
+    {
+        $this->applyTool($step, $variables);
+
+        return $this->resolveNext($step, $pointer, $steps, $indexes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $step
+     * @param  array<string, mixed>  $variables
+     */
+    private function applyTool(array $step, array &$variables): void
     {
         $toolName = (string) ($step['tool'] ?? '');
 
@@ -172,8 +193,6 @@ final class WorkflowRunner
         if ($saveAs !== '') {
             $variables[$saveAs] = $result->data;
         }
-
-        return $this->resolveNext($step, $pointer, $steps, $indexes);
     }
 
     /**
@@ -182,7 +201,20 @@ final class WorkflowRunner
      * @param  list<array<string, mixed>>  $steps
      * @param  array<string, int>  $indexes
      */
-    private function runAgent(array $step, array &$variables, int $pointer, array $steps, array $indexes): int
+    private function runAgent(WorkflowDefinition $workflow, array $step, array &$variables, int $pointer, array $steps, array $indexes): int
+    {
+        unset($workflow);
+
+        $this->applyAgent($step, $variables);
+
+        return $this->resolveNext($step, $pointer, $steps, $indexes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $step
+     * @param  array<string, mixed>  $variables
+     */
+    private function applyAgent(array $step, array &$variables): void
     {
         $agentSlug = (string) ($step['agent'] ?? '');
 
@@ -215,8 +247,6 @@ final class WorkflowRunner
         if ($saveAs !== '') {
             $variables[$saveAs] = $execution->output;
         }
-
-        return $this->resolveNext($step, $pointer, $steps, $indexes);
     }
 
     /**
@@ -225,6 +255,62 @@ final class WorkflowRunner
      * @param  list<array<string, mixed>>  $steps
      * @param  array<string, int>  $indexes
      */
+    private function runParallel(
+        WorkflowDefinition $workflow,
+        array $step,
+        array &$variables,
+        int $pointer,
+        array $steps,
+        array $indexes,
+    ): int {
+        $branches = $step['branches'] ?? [];
+
+        if (! is_array($branches) || $branches === []) {
+            throw new WorkflowExecutionException('Parallel step requires a [branches] array.');
+        }
+
+        $maxBranches = max(1, (int) config('agentic.workflows.max_parallel_branches', 10));
+
+        if (count($branches) > $maxBranches) {
+            throw new WorkflowExecutionException('Workflow exceeded the maximum parallel branch limit.');
+        }
+
+        foreach ($branches as $branch) {
+            if (! is_array($branch)) {
+                continue;
+            }
+
+            $branchVars = $variables;
+            $branchStep = is_array($branch['step'] ?? null) ? $branch['step'] : $branch;
+            $this->executeBranchStep($workflow, $branchStep, $branchVars);
+
+            $saveAs = (string) ($branch['save_as'] ?? '');
+
+            if ($saveAs !== '') {
+                $variables[$saveAs] = $branchVars;
+            }
+        }
+
+        return $this->resolveNext($step, $pointer, $steps, $indexes);
+    }
+
+    /**
+     * @param  array<string, mixed>  $step
+     */
+    private function executeBranchStep(WorkflowDefinition $workflow, array $step, array &$variables): void
+    {
+        unset($workflow);
+
+        $type = strtolower((string) ($step['type'] ?? ''));
+
+        match ($type) {
+            'set' => $this->applySet($step, $variables),
+            'tool' => $this->applyTool($step, $variables),
+            'agent' => $this->applyAgent($step, $variables),
+            default => throw new WorkflowExecutionException("Parallel branch step type [{$type}] is not supported."),
+        };
+    }
+
     /**
      * @param  array<string, mixed>  $step
      * @param  array<string, mixed>  $variables
