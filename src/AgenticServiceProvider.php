@@ -192,7 +192,7 @@ final class AgenticServiceProvider extends ServiceProvider
 
             Route::prefix($prefix)
                 ->middleware($middleware)
-                ->group(__DIR__.'/../routes/admin.php');
+                ->group(__DIR__.'/../routes/api.php');
         }
 
         $this->loadViewsFrom(__DIR__.'/../resources/views', 'agentic');
