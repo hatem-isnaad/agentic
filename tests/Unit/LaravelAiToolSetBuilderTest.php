@@ -40,7 +40,7 @@ final class LaravelAiToolSetBuilderTest extends TestCase
         ]);
 
         $tools = array_map(
-            fn (int $i) => $this->createMock(AgenticLaravelTool::class),
+            fn (int $i) => $this->createMock(Tool::class),
             range(1, 3),
         );
 
