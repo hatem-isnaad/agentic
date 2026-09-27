@@ -23,6 +23,11 @@ return [
         ],
     ],
 
+    'skill_routing' => [
+        'enabled' => env('AGENTIC_SKILL_ROUTING', true),
+        'limit' => env('AGENTIC_SKILL_ROUTING_LIMIT', 3),
+    ],
+
     /*
     |--------------------------------------------------------------------------
     | Permission denial

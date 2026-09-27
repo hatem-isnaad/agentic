@@ -50,6 +50,30 @@ final class ContextBuilderTest extends TestCase
         $this->assertSame(['orders.search'], $context['skills'][0]['tools']);
     }
 
+    public function test_selected_skills_are_used_when_provided(): void
+    {
+        $tools = new ToolRegistry();
+        $skills = new SkillRegistry();
+
+        $skills->register(new SkillDefinition(
+            name: 'orders',
+            description: 'Orders',
+        ));
+        $skills->register(new SkillDefinition(
+            name: 'billing',
+            description: 'Billing',
+        ));
+
+        $context = (new ContextBuilder($tools, new SkillResolver($skills, $tools)))->build(
+            new AgentDefinition(name: 'support', skills: ['orders', 'billing']),
+            'Where is my order?',
+            null,
+            ['orders'],
+        );
+
+        $this->assertSame(['orders'], array_column($context['skills'], 'name'));
+    }
+
     public function test_inactive_skills_are_skipped(): void
     {
         $tools = new ToolRegistry();

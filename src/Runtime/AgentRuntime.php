@@ -12,6 +12,7 @@ use Agentic\Execution\AgentExecutionResult;
 use Agentic\Execution\ExecutionManager;
 use Agentic\Execution\ExecutionStatus;
 use Agentic\Integrations\LaravelAi\LaravelAiSdkAdapter;
+use Agentic\Skill\SkillRouter;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\Registry\ToolRegistry;
 use Throwable;
@@ -32,6 +33,7 @@ final class AgentRuntime
         private ToolRegistry $tools,
         private LaravelAiSdkAdapter $ai,
         private ExecutionManager $executions,
+        private SkillRouter $skillRouter,
     ) {}
 
     public function run(AgentDefinition $agent, AgentExecutionContext $context): AgentExecutionResult
@@ -90,12 +92,28 @@ final class AgentRuntime
                 'conversation_id' => $conversation?->id,
             ]);
 
+            $skillSelection = null;
+
+            if ((bool) config('agentic.skill_routing.enabled', true)) {
+                $skillSelection = $this->skillRouter->select(
+                    $agent,
+                    $context->message,
+                    (int) config('agentic.skill_routing.limit', 3),
+                );
+            }
+
             $built = $this->contextBuilder->build(
                 $agent,
                 $context->message,
                 $context->runtime(),
+                $skillSelection?->skills,
             );
             $selectedTools = $this->resolveTools($built['tools']);
+
+            $this->executions->addStep($execution, 'skill_selection', output: [
+                'skills' => $skillSelection?->skills ?? $agent->skills,
+                'matches' => $skillSelection?->matches ?? [],
+            ]);
 
             $this->executions->addStep($execution, 'llm_request', [
                 'message' => $context->message,
