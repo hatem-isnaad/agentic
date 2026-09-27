@@ -32,10 +32,13 @@ final class ContextBuilder
         AgentDefinition $agent,
         ?string $retrievalQuery = null,
         ?RuntimeContext $runtime = null,
+        ?array $skillNames = null,
     ): array {
+        $skillNamesForAgent = $this->normalizeSkillNames($agent->skills, $skillNames);
+
         $selectedSkills = [];
 
-        foreach ($this->skills->resolveMany($agent->skills) as $skill) {
+        foreach ($this->skills->resolveMany($skillNamesForAgent) as $skill) {
             $tools = array_values(array_filter(
                 $skill->tools,
                 fn (string $tool) => $this->tools->has($tool),
@@ -48,7 +51,7 @@ final class ContextBuilder
             ];
         }
 
-        $skillTools = $this->skills->composeTools($agent->skills);
+        $skillTools = $this->skills->composeTools($skillNamesForAgent);
 
         $directTools = array_values(array_filter(
             $agent->tools,
@@ -90,5 +93,21 @@ final class ContextBuilder
         }
 
         return $inline;
+    }
+
+    /**
+     * @param  list<string>  $agentSkills
+     * @param  list<string>|null  $skillNames
+     * @return list<string>
+     */
+    private function normalizeSkillNames(array $agentSkills, ?array $skillNames): array
+    {
+        if ($skillNames === null) {
+            return $agentSkills;
+        }
+
+        $filtered = array_values(array_unique(array_intersect($agentSkills, $skillNames)));
+
+        return $filtered;
     }
 }
