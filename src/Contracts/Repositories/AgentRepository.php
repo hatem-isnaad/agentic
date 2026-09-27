@@ -21,6 +21,11 @@ interface AgentRepository
     public function allPublished(): array;
 
     /**
+     * @return list<AgentDefinition>
+     */
+    public function all(): array;
+
+    /**
      * @param  array{
      *     name: string,
      *     slug: string,

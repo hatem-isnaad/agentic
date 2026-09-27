@@ -2,6 +2,13 @@
 
 namespace Agentic;
 
+use Agentic\Admin\Services\AgentAdminService;
+use Agentic\Admin\Services\ConversationAdminService;
+use Agentic\Admin\Services\DashboardAdminService;
+use Agentic\Admin\Services\ExecutionAdminService;
+use Agentic\Admin\Services\KnowledgeSourceAdminService;
+use Agentic\Admin\Services\SkillAdminService;
+use Agentic\Admin\Services\ToolAdminService;
 use Agentic\Agent\AgentResolver;
 use Agentic\Context\ContextBuilder;
 use Agentic\Context\ContextManager;
@@ -154,6 +161,14 @@ final class AgenticServiceProvider extends ServiceProvider
             return $orchestrator;
         });
 
+        $this->app->singleton(AgentAdminService::class);
+        $this->app->singleton(SkillAdminService::class);
+        $this->app->singleton(ToolAdminService::class);
+        $this->app->singleton(KnowledgeSourceAdminService::class);
+        $this->app->singleton(ExecutionAdminService::class);
+        $this->app->singleton(ConversationAdminService::class);
+        $this->app->singleton(DashboardAdminService::class);
+
         $this->app->singleton(McpClientGateway::class, function ($app) {
             if ($app->bound(ClientManager::class)) {
                 return $app->make(LaravelMcpClientGateway::class);
@@ -177,10 +192,23 @@ final class AgenticServiceProvider extends ServiceProvider
 
             Route::prefix($prefix)
                 ->middleware($middleware)
-                ->group(__DIR__.'/../routes/api.php');
+                ->group(__DIR__.'/../routes/admin.php');
         }
 
-        if (class_exists(\Filament\Panel::class)) {
+        $this->loadViewsFrom(__DIR__.'/../resources/views', 'agentic');
+
+        if (config('agentic.admin.enabled')) {
+            $prefix = trim((string) config('agentic.admin.prefix', 'agentic/admin'), '/');
+            $middleware = config('agentic.admin.middleware', ['web']);
+            $namePrefix = (string) config('agentic.admin.route_name_prefix', 'agentic.admin.');
+
+            Route::prefix($prefix)
+                ->middleware($middleware)
+                ->name($namePrefix)
+                ->group(__DIR__.'/../routes/admin.php');
+        }
+
+        if (config('agentic.filament.enabled') && class_exists(\Filament\Panel::class)) {
             $this->app->register(AgenticFilamentServiceProvider::class);
         }
     }
