@@ -37,6 +37,16 @@ final class EloquentAgentRepository implements AgentRepository
             ->all();
     }
 
+    public function all(): array
+    {
+        return Agent::query()
+            ->with(['skills'])
+            ->orderBy('name')
+            ->get()
+            ->map(fn (Agent $agent) => $this->toDefinition($agent))
+            ->all();
+    }
+
     public function save(array $attributes): AgentDefinition
     {
         $config = $attributes['config'] ?? [];

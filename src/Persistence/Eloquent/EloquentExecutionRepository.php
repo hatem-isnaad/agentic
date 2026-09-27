@@ -42,6 +42,17 @@ final class EloquentExecutionRepository implements ExecutionRepository
         return $model ? $this->toDto($model) : null;
     }
 
+    public function recent(int $limit = 50): array
+    {
+        return Execution::query()
+            ->with('steps')
+            ->latest('id')
+            ->limit($limit)
+            ->get()
+            ->map(fn (Execution $model) => $this->toDto($model))
+            ->all();
+    }
+
     public function update(ExecutionDto $execution): ExecutionDto
     {
         $model = Execution::query()->where('uuid', $execution->id)->firstOrFail();
