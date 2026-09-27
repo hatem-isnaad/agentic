@@ -21,6 +21,20 @@ final class ToolVersionResolver
         return $version;
     }
 
+    public function resolveVersion(Tool $tool, int $versionNumber): ToolVersion
+    {
+        $version = $tool->versions()
+            ->where('version', $versionNumber)
+            ->whereNotNull('published_at')
+            ->first();
+
+        if ($version === null) {
+            throw new ToolNotFoundException($tool->slug.'@v'.$versionNumber);
+        }
+
+        return $version;
+    }
+
     public function resolveId(ToolDefinition $definition): ?int
     {
         if ($definition->id === null || $definition->version === null) {
