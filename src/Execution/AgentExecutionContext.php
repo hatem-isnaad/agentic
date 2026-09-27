@@ -23,6 +23,7 @@ final readonly class AgentExecutionContext
         public ?RuntimeContext $runtime = null,
         public ?Conversation $conversation = null,
         public ?string $conversationId = null,
+        public ?string $executionId = null,
     ) {}
 
     public function runtime(): RuntimeContext

@@ -85,6 +85,7 @@ final class EloquentToolRepository implements ToolRepository
             runtime: $definition['runtime'] ?? [],
             version: $version?->version,
             connection: is_string($definition['connection'] ?? null) ? $definition['connection'] : null,
+            id: $tool->getKey(),
         );
     }
 }

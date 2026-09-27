@@ -23,5 +23,6 @@ final readonly class ToolDefinition
         public array $runtime = [],
         public ?int $version = null,
         public ?string $connection = null,
+        public ?int $id = null,
     ) {}
 }

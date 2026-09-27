@@ -56,6 +56,7 @@ final class AgentRuntime
             runtime: $runtime,
             conversation: $conversation,
             conversationId: $conversation?->id ?? $context->conversationId,
+            executionId: $context->executionId,
         );
 
         $execution = $this->executions->start(
@@ -73,6 +74,17 @@ final class AgentRuntime
         );
 
         try {
+            $context = new AgentExecutionContext(
+                message: $context->message,
+                metadata: $context->metadata,
+                variables: $context->variables,
+                messages: $context->messages,
+                runtime: $context->runtime,
+                conversation: $context->conversation,
+                conversationId: $context->conversationId,
+                executionId: $execution->id,
+            );
+
             $this->executions->addStep($execution, 'agent_start', [
                 'agent' => $agent->identifier(),
                 'conversation_id' => $conversation?->id,

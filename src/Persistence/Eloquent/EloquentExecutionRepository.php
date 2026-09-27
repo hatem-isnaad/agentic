@@ -71,6 +71,8 @@ final class EloquentExecutionRepository implements ExecutionRepository
     {
         ExecutionStep::query()->create([
             'execution_id' => $executionId,
+            'tool_id' => $step->toolId,
+            'tool_version_id' => $step->toolVersionId,
             'uuid' => $step->id !== '' ? $step->id : (string) Str::uuid(),
             'type' => $step->type,
             'status' => $step->status,
@@ -79,6 +81,8 @@ final class EloquentExecutionRepository implements ExecutionRepository
             'metadata' => $step->metadata,
             'started_at' => $step->startedAt,
             'completed_at' => $step->completedAt,
+            'permission_allowed' => $step->permissionAllowed,
+            'duration_ms' => $step->durationMs,
         ]);
     }
 
@@ -103,6 +107,10 @@ final class EloquentExecutionRepository implements ExecutionRepository
                 metadata: $step->metadata ?? [],
                 startedAt: optional($step->started_at)?->toISOString(),
                 completedAt: optional($step->completed_at)?->toISOString(),
+                toolId: $step->tool_id,
+                toolVersionId: $step->tool_version_id,
+                permissionAllowed: $step->permission_allowed,
+                durationMs: $step->duration_ms,
             ))->all(),
             startedAt: optional($model->started_at)?->toISOString(),
             completedAt: optional($model->completed_at)?->toISOString(),
