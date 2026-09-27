@@ -70,6 +70,19 @@ final class WorkflowExecutionService
         return $this->runs->find($uuid);
     }
 
+    /**
+     * @return list<WorkflowRunRecord>
+     */
+    public function listRuns(?string $workflowSlug = null, ?string $status = null, int $limit = 50, int $offset = 0): array
+    {
+        return $this->runs->list($workflowSlug, $status, $limit, $offset);
+    }
+
+    public function countRuns(?string $workflowSlug = null, ?string $status = null): int
+    {
+        return $this->runs->count($workflowSlug, $status);
+    }
+
     private function persistResult(WorkflowRunRecord $run, string $slug, WorkflowResult $result): WorkflowResult
     {
         if ($result->pending) {

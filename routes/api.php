@@ -62,6 +62,7 @@ Route::put('workflows/{slug}', [WorkflowController::class, 'update']);
 Route::delete('workflows/{slug}', [WorkflowController::class, 'destroy']);
 Route::post('workflows/{slug}/execute', WorkflowExecuteController::class);
 Route::post('workflows/{slug}/resume', WorkflowResumeController::class);
+Route::get('workflow-runs', [WorkflowRunController::class, 'index']);
 Route::get('workflow-runs/{uuid}', [WorkflowRunController::class, 'show']);
 
 Route::get('memories', [MemoryController::class, 'index']);

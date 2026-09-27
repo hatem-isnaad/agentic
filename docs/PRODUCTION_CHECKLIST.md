@@ -112,7 +112,7 @@ Or rely on auto-registration when the panel ID is listed in config. Filament cov
 
 ## 9. Workflows
 
-- Approvals pause with **HTTP 202**; approve via widget/admin, then `POST .../workflows/{slug}/resume` with `approval_id` (or re-execute with `input._resume_approval_id`).
+- Approvals pause with **HTTP 202**; approve via widget/admin, then `POST .../workflows/{slug}/resume` with `approval_id`. Use `GET .../workflow-runs` to list pending runs. Low-level `WorkflowRunner` still supports `input._resume_approval_id` for custom integrations.
 - Parallel branches run sequentially in PHP (isolated variables, merged results).
 
 ## 10. Verify before launch

@@ -10,7 +10,11 @@ use Agentic\Http\Controllers\Admin\SkillController;
 use Agentic\Http\Controllers\Admin\ToolController;
 use Agentic\Http\Controllers\Admin\TranslationsController;
 use Agentic\Http\Controllers\Admin\WidgetSettingsController;
+use Agentic\Http\Controllers\Admin\WorkflowController;
+use Agentic\Http\Controllers\Admin\WorkflowRunController;
 use Agentic\Http\Controllers\Api\AgentExecuteController;
+use Agentic\Http\Controllers\Api\WorkflowExecuteController;
+use Agentic\Http\Controllers\Api\WorkflowResumeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('dashboard', DashboardController::class)->name('dashboard');
@@ -57,3 +61,14 @@ Route::get('executions/{id}', [ExecutionController::class, 'show'])->name('execu
 
 Route::get('conversations', [ConversationController::class, 'index'])->name('conversations.index');
 Route::get('conversations/{id}', [ConversationController::class, 'show'])->name('conversations.show');
+
+Route::get('workflows', [WorkflowController::class, 'index'])->name('workflows.index');
+Route::post('workflows', [WorkflowController::class, 'store'])->name('workflows.store');
+Route::get('workflows/{slug}', [WorkflowController::class, 'show'])->name('workflows.show');
+Route::put('workflows/{slug}', [WorkflowController::class, 'update'])->name('workflows.update');
+Route::delete('workflows/{slug}', [WorkflowController::class, 'destroy'])->name('workflows.destroy');
+Route::post('workflows/{slug}/execute', WorkflowExecuteController::class)->name('workflows.execute');
+Route::post('workflows/{slug}/resume', WorkflowResumeController::class)->name('workflows.resume');
+
+Route::get('workflow-runs', [WorkflowRunController::class, 'index'])->name('workflow-runs.index');
+Route::get('workflow-runs/{uuid}', [WorkflowRunController::class, 'show'])->name('workflow-runs.show');

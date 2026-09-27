@@ -470,7 +470,7 @@ See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md) for the full 
 ## Memory, workflows & MCP
 
 - **Memory** — `POST/GET /api/agentic/memories` (scoped facts injected into agent context).
-- **Workflows** — `POST /api/agentic/workflows/{slug}/execute` with steps: `set`, `tool`, `agent`, `condition`, `complete`.
+- **Workflows** — CRUD on `/api/agentic/workflows` (admin mirror: `/api/agentic/admin/workflows`). Steps: `set`, `tool`, `agent`, `condition`, `parallel`, `approval`, `complete`. Execute with `POST .../execute`; approval steps return **202** with `workflow_run_id` and `approval_id`. After approving, `POST .../resume` with `approval_id` continues from the saved step. Inspect runs via `GET .../workflow-runs` and `GET .../workflow-runs/{uuid}`.
 - **MCP** — configure `config/mcp.php` in the host app, then `php artisan agentic:mcp-sync {server}` or `POST /api/agentic/mcp/servers/{server}/sync`.
 
 ---

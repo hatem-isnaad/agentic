@@ -19,4 +19,22 @@ final readonly class WorkflowRunRecord
         public ?array $output = null,
         public ?string $error = null,
     ) {}
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function toArray(): array
+    {
+        return [
+            'uuid' => $this->uuid,
+            'workflow_slug' => $this->workflowSlug,
+            'status' => $this->status,
+            'step_pointer' => $this->stepPointer,
+            'approval_id' => $this->approvalUuid,
+            'variables' => $this->variables,
+            'trace' => $this->trace,
+            'output' => $this->output,
+            'error' => $this->error,
+        ];
+    }
 }

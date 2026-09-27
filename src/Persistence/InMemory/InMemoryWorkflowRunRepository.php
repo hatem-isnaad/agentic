@@ -49,4 +49,24 @@ final class InMemoryWorkflowRunRepository implements WorkflowRunRepository
 
         return $run;
     }
+
+    public function list(?string $workflowSlug = null, ?string $status = null, int $limit = 50, int $offset = 0): array
+    {
+        $runs = array_values(array_filter(
+            $this->runs,
+            fn (WorkflowRunRecord $run): bool => ($workflowSlug === null || $run->workflowSlug === $workflowSlug)
+                && ($status === null || $run->status === $status),
+        ));
+
+        return array_slice(array_reverse($runs), $offset, $limit);
+    }
+
+    public function count(?string $workflowSlug = null, ?string $status = null): int
+    {
+        return count(array_filter(
+            $this->runs,
+            fn (WorkflowRunRecord $run): bool => ($workflowSlug === null || $run->workflowSlug === $workflowSlug)
+                && ($status === null || $run->status === $status),
+        ));
+    }
 }

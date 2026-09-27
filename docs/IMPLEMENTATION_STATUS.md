@@ -21,13 +21,13 @@
 | Tools HTTP / Code / MCP | ✅ | Connections, OAuth2, SSRF limits |
 | Knowledge array + vector | ✅ | Chunking, ingest parsers, reindex |
 | Memory (scoped) | ✅ | API + context injection |
-| Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete; persisted runs (`workflow_run_id`); `GET .../workflow-runs/{uuid}`; `POST .../resume` continues from saved step pointer |
-| Admin API | ✅ | Agents, skills, tools, knowledge, executions, widget settings |
+| Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete; persisted runs (`workflow_run_id`); `GET .../workflow-runs` + `GET .../workflow-runs/{uuid}`; admin API parity; `POST .../resume` continues from saved step pointer |
+| Admin API | ✅ | Agents, skills, tools, knowledge, workflows (CRUD + execute/resume), workflow runs, executions, widget settings |
 | Widget API | ✅ | Config, conversations, messages, approvals, realtime bridge |
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |
 | MCP discovery | ✅ | Tool sync, catalog API, optional resource injection via agent `config.mcp` |
 | API rate limiting | ✅ | `throttle:agentic-api` on runtime routes |
-| Filament UI (optional) | ✅ | Agents (+ skills), skills, tools, knowledge, workflows, executions (read-only) |
+| Filament UI (optional) | ✅ | Agents (+ skills), skills, tools, knowledge, workflows, workflow runs (read-only), executions (read-only) |
 | Rule-based tool permissions | ✅ | `RuleBasedPermissionChecker` + allow/deny fnmatch patterns |
 | Multi-tenant contract | ✅ | `TenantResolver`, request/conversation context providers |
 

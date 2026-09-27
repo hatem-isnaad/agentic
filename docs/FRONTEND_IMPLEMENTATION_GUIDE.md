@@ -218,7 +218,23 @@ Same CRUD pattern as agents:
 | `POST` | `/knowledge-sources/{slug}/ingest` | `{ "format": "markdown\|html\|text\|json", "documents"?, "raw_text"?, "reindex?": true }` → parse, save, re-embed |
 | `POST` | `/knowledge-sources/{slug}/search` | `{ "query": "...", "limit?": 5 }` → `{ "data": [ { "content", "source?", "score?", "metadata?" } ] }` |
 
-### 4.4 Widget settings (DB per agent)
+### 4.4 Workflows & workflow runs
+
+| Method | Path | Body / notes |
+|--------|------|----------------|
+| `GET` | `/workflows` | Paginated list (includes draft) |
+| `POST` | `/workflows` | Create workflow definition |
+| `GET` | `/workflows/{slug}` | Single |
+| `PUT` | `/workflows/{slug}` | Update |
+| `DELETE` | `/workflows/{slug}` | Delete |
+| `POST` | `/workflows/{slug}/execute` | `{ "input?": {} }` → **200** complete or **202** `pending_approval` + `workflow_run_id` |
+| `POST` | `/workflows/{slug}/resume` | `{ "approval_id": "uuid", "input?": {} }` after approval |
+| `GET` | `/workflow-runs` | Query: `workflow_slug?`, `status?`, `page?`, `per_page?` |
+| `GET` | `/workflow-runs/{uuid}` | Single run snapshot |
+
+Step types: `set`, `tool`, `agent`, `condition`, `parallel`, `approval`, `complete`.
+
+### 4.5 Widget settings (DB per agent)
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -250,7 +266,7 @@ Same CRUD pattern as agents:
 }
 ```
 
-### 4.5 Executions & conversations (read-only)
+### 4.6 Executions & conversations (read-only)
 
 | Method | Path |
 |--------|------|
@@ -485,7 +501,7 @@ Use React Router (or similar). All labels from `GET /translations`.
 ## 10. Optional runtime API
 
 **Base:** `/api/agentic` when `AGENTIC_API_ENABLED=true`  
-Mirrors CRUD + `POST /agents/{slug}/execute`, `POST /route`, lists for executions/conversations. Prefer **admin API** for dashboard work.
+Mirrors CRUD + `POST /agents/{slug}/execute`, `POST /route`, workflows + workflow runs, lists for executions/conversations. Prefer **admin API** for dashboard work (same workflow shapes under `/api/agentic/admin/workflows`).
 
 ---
 
@@ -493,7 +509,7 @@ Mirrors CRUD + `POST /agents/{slug}/execute`, `POST /route`, lists for execution
 
 Ensure `php artisan migrate` includes package migrations:
 
-- `agentic_conversations`, `agentic_executions`, agents/skills/tools/knowledge tables
+- `agentic_conversations`, `agentic_executions`, `agentic_workflow_runs`, agents/skills/tools/knowledge/workflow tables
 - `agentic_conversation_messages`
 - `agentic_tool_approvals`
 - `agentic_widget_settings`
