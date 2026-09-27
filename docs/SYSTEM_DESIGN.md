@@ -153,7 +153,7 @@ Event names are **identical** across drivers (see FRONTEND_IMPLEMENTATION_GUIDE 
 ## Admin vs widget responsibility split
 
 | Concern | Admin SPA | Widget SPA |
-|---------|-----------|--------------|
+|---------|-----------|------------|
 | Agent CRUD | Yes | No |
 | Widget theme/intake | Yes (DB settings) | Consume `/config` |
 | End-user chat | Optional test execute | Yes |
