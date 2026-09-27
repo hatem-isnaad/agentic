@@ -52,6 +52,10 @@ final class HttpRequestBuilder
         }
 
         $url = TemplateInterpolator::string($url, $values);
+        if (preg_match('/\\{[a-zA-Z0-9_.]+\\}/', $url) === 1) {
+            throw new InvalidArgumentException("HTTP tool [{$definition->name}] contains unresolved URL placeholders.");
+        }
+
         $this->urls->validate($url);
 
         $headers = TemplateInterpolator::array(
@@ -103,8 +107,13 @@ final class HttpRequestBuilder
             'body' => $body,
             'timeout' => $config['timeout'] ?? 30,
             'retry' => [
-                'times' => (int) ($retry['times'] ?? 0),
-                'sleep' => (int) ($retry['sleep'] ?? 100),
+                'times' => max(0, (int) ($retry['times'] ?? 0)),
+                'sleep' => max(0, (int) ($retry['sleep'] ?? 100)),
+                'statuses' => array_values(array_filter(
+                    array_map('intval', (array) ($retry['statuses'] ?? [429, 500, 502, 503, 504])),
+                    fn (int $status): bool => $status >= 400 && $status <= 599,
+                )),
+                'unsafe_methods' => (bool) ($retry['unsafe_methods'] ?? false),
             ],
         ];
     }
