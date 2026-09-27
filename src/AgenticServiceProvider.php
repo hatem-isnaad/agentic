@@ -95,7 +95,7 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(McpToolRegistrar::class);
         $this->app->singleton(ExecutionManager::class);
 
-        $this->app->singleton(PermissionChecker::class, AllowAllPermissionChecker::class);
+        $this->app->singleton(PermissionChecker::class, function ($app) {\n            return $app->make(config('agentic.permissions.checker', DenyAllPermissionChecker::class));\n        });
 
         $this->app->bind(AgentRepository::class, EloquentAgentRepository::class);
         $this->app->bind(SkillRepository::class, EloquentSkillRepository::class);

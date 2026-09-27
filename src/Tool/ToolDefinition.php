@@ -21,5 +21,6 @@ final readonly class ToolDefinition
         public array $permissions = [],
         public ?string $status = null,
         public array $runtime = [],
+        public ?int $version = null,
     ) {}
 }

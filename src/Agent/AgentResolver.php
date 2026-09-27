@@ -3,19 +3,16 @@
 namespace Agentic\Agent;
 
 use Agentic\Contracts\Repositories\AgentRepository;
-use Agentic\Contracts\Repositories\SkillRepository;
 use Agentic\Exceptions\AgentNotFoundException;
-use Agentic\Skill\SkillRegistry;
+use Agentic\Skill\SkillResolver;
+use Agentic\Tool\ToolFactory;
 
-/**
- * Resolves persisted Agents into runtime definitions and hydrates skill registry entries.
- */
 final class AgentResolver
 {
     public function __construct(
         private AgentRepository $agents,
-        private SkillRepository $skills,
-        private SkillRegistry $skillRegistry,
+        private SkillResolver $skills,
+        private ToolFactory $tools,
     ) {}
 
     public function resolve(string $slug): AgentDefinition
@@ -27,11 +24,15 @@ final class AgentResolver
         }
 
         foreach ($agent->skills as $skillSlug) {
-            $skill = $this->skills->findBySlug($skillSlug);
-
-            if ($skill !== null && ! $this->skillRegistry->has($skill->name)) {
-                $this->skillRegistry->register($skill);
+            try {
+                $this->skills->resolve($skillSlug);
+            } catch (\Throwable) {
+                continue;
             }
+        }
+
+        foreach ($agent->tools as $toolSlug) {
+            $this->tools->ensureRegistered($toolSlug);
         }
 
         return $agent;

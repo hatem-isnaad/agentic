@@ -7,9 +7,6 @@ use Agentic\Exceptions\ToolNotFoundException;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\Registry\ToolRegistry;
 
-/**
- * Builds ConfiguredTool instances from definitions / persistence and registers them.
- */
 final class ToolFactory
 {
     public function __construct(
@@ -40,5 +37,20 @@ final class ToolFactory
         }
 
         return $this->register($definition);
+    }
+
+    public function ensureRegistered(string $slug): bool
+    {
+        if ($this->registry->has($slug)) {
+            return true;
+        }
+
+        try {
+            $this->registerFromSlug($slug);
+
+            return true;
+        } catch (ToolNotFoundException) {
+            return false;
+        }
     }
 }
