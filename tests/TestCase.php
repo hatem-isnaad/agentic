@@ -19,5 +19,6 @@ abstract class TestCase extends Orchestra
     protected function defineEnvironment($app): void
     {
         $app['config']->set('agentic.execution.driver', 'memory');
+        $app['config']->set('agentic.conversation.driver', 'memory');
     }
 }
