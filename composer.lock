@@ -1,1 +1,1 @@
-@/agent/agentic/composer.lock
+$readFile(/agent/agentic/composer.lock)
