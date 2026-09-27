@@ -16,7 +16,7 @@
 
 | Area | Status | Notes |
 |------|--------|-------|
-| Agent runtime + Laravel AI SDK | ✅ | Deferred tools, approvals, execution trace |
+| Agent runtime + Laravel AI SDK | ✅ | OpenAI, Anthropic, **Gemini**, **Ollama** (SDK); provider registry in `config/agentic.php`; deferred tools, approvals, execution trace |
 | Skills + routing (keyword + AI) | ✅ | Configurable |
 | Tools HTTP / Code / MCP | ✅ | Connections, OAuth2, SSRF limits |
 | Knowledge array + vector | ✅ | Laravel AI embeddings, pgvector JSON / native Postgres / Pinecone, `agentic:rag-validate`, ingest + search tests |

@@ -7,7 +7,7 @@
 | **Your app** | Users, auth, business domain, React SPAs |
 | **Agentic** | Agents, tools, skills, conversations, approvals, admin/widget APIs |
 | **Laravel AI SDK** | Provider calls, streaming, native AI primitives |
-| **LLM provider** | OpenAI, Anthropic, etc. |
+| **LLM provider** | OpenAI, Anthropic, Gemini, Ollama, etc. (via Laravel AI SDK) |
 
 ```
 Application (React admin + widget, domain services)
@@ -90,6 +90,46 @@ AGENTIC_API_ENABLED=false
 ```
 
 Persistence drivers (`eloquent` vs `memory`) are configurable per subsystem — see `.env.example` for execution, conversation, and knowledge drivers.
+
+### AI providers (OpenAI, Anthropic, Gemini, Ollama)
+
+Agentic does **not** ship separate provider clients — all text, tools, and embeddings go through the **[Laravel AI SDK](https://laravel.com/docs/ai-sdk)** (`laravel/ai`), which already includes **Gemini** and **Ollama**.
+
+1. Publish SDK config in the host app (optional but recommended):
+
+```bash
+php artisan vendor:publish --tag=ai-config
+```
+
+2. Set credentials / URLs in `.env` (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OLLAMA_URL`, … — see `config/ai.php`).
+
+3. Point agents (or defaults) at a provider:
+
+```env
+AGENTIC_AI_PROVIDER=gemini
+AGENTIC_AI_MODEL=gemini-3.6-flash
+# or local:
+AGENTIC_AI_PROVIDER=ollama
+AGENTIC_AI_MODEL=qwen3.5:4b
+```
+
+4. Model picklists for admin/widget UIs come from `AGENTIC_*_MODELS` in `config/agentic.php` (`AGENTIC_GEMINI_MODELS`, `AGENTIC_OLLAMA_MODELS`, …).
+
+**RAG embeddings** with the same SDK:
+
+```env
+AGENTIC_KNOWLEDGE_EMBEDDING=laravel_ai
+AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER=gemini
+AGENTIC_KNOWLEDGE_EMBEDDING_MODEL=gemini-embedding-2
+AGENTIC_PGVECTOR_DIMENSIONS=3072
+```
+
+```env
+# Local Ollama embeddings (e.g. nomic-embed-text)
+AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER=ollama
+AGENTIC_KNOWLEDGE_EMBEDDING_MODEL=nomic-embed-text
+AGENTIC_PGVECTOR_DIMENSIONS=768
+```
 
 ---
 

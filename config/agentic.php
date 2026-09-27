@@ -24,6 +24,20 @@ return [
                 'label' => 'Anthropic',
                 'models' => array_filter(explode(',', (string) env('AGENTIC_ANTHROPIC_MODELS', 'claude-sonnet-4-20250514'))),
             ],
+            'gemini' => [
+                'label' => 'Google Gemini',
+                'models' => array_filter(explode(',', (string) env(
+                    'AGENTIC_GEMINI_MODELS',
+                    'gemini-3.6-flash,gemini-3.1-flash-lite',
+                ))),
+            ],
+            'ollama' => [
+                'label' => 'Ollama (local)',
+                'models' => array_filter(explode(',', (string) env(
+                    'AGENTIC_OLLAMA_MODELS',
+                    'qwen3.5:4b,llama3.2,nomic-embed-text',
+                ))),
+            ],
         ],
         'deferred_tools' => [
             'enabled' => env('AGENTIC_DEFERRED_TOOLS', false),
