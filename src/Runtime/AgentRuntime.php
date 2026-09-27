@@ -78,7 +78,11 @@ final class AgentRuntime
                 'conversation_id' => $conversation?->id,
             ]);
 
-            $built = $this->contextBuilder->build($agent);
+            $built = $this->contextBuilder->build(
+                $agent,
+                $context->message,
+                $context->runtime(),
+            );
             $selectedTools = $this->resolveTools($built['tools']);
 
             $this->executions->addStep($execution, 'llm_request', [
