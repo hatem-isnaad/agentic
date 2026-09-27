@@ -3,7 +3,6 @@
 namespace Agentic\Context;
 
 use Agentic\Agent\AgentDefinition;
-use Agentic\Context\RuntimeContext;
 use Agentic\Knowledge\KnowledgeChunk;
 use Agentic\Knowledge\KnowledgeOrchestrator;
 use Agentic\Skill\SkillResolver;
@@ -21,6 +20,7 @@ final class ContextBuilder
     ) {}
 
     /**
+     * @param  list<string>|null  $skillNames
      * @return array{
      *     instructions: string,
      *     skills: list<array{name: string, description: string, tools: list<string>}>,
@@ -32,10 +32,12 @@ final class ContextBuilder
         AgentDefinition $agent,
         ?string $retrievalQuery = null,
         ?RuntimeContext $runtime = null,
+        ?array $skillNames = null,
     ): array {
+        $skillNames ??= $agent->skills;
         $selectedSkills = [];
 
-        foreach ($this->skills->resolveMany($agent->skills) as $skill) {
+        foreach ($this->skills->resolveMany($skillNames) as $skill) {
             $tools = array_values(array_filter(
                 $skill->tools,
                 fn (string $tool) => $this->tools->has($tool),
@@ -48,7 +50,7 @@ final class ContextBuilder
             ];
         }
 
-        $skillTools = $this->skills->composeTools($agent->skills);
+        $skillTools = $this->skills->composeTools($skillNames);
 
         $directTools = array_values(array_filter(
             $agent->tools,
