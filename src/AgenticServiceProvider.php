@@ -29,6 +29,7 @@ use Agentic\Integrations\LaravelAi\LaravelAiSdkAdapter;
 use Agentic\Permission\DenyAllPermissionChecker;
 use Agentic\Contracts\Connections\ConnectionResolver;
 use Agentic\Connections\EloquentConnectionResolver;
+use Agentic\Connections\OAuth2TokenManager;
 use Agentic\Permission\PermissionChecker;
 use Agentic\Permission\PermissionResolver;
 use Agentic\Persistence\Eloquent\EloquentAgentRepository;
@@ -100,6 +101,7 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(McpToolDriver::class);
         $this->app->singleton(McpToolRegistrar::class);
         $this->app->singleton(ExecutionManager::class);
+        $this->app->singleton(OAuth2TokenManager::class);
 
         $this->app->singleton(PermissionChecker::class, function ($app) {
             return $app->make(config('agentic.permissions.checker', DenyAllPermissionChecker::class));
