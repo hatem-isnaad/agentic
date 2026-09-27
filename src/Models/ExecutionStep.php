@@ -18,6 +18,8 @@ class ExecutionStep extends Model
             'input' => 'array',
             'output' => 'array',
             'metadata' => 'array',
+            'permission_allowed' => 'boolean',
+            'duration_ms' => 'integer',
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
         ];
