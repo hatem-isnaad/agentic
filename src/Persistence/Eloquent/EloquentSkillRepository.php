@@ -45,6 +45,13 @@ final class EloquentSkillRepository implements SkillRepository
             $config['knowledge'] = $attributes['knowledge'];
         }
 
+        if (array_key_exists('routing_keywords', $attributes)) {
+            $config['routing_keywords'] = array_values(array_filter(
+                (array) $attributes['routing_keywords'],
+                fn ($keyword) => is_string($keyword) && $keyword !== '',
+            ));
+        }
+
         $model = Skill::query()->updateOrCreate(
             ['slug' => $attributes['slug']],
             [
@@ -91,6 +98,7 @@ final class EloquentSkillRepository implements SkillRepository
                 'display_name' => $skill->name,
                 'instructions' => $skill->instructions,
                 'status' => $skill->status instanceof Status ? $skill->status->value : (string) $skill->status,
+                'routing_keywords' => $skill->config['routing_keywords'] ?? [],
             ],
         );
     }
