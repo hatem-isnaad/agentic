@@ -30,15 +30,17 @@ final class PermissionResolver
 
         // Tool-level allow-list on the definition.
         $toolPermissions = $tool->definition()->permissions;
-        if ($toolPermissions !== [] && ! $this->matches($ability, $toolPermissions)) {
-            return PermissionDecision::Deny;
+        if ($toolPermissions !== []) {
+            return $this->matches($ability, $toolPermissions)
+                ? PermissionDecision::Allow
+                : PermissionDecision::Deny;
         }
 
         // Agent-level allow-list.
         if ($agent !== null && $agent->permissions !== []) {
-            if (! $this->matches($ability, $agent->permissions)) {
-                return PermissionDecision::Deny;
-            }
+            return $this->matches($ability, $agent->permissions)
+                ? PermissionDecision::Allow
+                : PermissionDecision::Deny;
         }
 
         if ($this->checker->allows($ability, $tool)) {
