@@ -1,0 +1,40 @@
+name: Regenerate composer.lock
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - cursor/skill-router-runtime-af3b
+    paths:
+      - .github/workflows/regenerate-composer-lock.yml
+
+permissions:
+  contents: write
+
+jobs:
+  composer-lock:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: cursor/skill-router-runtime-af3b
+
+      - uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          tools: composer:v2
+
+      - name: Regenerate lockfile
+        run: composer update --lock --no-install --no-interaction
+
+      - name: Commit composer.lock
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add composer.lock
+          if git diff --staged --quiet; then
+            echo "composer.lock unchanged"
+            exit 0
+          fi
+          git commit -m "chore: regenerate composer.lock via GitHub Actions"
+          git push
