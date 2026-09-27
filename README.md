@@ -1,1 +1,1 @@
-PLACEHOLDER
+@file:/tmp/push-b0c0-args.json
