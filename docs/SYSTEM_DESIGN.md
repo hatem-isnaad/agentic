@@ -71,6 +71,34 @@ sequenceDiagram
   W->>U: Render blocks
 ```
 
+## Skill routing (runtime tool budget)
+
+Before the LLM call, **SkillRouter** selects a subset of the agent’s configured skills. **ContextBuilder** then exposes only those skills’ tools and instruction lines.
+
+```mermaid
+sequenceDiagram
+  participant RT as AgentRuntime
+  participant SR as SkillRouter
+  participant CB as ContextBuilder
+  participant LLM as Laravel AI SDK
+
+  RT->>SR: route(message, agent.skills)
+  Note over SR: hint → keyword → lexical (TF cosine) → optional LLM
+  SR-->>RT: selected skills + strategy
+  RT->>CB: build(agent, skillNames)
+  CB-->>RT: instructions + tool names
+  RT->>LLM: prompt with reduced tool set
+```
+
+| Layer | Deterministic | Optional LLM |
+|-------|---------------|--------------|
+| **Agent** pick | Slug hint, keyword map | `AGENTIC_AGENT_ROUTING_LLM` |
+| **Skill** pick | Hint metadata, keywords, lexical overlap on name/description | `AGENTIC_SKILL_ROUTING_LLM` |
+
+Admin: `GET /api/agentic/admin/skills/routing-schema`, headless CRUD under `/api/agentic/admin/{agents,skills,tools,knowledge-sources}`, skill payloads include `routing_keywords[]`.
+
+Execution steps: `skill_routing` → `llm_request` (records skills/tools sent).
+
 ## Tool approval + auto-resume
 
 ```mermaid
