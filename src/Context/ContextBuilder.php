@@ -5,6 +5,7 @@ namespace Agentic\Context;
 use Agentic\Agent\AgentDefinition;
 use Agentic\Knowledge\KnowledgeChunk;
 use Agentic\Knowledge\KnowledgeOrchestrator;
+use Agentic\Mcp\McpAgentKnowledgeEnricher;
 use Agentic\Memory\MemoryManager;
 use Agentic\Skill\SkillResolver;
 use Agentic\Tool\Registry\ToolRegistry;
@@ -19,6 +20,7 @@ final class ContextBuilder
         private SkillResolver $skills,
         private ?KnowledgeOrchestrator $knowledge = null,
         private ?MemoryManager $memory = null,
+        private ?McpAgentKnowledgeEnricher $mcpKnowledge = null,
     ) {}
 
     /**
@@ -61,6 +63,10 @@ final class ContextBuilder
         ));
 
         $knowledge = $this->inlineKnowledge($agent->knowledge);
+
+        if ($this->mcpKnowledge !== null) {
+            $knowledge = array_merge($knowledge, $this->mcpKnowledge->enrich($agent));
+        }
 
         if ($this->knowledge !== null && is_string($retrievalQuery) && $retrievalQuery !== '') {
             $knowledge = array_merge(

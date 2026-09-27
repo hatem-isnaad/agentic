@@ -63,7 +63,13 @@ AGENTIC_VECTOR_STORE=pgvector
 # or AGENTIC_VECTOR_STORE=pinecone + PINECONE_HOST / PINECONE_API_KEY
 ```
 
-Run ingest + reindex via admin/runtime API or Filament. For large corpora, wrap reindex in a **queued job** in your app (package runs reindex synchronously today).
+Run ingest + reindex via admin/runtime API or Filament. For large corpora:
+
+```env
+AGENTIC_KNOWLEDGE_QUEUE_REINDEX=true
+```
+
+Run `php artisan queue:work` in the host app.
 
 ## 5. Multi-tenant
 
@@ -74,7 +80,8 @@ Bind `Agentic\Contracts\TenantResolver` if defaults are not enough. Pass tenant 
 1. Configure `config/mcp.php` (Laravel MCP).
 2. `php artisan agentic:mcp-sync {server}` or `POST /api/agentic/mcp/servers/{server}/sync`.
 3. Treat synced tools as **trusted code** — same permission and approval rules as native tools.
-4. Resources/prompts are **catalog APIs only**; wire into agents manually if needed.
+4. Optional: add to agent `config` JSON — `"mcp": { "server": "docs", "resource_uris": ["file:///policy.md"] }` for runtime knowledge injection.
+5. Resources/prompts catalog: runtime API under `/mcp/servers/{server}/...`.
 
 ## 7. Frontends (required for end users)
 
@@ -103,7 +110,7 @@ Or rely on auto-registration when the panel ID is listed in config. Filament cov
 
 ## 9. Workflows
 
-- Approvals pause with **HTTP 202**; approve via widget/admin, then re-execute with `input._resume_approval_id`.
+- Approvals pause with **HTTP 202**; approve via widget/admin, then `POST .../workflows/{slug}/resume` with `approval_id` (or re-execute with `input._resume_approval_id`).
 - Parallel branches run sequentially in PHP (isolated variables, merged results).
 
 ## 10. Verify before launch

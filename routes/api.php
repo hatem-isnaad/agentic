@@ -13,6 +13,7 @@ use Agentic\Http\Controllers\Api\SkillController;
 use Agentic\Http\Controllers\Api\ToolController;
 use Agentic\Http\Controllers\Api\WorkflowController;
 use Agentic\Http\Controllers\Api\WorkflowExecuteController;
+use Agentic\Http\Controllers\Api\WorkflowResumeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('agents', [AgentController::class, 'index']);
@@ -59,6 +60,7 @@ Route::get('workflows/{slug}', [WorkflowController::class, 'show']);
 Route::put('workflows/{slug}', [WorkflowController::class, 'update']);
 Route::delete('workflows/{slug}', [WorkflowController::class, 'destroy']);
 Route::post('workflows/{slug}/execute', WorkflowExecuteController::class);
+Route::post('workflows/{slug}/resume', WorkflowResumeController::class);
 
 Route::get('memories', [MemoryController::class, 'index']);
 Route::post('memories', [MemoryController::class, 'store']);

@@ -25,6 +25,7 @@ use Agentic\Knowledge\Documents\DocumentUrlFetcher;
 use Agentic\Knowledge\KnowledgeIngestor;
 use Agentic\Knowledge\KnowledgeOrchestrator;
 use Agentic\Console\SyncMcpToolsCommand;
+use Agentic\Mcp\McpAgentKnowledgeEnricher;
 use Agentic\Mcp\McpServerService;
 use Agentic\Mcp\McpToolSyncService;
 use Illuminate\Cache\RateLimiting\Limit;
@@ -231,6 +232,7 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(KnowledgeIngestor::class);
         $this->app->singleton(McpToolSyncService::class);
         $this->app->singleton(McpServerService::class);
+        $this->app->singleton(McpAgentKnowledgeEnricher::class);
 
         $this->app->singleton(McpClientGateway::class, function ($app) {
             if ($app->bound(ClientManager::class)) {

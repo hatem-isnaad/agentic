@@ -21,13 +21,13 @@
 | Tools HTTP / Code / MCP | ✅ | Connections, OAuth2, SSRF limits |
 | Knowledge array + vector | ✅ | Chunking, ingest parsers, reindex |
 | Memory (scoped) | ✅ | API + context injection |
-| Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete |
+| Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete; `POST .../resume` after approve |
 | Admin API | ✅ | Agents, skills, tools, knowledge, executions, widget settings |
 | Widget API | ✅ | Config, conversations, messages, approvals, realtime bridge |
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |
-| MCP discovery | ✅ | Tool sync + resources/prompts catalog API |
+| MCP discovery | ✅ | Tool sync, catalog API, optional resource injection via agent `config.mcp` |
 | API rate limiting | ✅ | `throttle:agentic-api` on runtime routes |
-| Filament UI (optional) | 🟡 | `AgenticPlugin`: agents, skills, tools, knowledge, workflows — basic CRUD, no relation managers |
+| Filament UI (optional) | ✅ | Agents (+ skills), skills, tools, knowledge, workflows, executions (read-only) |
 | Rule-based tool permissions | ✅ | `RuleBasedPermissionChecker` + allow/deny fnmatch patterns |
 | Multi-tenant contract | ✅ | `TenantResolver`, request/conversation context providers |
 
@@ -39,7 +39,7 @@
 - `documents` or `raw_text`
 - optional `urls` — HTTPS fetch (SSRF-safe, size-limited) merged before parsing
 - optional `chunk_size`, `chunk_overlap`, `tenant`
-- `reindex` (default `true`) — purges vector namespace then re-embeds
+- `reindex` (default `true`) — sync or queued (`AGENTIC_KNOWLEDGE_QUEUE_REINDEX`)
 
 ## MCP
 

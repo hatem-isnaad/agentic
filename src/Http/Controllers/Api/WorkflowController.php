@@ -75,7 +75,7 @@ final class WorkflowController
             'status' => ['nullable', 'string', 'in:draft,published,archived'],
             'steps' => ['required', 'array', 'min:1'],
             'steps.*.id' => ['required', 'string', 'max:191'],
-            'steps.*.type' => ['required', 'string', 'in:set,tool,agent,condition,complete'],
+            'steps.*.type' => ['required', 'string', 'in:set,tool,agent,condition,parallel,approval,complete'],
         ]);
 
         if ($slug !== null) {

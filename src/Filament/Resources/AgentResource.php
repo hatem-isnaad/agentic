@@ -31,6 +31,11 @@ class AgentResource extends Resource
             TextInput::make('slug')->required()->unique(ignoreRecord: true),
             Textarea::make('description')->columnSpanFull(),
             Textarea::make('instructions')->columnSpanFull(),
+            Select::make('skills')
+                ->relationship('skills', 'name')
+                ->multiple()
+                ->preload()
+                ->columnSpanFull(),
             KeyValue::make('model_config')->columnSpanFull(),
             KeyValue::make('config')->columnSpanFull(),
             Select::make('status')

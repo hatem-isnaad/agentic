@@ -19,7 +19,9 @@
   },
   "suggest": {
     "filament/filament": "Required for the optional Agentic Filament admin panel (^4.0).",
-    "smalot/pdfparser": "Required for PDF knowledge ingest (format=pdf)."
+    "smalot/pdfparser": "Required for PDF knowledge ingest (format=pdf).",
+    "laravel/sanctum": "Required for Agentic auth API and protected admin/runtime routes.",
+    "laravel/passkeys": "Optional WebAuthn routes under /api/agentic/auth."
   },
   "autoload": {
     "psr-4": {

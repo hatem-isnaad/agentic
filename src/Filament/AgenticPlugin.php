@@ -6,6 +6,7 @@ use Agentic\Filament\Resources\AgentResource;
 use Agentic\Filament\Resources\KnowledgeSourceResource;
 use Agentic\Filament\Resources\SkillResource;
 use Agentic\Filament\Resources\ToolResource;
+use Agentic\Filament\Resources\ExecutionResource;
 use Agentic\Filament\Resources\WorkflowResource;
 use Filament\Contracts\Plugin;
 use Filament\Panel;
@@ -30,6 +31,7 @@ final class AgenticPlugin implements Plugin
             SkillResource::class,
             ToolResource::class,
             WorkflowResource::class,
+            ExecutionResource::class,
         ]);
     }
 

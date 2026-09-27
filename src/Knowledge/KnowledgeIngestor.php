@@ -3,6 +3,7 @@
 namespace Agentic\Knowledge;
 
 use Agentic\Contracts\Repositories\KnowledgeRepository;
+use Agentic\Jobs\ReindexKnowledgeSourceJob;
 use Agentic\Knowledge\Documents\DocumentCollector;
 use Agentic\Knowledge\Documents\DocumentParserResolver;
 use Agentic\Knowledge\Documents\DocumentUrlFetcher;
@@ -70,10 +71,25 @@ final class KnowledgeIngestor
         ));
 
         if ($reindex) {
-            $this->orchestrator->reindex($updated);
+            $this->dispatchReindex($updated->slug);
         }
 
         return $updated;
+    }
+
+    private function dispatchReindex(string $slug): void
+    {
+        if ((bool) config('agentic.knowledge.queue_reindex', false)) {
+            ReindexKnowledgeSourceJob::dispatch($slug);
+
+            return;
+        }
+
+        $source = $this->sources->findBySlug($slug);
+
+        if ($source !== null) {
+            $this->orchestrator->reindex($source);
+        }
     }
 
     /**

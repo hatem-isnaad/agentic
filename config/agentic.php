@@ -228,6 +228,7 @@ return [
             'timeout' => (int) env('AGENTIC_KNOWLEDGE_URL_FETCH_TIMEOUT', 15),
             'max_bytes' => (int) env('AGENTIC_KNOWLEDGE_URL_FETCH_MAX_BYTES', 5 * 1024 * 1024),
         ],
+        'queue_reindex' => env('AGENTIC_KNOWLEDGE_QUEUE_REINDEX', false),
     ],
 
     /*
@@ -346,5 +347,7 @@ return [
         'enabled' => env('AGENTIC_MCP_ENABLED', true),
         'tool_prefix' => env('AGENTIC_MCP_TOOL_PREFIX', ''),
         'servers' => [],
+        'inject_resources' => env('AGENTIC_MCP_INJECT_RESOURCES', true),
+        'max_resource_injections' => (int) env('AGENTIC_MCP_MAX_RESOURCE_INJECTIONS', 5),
     ],
 ];
