@@ -92,6 +92,10 @@ final class LaravelAiSdkAdapter
             $parts[] = "Knowledge:\n".json_encode($builtContext['knowledge'], JSON_THROW_ON_ERROR);
         }
 
+        if (($builtContext['memory'] ?? []) !== []) {
+            $parts[] = "Memory:\n".json_encode($builtContext['memory'], JSON_THROW_ON_ERROR);
+        }
+
         return implode("\n\n", array_filter($parts, fn (string $part) => $part !== ''));
     }
 }

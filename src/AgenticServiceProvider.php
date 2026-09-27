@@ -9,6 +9,7 @@ use Agentic\Contracts\Repositories\AgentRepository;
 use Agentic\Contracts\Repositories\ConversationRepository;
 use Agentic\Contracts\Repositories\ExecutionRepository;
 use Agentic\Contracts\Repositories\KnowledgeRepository;
+use Agentic\Contracts\Repositories\MemoryRepository;
 use Agentic\Contracts\Repositories\SkillRepository;
 use Agentic\Contracts\Repositories\ToolRepository;
 use Agentic\Knowledge\Contracts\EmbeddingProvider;
@@ -41,6 +42,10 @@ use Agentic\Persistence\Eloquent\EloquentToolRepository;
 use Agentic\Persistence\InMemory\InMemoryConversationRepository;
 use Agentic\Persistence\InMemory\InMemoryExecutionRepository;
 use Agentic\Persistence\InMemory\InMemoryKnowledgeRepository;
+use Agentic\Persistence\InMemory\InMemoryMemoryRepository;
+use Agentic\Persistence\Eloquent\EloquentMemoryRepository;
+use Agentic\Memory\MemoryContextResolver;
+use Agentic\Memory\MemoryManager;
 use Agentic\Persistence\ToolVersionPublisher;
 use Agentic\Persistence\ToolVersionResolver;
 use Agentic\Routing\AgentRouter;
@@ -146,6 +151,15 @@ final class AgenticServiceProvider extends ServiceProvider
                 ? $app->make(InMemoryKnowledgeRepository::class)
                 : $app->make(EloquentKnowledgeRepository::class);
         });
+
+        $this->app->bind(MemoryRepository::class, function ($app) {
+            return config('agentic.memory.driver', 'eloquent') === 'memory'
+                ? $app->make(InMemoryMemoryRepository::class)
+                : $app->make(EloquentMemoryRepository::class);
+        });
+
+        $this->app->singleton(MemoryContextResolver::class);
+        $this->app->singleton(MemoryManager::class);
 
         $this->app->singleton(EmbeddingProvider::class, function ($app) {
             $driver = config('agentic.knowledge.embedding', 'null');

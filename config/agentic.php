@@ -115,6 +115,24 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Memory
+    |--------------------------------------------------------------------------
+    |
+    | Scoped long-term facts injected into agent context (user, conversation,
+    | agent, tenant). Opt-in per host app via API or MemoryManager.
+    |
+    | driver: eloquent | memory
+    |
+    */
+    'memory' => [
+        'enabled' => env('AGENTIC_MEMORY_ENABLED', true),
+        'driver' => env('AGENTIC_MEMORY_DRIVER', 'eloquent'),
+        'max_context_entries' => (int) env('AGENTIC_MEMORY_MAX_CONTEXT_ENTRIES', 20),
+        'default_ttl_days' => env('AGENTIC_MEMORY_DEFAULT_TTL_DAYS'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Filament admin (optional)
     |--------------------------------------------------------------------------
     |

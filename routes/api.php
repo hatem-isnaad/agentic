@@ -6,6 +6,7 @@ use Agentic\Http\Controllers\Api\AgentRouteController;
 use Agentic\Http\Controllers\Api\ConversationController;
 use Agentic\Http\Controllers\Api\ExecutionController;
 use Agentic\Http\Controllers\Api\KnowledgeSourceController;
+use Agentic\Http\Controllers\Api\MemoryController;
 use Agentic\Http\Controllers\Api\SkillController;
 use Agentic\Http\Controllers\Api\ToolController;
 use Illuminate\Support\Facades\Route;
@@ -38,3 +39,7 @@ Route::get('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'show'
 Route::put('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'update']);
 Route::delete('knowledge-sources/{slug}', [KnowledgeSourceController::class, 'destroy']);
 Route::post('knowledge-sources/{slug}/index', [KnowledgeSourceController::class, 'indexDocuments']);
+
+Route::get('memories', [MemoryController::class, 'index']);
+Route::post('memories', [MemoryController::class, 'store']);
+Route::delete('memories/{id}', [MemoryController::class, 'destroy']);
