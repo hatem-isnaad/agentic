@@ -10,12 +10,17 @@ export const chaptersEn: DocChapterMap = {
             {
                 title: 'One Composer require',
                 body:
-                    'Run this in your Laravel app root (not inside the package folder). Agentic declares laravel/ai in its own composer.json, so the Laravel AI SDK is installed transitively — never add laravel/ai as a second require.',
+                    'Run this in your Laravel app root (not inside the package folder). Agentic declares laravel/ai in its own composer.json, so the Laravel AI SDK is installed transitively — never add laravel/ai as a second require. Pin releases: composer require hatem-isnaad/agentic:^0.2 (Git tag v0.2.0).',
+            },
+            {
+                title: 'Interactive install wizard',
+                body:
+                    'php artisan agentic:install (default in a TTY) asks multiple-choice questions — deployment mode, AI provider, model, RAG, credentials — and merges answers into .env without wiping APP_KEY or DB settings. Use --quick to skip. See docs/INSTALL_WIZARD.md.',
             },
             {
                 title: 'Publish Agentic + Laravel AI config',
                 body:
-                    'agentic:install publishes config/agentic.php. Publishing ai-config creates config/ai.php for provider API keys (OpenAI, Anthropic, Gemini, Ollama).',
+                    'agentic:install publishes a thin config/agentic.php (package defaults live in vendor). Publishing ai-config creates config/ai.php for provider API keys (OpenAI, Anthropic, Gemini, Ollama).',
             },
             {
                 title: 'Database tables',
@@ -42,8 +47,8 @@ export const chaptersEn: DocChapterMap = {
             },
             {
                 command: 'php artisan agentic:install',
-                title: 'Publish Agentic configuration',
-                why: 'Creates config/agentic.php so your host can override drivers, code tool paths, widget URLs, and feature flags.',
+                title: 'Install wizard + publish config',
+                why: 'Interactive .env setup (mode, AI, RAG, Pusher). Publishes config/agentic.php. Non-interactive: agentic:install --quick.',
             },
             {
                 command: 'php artisan vendor:publish --tag=ai-config',
@@ -72,29 +77,28 @@ export const chaptersEn: DocChapterMap = {
             },
         ],
         env: [
+            { key: 'AGENTIC_MODE', description: 'local | production | widget — routes + auth (see chapter 02)' },
             { key: 'AGENTIC_ENABLED', description: 'Master switch (default true)' },
             { key: 'AGENTIC_AI_PROVIDER', description: 'Default provider when an agent omits one: openai | gemini | anthropic | ollama' },
             { key: 'AGENTIC_AI_MODEL', description: 'Default model slug for new agents' },
             { key: 'OPENAI_API_KEY', description: 'Laravel AI / OpenAI (see also config/ai.php)' },
             { key: 'OLLAMA_URL', description: 'Base URL when using local Ollama (e.g. http://localhost:11434)' },
         ],
-        envExample: `# Minimal .env after copying vendor/hatem-isnaad/agentic/.env.example
+        envExample: `AGENTIC_MODE=local
 AGENTIC_AI_PROVIDER=ollama
-AGENTIC_AI_MODEL=qwen3.5:4b
+AGENTIC_AI_MODEL=qwen3:8b
 OLLAMA_URL=http://localhost:11434
 
-# Or cloud:
-# AGENTIC_AI_PROVIDER=openai
-# AGENTIC_AI_MODEL=gpt-4.1-mini
-# OPENAI_API_KEY=sk-...`,
-        cli: `# Run from your Laravel project root
-composer require hatem-isnaad/agentic
-php artisan agentic:install
-php artisan vendor:publish --tag=ai-config
-php artisan migrate
-php artisan vendor:publish --tag=agentic-admin-assets --force
+# Production server:
+# AGENTIC_MODE=production
+# AGENTIC_ADMIN_GATE=viewAgentic
 
-# Copy AI / Agentic keys from vendor/hatem-isnaad/agentic/.env.example → .env
+# Public site embed only (no admin routes):
+# AGENTIC_MODE=widget`,
+        cli: `# Run from your Laravel project root
+composer require hatem-isnaad/agentic:^0.2
+php artisan agentic:install
+php artisan config:clear
 php artisan agentic:rag-validate --offline
 php artisan agentic:rag-validate`,
         php: `// config/agentic.php (excerpt) — custom PHP tools auto-discovered from your app
@@ -107,23 +111,26 @@ php artisan agentic:rag-validate`,
             'Start in plain language: vendor/hatem-isnaad/agentic/docs/START_HERE.md. Then DEVELOPER_HANDBOOK.md.',
     },
     environment: {
-        title: '02 · Environment & config file',
-        summary: 'Every .env knob maps to config/agentic.php — change both places consciously.',
-        goal: 'Know where to toggle features without hunting the codebase.',
+        title: '02 · Deployment mode & environment',
+        summary: 'Start with AGENTIC_MODE — one switch for routes, auth, and embed security. Other keys are optional tuning.',
+        goal: 'Avoid dozens of conflicting AGENTIC_* toggles; use the wizard or handbook for edge cases.',
         steps: [
-            { title: 'Published config', body: 'config/agentic.php after agentic:install — host overrides win.' },
+            {
+                title: 'AGENTIC_MODE (primary)',
+                body:
+                    'local — laptop: /agentic/admin + widget demo, admin API without Sanctum. production — server: admin + widget API, Sanctum + embed token required. widget — server: only /api/agentic/widget/* (no admin, runtime API, or auth routes). Legacy alias: AGENTIC_WIDGET_ONLY=true ≡ widget.',
+            },
+            { title: 'Published config', body: 'Thin config/agentic.php merges package defaults from vendor/hatem-isnaad/agentic/config/agentic.php — do not copy the full file into your host.' },
             { title: 'Clear config cache', body: 'php artisan config:clear after .env changes.' },
-            { title: 'Every env documented', body: 'docs/DEVELOPER_HANDBOOK.md — what each key does and what happens if you raise a limit. Widget replies: AGENTIC_WIDGET_STREAM=false, render on message.created (handbook § Widget replies).' },
-            { title: 'Drivers', body: 'execution, conversation, knowledge, memory, workflow drivers: eloquent vs memory (tests).' },
-            { title: 'Feature flags', body: 'admin.enabled, widget.enabled, api.enabled, workflows.enabled, memory.enabled.' },
+            { title: 'Handbook', body: 'docs/DEVELOPER_HANDBOOK.md for RAG, tokens, and limits. Widget replies: AGENTIC_WIDGET_STREAM=false → render on message.created.' },
+            { title: 'Advanced overrides', body: 'Only if AGENTIC_MODE is empty: AGENTIC_ADMIN_REQUIRE_AUTH, AGENTIC_API_REQUIRE_AUTH, AGENTIC_*_ENABLED. Prefer mode presets instead.' },
         ],
-        configPaths: ['config/agentic.php', '.env'],
+        configPaths: ['config/agentic.php', '.env', 'docs/INSTALL_WIZARD.md'],
         env: [
-            { key: 'AGENTIC_ENABLED', description: 'Disable entire package' },
-            { key: 'AGENTIC_ADMIN_ENABLED', description: 'Admin API + optional SPA' },
-            { key: 'AGENTIC_ADMIN_WEB_ENABLED', description: 'Serve /agentic/admin SPA' },
-            { key: 'AGENTIC_WIDGET_ENABLED', description: 'Widget JSON API' },
-            { key: 'AGENTIC_API_ENABLED', description: 'Runtime JSON API under /api/agentic' },
+            { key: 'AGENTIC_MODE', description: 'local | production | widget (auto: local when APP_ENV=local)' },
+            { key: 'AGENTIC_ENABLED', description: 'Master switch' },
+            { key: 'AGENTIC_API_ENABLED', description: 'Runtime /api/agentic (off in widget mode; optional in production)' },
+            { key: 'AGENTIC_ADMIN_GATE', description: 'Laravel gate for admin SPA + API when mode=production' },
         ],
         api: 'GET /settings — effective config snapshot (no secrets)',
         ui: { path: '/settings', label: 'Package settings' },
@@ -399,7 +406,7 @@ curl -O https://YOUR-HOST/vendor/agentic/widget/agentic-widget.css`,
             {
                 title: 'Enforce in production',
                 body:
-                    'AGENTIC_WIDGET_EMBED_REQUIRE_TOKEN=true — widget API returns 401 without Bearer wgt_… or Sanctum. Origin must match the token allowlist or you get “Origin not allowed”.',
+                    'Set AGENTIC_MODE=production or widget — embed token is required automatically. Widget API returns 401 without Bearer wgt_… or Sanctum. Origin must match the token allowlist.',
             },
             {
                 title: 'Copy-paste embed (Blade)',
@@ -539,32 +546,32 @@ POST /conversations/{id}/release`,
     },
     'runtime-api': {
         title: '18 · Runtime API (headless)',
-        summary: 'Same CRUD as admin under /api/agentic when enabled.',
-        goal: 'Automate from your backend without admin prefix.',
+        summary: 'Optional CRUD under /api/agentic — disabled when AGENTIC_MODE=widget.',
+        goal: 'Automate from your backend without the admin prefix.',
         steps: [
-            { title: 'Enable', body: 'AGENTIC_API_ENABLED=true' },
-            { title: 'Auth', body: 'AGENTIC_API_REQUIRE_AUTH + Sanctum tokens' },
+            { title: 'Enable', body: 'AGENTIC_MODE=production and AGENTIC_API_ENABLED=true (default off in production preset)' },
+            { title: 'Auth', body: 'production mode enables Sanctum on runtime API; issue tokens via /api/agentic/auth' },
             { title: 'Rate limit', body: 'AGENTIC_API_RATE_LIMIT_*' },
         ],
         env: [
-            { key: 'AGENTIC_API_ENABLED', description: 'Register runtime routes' },
-            { key: 'AGENTIC_API_REQUIRE_AUTH', description: 'auth:sanctum on runtime API' },
+            { key: 'AGENTIC_MODE', description: 'widget mode does not register runtime or admin routes' },
+            { key: 'AGENTIC_API_ENABLED', description: 'Register /api/agentic routes' },
         ],
         api: 'Prefix: /api/agentic — agents, tools, workflows, memories, mcp, ...',
     },
     'auth-admin': {
         title: '19 · Admin auth & gates',
-        summary: 'Open by default; lock with Sanctum + Gate.',
-        goal: 'Production-safe admin SPA and API.',
+        summary: 'AGENTIC_MODE=local for laptop; production locks admin with Sanctum + Gate.',
+        goal: 'Production-safe admin SPA and API without juggling legacy REQUIRE_AUTH flags.',
         steps: [
-            { title: 'API tokens', body: 'AGENTIC_ADMIN_REQUIRE_AUTH=true' },
-            { title: 'SPA session', body: "Add 'auth' to admin.web.middleware" },
-            { title: 'Telescope gate', body: 'AGENTIC_ADMIN_GATE=viewAgentic + Gate::define(..., $user=null)' },
-            { title: 'Passkeys (optional)', body: 'laravel/passkeys on /api/agentic/auth routes' },
+            { title: 'Deployment mode', body: 'AGENTIC_MODE=production — Sanctum required on admin JSON API; embed token required on widget.' },
+            { title: 'Who may open admin', body: 'AGENTIC_ADMIN_GATE=viewAgentic + Gate::define(\'viewAgentic\', fn ($user) => ...) in AppServiceProvider' },
+            { title: 'Login', body: 'Sanctum Bearer token or session; auth routes under /api/agentic/auth when not in widget-only mode.' },
+            { title: 'Passkeys (optional)', body: 'laravel/passkeys on auth routes' },
         ],
         env: [
-            { key: 'AGENTIC_ADMIN_REQUIRE_AUTH', description: 'Sanctum on admin API' },
-            { key: 'AGENTIC_ADMIN_GATE', description: 'Laravel gate name' },
+            { key: 'AGENTIC_MODE', description: 'production secures admin; local skips Sanctum on admin API' },
+            { key: 'AGENTIC_ADMIN_GATE', description: 'Laravel gate name (required in production)' },
         ],
         php: "Gate::define('viewAgentic', fn ($user = null) => ...);",
     },
@@ -626,7 +633,7 @@ POST /conversations/{id}/release`,
         summary: 'All package CLI entry points.',
         goal: 'Quick lookup without opening README.',
         steps: [
-            { title: 'agentic:install', body: 'Publish config, print next steps' },
+            { title: 'agentic:install', body: 'Interactive .env wizard (default); --quick publishes config only' },
             { title: 'agentic:make-code-tool', body: 'Scaffold PHP handler class' },
             { title: 'agentic:code-tools-sync', body: 'Register + sync tool records' },
             { title: 'agentic:mcp-sync', body: 'Import MCP tools' },

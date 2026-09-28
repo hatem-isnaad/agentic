@@ -13,8 +13,12 @@ export const chaptersAr: DocChapterMap = {
                     'نفّذ في جذر تطبيق Laravel (وليس داخل مجلد الحزمة). الحزمة تتضمن laravel/ai كاعتماد — لا تضف laravel/ai كحزمة منفصلة.',
             },
             {
+                title: 'معالج التثبيت التفاعلي',
+                body: 'php artisan agentic:install يطرح أسئلة (وضع النشر، المزود، النموذج، RAG) ويكتب .env. --quick لتخطي المعالج. docs/INSTALL_WIZARD.md',
+            },
+            {
                 title: 'نشر إعداد Agentic و Laravel AI',
-                body: 'agentic:install ينشر config/agentic.php. ai-config ينشر config/ai.php لمفاتيح المزودين.',
+                body: 'config/agentic.php رفيع — الافتراضيات من vendor. ai-config لـ config/ai.php.',
             },
             {
                 title: 'جداول قاعدة البيانات',
@@ -38,8 +42,8 @@ export const chaptersAr: DocChapterMap = {
             },
             {
                 command: 'php artisan agentic:install',
-                title: 'نشر إعداد Agentic',
-                why: 'ينشئ config/agentic.php للمسارات والمحركات وأعلام الميزات.',
+                title: 'معالج التثبيت + نشر الإعداد',
+                why: 'إعداد .env تفاعلي ونشر config/agentic.php. بدون معالج: --quick.',
             },
             {
                 command: 'php artisan vendor:publish --tag=ai-config',
@@ -67,21 +71,21 @@ export const chaptersAr: DocChapterMap = {
                 why: 'بعد ضبط AGENTIC_KNOWLEDGE_EMBEDDING والمفاتيح.',
             },
         ],
-        envExample: `AGENTIC_AI_PROVIDER=ollama
-AGENTIC_AI_MODEL=qwen3.5:4b
+        envExample: `AGENTIC_MODE=local
+AGENTIC_AI_PROVIDER=ollama
+AGENTIC_AI_MODEL=qwen3:8b
 OLLAMA_URL=http://localhost:11434`,
         adminNote: 'ابدأ من START_HERE.md ثم DEVELOPER_HANDBOOK.md في vendor/hatem-isnaad/agentic/docs/',
     },
     environment: {
-        title: '02 · البيئة وملف الإعداد',
-        summary: 'كل مفتاح .env يقابل config/agentic.php.',
-        goal: 'معرفة أين تُفعَّل الميزات دون البحث في الكود.',
+        title: '02 · وضع النشر والبيئة',
+        summary: 'ابدأ بـ AGENTIC_MODE — مفتاح واحد للمسارات والمصادقة.',
+        goal: 'تجنب عشرات مفاتيح AGENTIC_* المتعارضة.',
         steps: [
-            { title: 'ملف الإعداد المنشور', body: 'config/agentic.php بعد agentic:install' },
-            { title: 'مسح كاش الإعداد', body: 'php artisan config:clear بعد تغيير .env' },
-            { title: 'دليل المفاتيح', body: 'docs/DEVELOPER_HANDBOOK.md — ردود الويدجت كاملة على message.created (AGENTIC_WIDGET_STREAM=false).' },
-            { title: 'المحركات', body: 'execution، conversation، knowledge، memory، workflow: eloquent أو memory' },
-            { title: 'أعلام الميزات', body: 'admin، widget، api، workflows، memory' },
+            { title: 'AGENTIC_MODE', body: 'local | production | widget — راجع الفصل بالإنجليزية للتفاصيل.' },
+            { title: 'ملف الإعداد', body: 'config/agentic.php رفيع يدمج إعداد الحزمة من vendor' },
+            { title: 'مسح الكاش', body: 'php artisan config:clear بعد .env' },
+            { title: 'الدليل', body: 'DEVELOPER_HANDBOOK.md و INSTALL_WIZARD.md' },
         ],
     },
     ai: {
@@ -306,9 +310,12 @@ curl -O https://YOUR-HOST/vendor/agentic/widget/agentic-widget.css`,
     },
     'auth-admin': {
         title: '19 · مصادقة الإدارة',
-        summary: 'مفتوح افتراضياً؛ Sanctum + Gate للإنتاج.',
-        goal: 'إدارة آمنة.',
-        steps: [{ title: 'البوابة', body: 'AGENTIC_ADMIN_GATE + Gate::define' }],
+        summary: 'AGENTIC_MODE=production يفعّل Sanctum + البوابة.',
+        goal: 'إدارة آمنة في الإنتاج.',
+        steps: [
+            { title: 'الوضع', body: 'AGENTIC_MODE=production' },
+            { title: 'البوابة', body: 'AGENTIC_ADMIN_GATE + Gate::define' },
+        ],
     },
     'http-security': {
         title: '20 · أمان HTTP',

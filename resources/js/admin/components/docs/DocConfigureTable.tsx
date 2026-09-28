@@ -10,9 +10,9 @@ type Row = {
 const ROWS: Row[] = [
     {
         taskKey: 'docs.cfg_install',
-        cli: 'agentic:install · migrate · agentic:rag-validate',
-        api: '—',
-        code: 'config/agentic.php · .env',
+        cli: 'agentic:install (wizard) · migrate · agentic:rag-validate',
+        api: 'GET /settings',
+        code: 'AGENTIC_MODE · config/agentic.php · .env',
     },
     {
         taskKey: 'docs.cfg_code_tools',

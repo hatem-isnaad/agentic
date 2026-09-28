@@ -737,7 +737,7 @@ return [
         'checklist_open_install' => 'فتح فصل التثبيت',
         'catalog' => [
             'install' => '01 التثبيت',
-            'environment' => '02 البيئة',
+            'environment' => '02 النشر والبيئة',
             'ai' => '03 نماذج الذكاء',
             'code_tools' => '04 أدوات code',
             'http_tools' => '05 أدوات HTTP',
