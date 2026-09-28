@@ -1,7 +1,7 @@
 # Agentic frontend implementation guide
 
 **Purpose:** Single source of truth for building **two separate React apps** (Admin dashboard + embeddable Chat widget) against the Agentic Laravel package APIs.  
-**Last updated:** 2026-09-27 (keep this file in sync when routes or events change in `routes/*.php`).
+**Last updated:** 2026-09-28 (keep this file in sync when routes or events change in `routes/*.php`).
 
 **Related files**
 
@@ -10,6 +10,7 @@
 | [`COPY_PROMPT_FOR_AI.md`](./COPY_PROMPT_FOR_AI.md) | Paste into Cursor/Claude to implement UI |
 | [`../.env.example`](../.env.example) | Laravel backend env |
 | [`SYSTEM_DESIGN.md`](./SYSTEM_DESIGN.md) | Architecture diagrams and flows |
+| [`STAFF_INBOX.md`](./STAFF_INBOX.md) | Build a helpdesk in **your** UI using inbox APIs |
 
 ---
 
@@ -271,6 +272,18 @@ Step types: `set`, `tool`, `agent`, `condition`, `parallel`, `approval`, `comple
 |--------|------|
 | `GET` | `/executions`, `/executions/{id}` |
 | `GET` | `/conversations`, `/conversations/{id}` |
+| `GET` | `/conversations/{id}/messages` (`?limit=` 1–100) |
+
+### 4.7 Staff inbox (custom desk)
+
+You do not have to use `/agentic/admin/inbox`. Same JSON, your UI: **[STAFF_INBOX.md](./STAFF_INBOX.md)**.
+
+| Method | Path | Body |
+|--------|------|------|
+| `GET` | `/inbox` | Query: `limit`, `page`, `per_page`, `q` |
+| `POST` | `/conversations/{id}/take` | `{ "by"? }` |
+| `POST` | `/conversations/{id}/reply` | `{ "message" }` → 201, also takes the thread |
+| `POST` | `/conversations/{id}/release` | — |
 
 ---
 
@@ -289,6 +302,7 @@ Step types: `set`, `tool`, `agent`, `condition`, `parallel`, `approval`, `comple
 **Response `data` highlights:**
 
 - `auth`, `conversation`, `intake`, `locale`, `theme`, `reply`, `realtime`, `providers`
+- `stream`: `false` by default (`AGENTIC_WIDGET_STREAM`). When `false`, do **not** render `message.delta` — wait for the full `message.created`
 - `realtime.driver`: `pusher` \| `polling` \| `socketio` \| `null`
 - `reply.render`: `blocks` (prefer rendering `blocks` over raw HTML when present)
 
@@ -302,7 +316,10 @@ Step types: `set`, `tool`, `agent`, `condition`, `parallel`, `approval`, `comple
 | `POST` | `/conversations/{id}/messages` | `{ "agent", "message", "locale?", "metadata?" }` |
 | `POST` | `/messages` | Same as above + optional `conversation_id` (create or continue) |
 
-**Send message success `data`:**
+**Send message — two success shapes:**
+
+1. **Async (Pusher default):** `{ "conversation_id": "uuid", "pending": true }`. Show Typing. Do not expect assistant HTML on this HTTP response.
+2. **Sync** (`AGENTIC_WIDGET_ASYNC_REPLIES=false`) or **handoff:** may include `message` and/or `handoff: true`. After human handoff, do not wait for an agent job.
 
 ```json
 {
@@ -325,6 +342,8 @@ Step types: `set`, `tool`, `agent`, `condition`, `parallel`, `approval`, `comple
 ```
 
 **Failure:** `{ "data": { "success": false, "error": "...", "conversation_id": "..." } }` with HTTP 422.
+
+**Render contract (custom widget):** wait for `message.created` / `message.resumed` and paint `payload.message.html` (or `blocks`) once. Ignore `message.delta` unless `GET /config` has `stream: true`. Images in `html` use signed file URLs — refresh from history if they expire. Env catalog: [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) § Widget replies.
 
 ### 5.3 Tool approvals
 
@@ -397,16 +416,18 @@ Default prefix: `agentic-widget` → `agentic-widget.550e8400-e29b-41d4-a716-446
 
 | Event name | When | Payload (typical) |
 |------------|------|-------------------|
-| `message.created` | New assistant reply after user message | `{ success, conversation_id, message, usage }` |
-| `message.resumed` | New assistant reply after tool approval auto-resume | Same shape as `message.created` |
+| `assistant.typing` | Agent job started / finished | `{ active: true\|false }` — show Typing while `active` |
+| `message.created` | **Full** assistant (or staff) reply — this is what you render | `{ success, conversation_id, message, usage }` |
+| `message.resumed` | Full assistant reply after tool approval auto-resume | Same shape as `message.created` |
+| `message.delta` | Token fragment — **only** if `AGENTIC_WIDGET_STREAM=true` | `{ delta }` — official widget ignores this; default is off |
 | `tool.approval.executed` | Approved tool finished running | `{ success, approval_id, tool, result, error }` |
 
 ### Driver implementation notes (frontend)
 
 | Driver | Frontend action |
 |--------|-------------------|
-| `pusher` | Subscribe with `pusher-js` to channel above; bind all event names |
-| `polling` | Loop `GET .../realtime?since_id=` |
+| `pusher` | Subscribe with `pusher-js`; bind `assistant.typing`, `message.created`, `message.resumed`. Ignore `message.delta` unless `config.stream === true` |
+| `polling` | Loop `GET .../realtime?since_id=` — same event names; still render only on `message.created` |
 | `socketio` | Connect to **your** relay; server receives POST from Laravel at `AGENTIC_WIDGET_SOCKETIO_URL` — mirror same channel/event names |
 | `null` | Poll message history or rely on HTTP response only |
 
@@ -469,6 +490,7 @@ Use React Router (or similar). All labels from `GET /translations`.
 | `/tools` | CRUD | `/tools` |
 | `/knowledge` | CRUD + index + search test | `/knowledge-sources` |
 | `/executions` | List + detail drawer | `/executions` |
+| `/inbox` | Staff desk (or skip — use your app) | [STAFF_INBOX.md](./STAFF_INBOX.md) |
 | `/conversations` | List + detail | `/conversations` |
 | `/widget-settings` | List | `GET /widget-settings` |
 | `/widget-settings/:agentSlug` | Form from schema | `GET schema`, `PUT /widget-settings/:agentSlug` |
@@ -482,15 +504,15 @@ Use React Router (or similar). All labels from `GET /translations`.
 
 | Area | Behavior |
 |------|----------|
-| Bootstrap | `GET /config?agent=` → theme, locale, realtime driver |
+| Bootstrap | `GET /config?agent=` → theme, locale, realtime driver, `stream` (default false) |
 | Launcher | Floating button; open panel |
 | Intake | If `intake.enabled`, show `welcome_message` + `questions` before chat |
 | Header | Agent name, locale switcher, close |
 | Thread | `GET /conversations/{id}/messages` — render blocks |
-| Composer | POST message; disable while loading |
+| Composer | POST message; with Pusher expect `{ pending: true }` then Typing |
 | Conversations | If `allow_multiple`, list `GET /conversations?agent=` |
-| Approvals | Modal when `pending_approval` detected |
-| Realtime | Pusher/polling/socket.io per config |
+| Approvals | Modal when `pending_approval` detected; handoff Yes/No uses the same approval APIs |
+| Realtime | Pusher/polling: render **once** on `message.created`. Ignore `message.delta` unless `stream: true` |
 | Guest id | Generate once, store `localStorage.agentic_guest_id`, send header |
 
 **Theme:** Apply `theme.custom` CSS variables; direction from `theme.direction` or locale RTL list.

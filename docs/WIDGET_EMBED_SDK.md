@@ -1,6 +1,7 @@
 # Widget embed SDK (popup chat for Blade, SPA, any site)
 
-Env, tokens, and limits: [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) §5.
+Env, tokens, and limits: [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) §5.  
+Staff inbox in **your** admin (same APIs, your UI): [STAFF_INBOX.md](./STAFF_INBOX.md).
 
 Drop a **chat popup** on any webpage: standalone JS/CSS, themes (light / dark / system / brand), optional sounds, and **production security** so random sites cannot use your widget even if they copy your script tags.
 
@@ -354,6 +355,14 @@ Async is **automatic** with the Pusher driver (`AGENTIC_WIDGET_ASYNC_REPLIES` un
 
 **Reply vs result:** The HTTP `POST /messages` ack is only `pending` + `conversation_id` (fast). The user-facing assistant HTML arrives on Pusher `message.created` under `payload.message`. Token usage and `execution_id` are under `payload.result` (not rendered as chat text).
 
+### No token streaming (default)
+
+`AGENTIC_WIDGET_STREAM` defaults to **`false`**. The official embed **does not** paint word-by-word `message.delta` events. It waits for the complete assistant message on `message.created` (or `message.resumed` after Approve), then replaces Typing with that HTML.
+
+Custom UIs should do the same: ignore `message.delta` unless you set `AGENTIC_WIDGET_STREAM=true` **and** `GET /config` reports `stream: true`. Streaming is opt-in only; it usually looks slower than one full render.
+
+Images uploaded in the widget (AI or staff) render in `message.html` via a signed `GET …/files/{file}` URL. Handoff is in-chat Yes/No (no header button). After the visitor confirms, queued agent jobs no-op — [STAFF_INBOX.md](./STAFF_INBOX.md).
+
 ## Lean context (tokens + speed)
 
 **Global (default on):** `agentic.context` + `AGENTIC_LEAN_CONTEXT=true` applies to every agent run (admin chat, API, widget). One “full system” agent can keep many skills/tools in the database; each turn routes a small subset.
@@ -365,11 +374,11 @@ Widget-specific env (override global when tighter):
 | Env | Default | Effect |
 |-----|---------|--------|
 | `AGENTIC_WIDGET_LEAN_CONTEXT` | `true` | Enable widget policy |
-| `AGENTIC_WIDGET_CONTEXT_HISTORY` | `12` | Prior user/assistant turns sent to the SDK (excludes the current user message) |
+| `AGENTIC_WIDGET_CONTEXT_HISTORY` | `8` | Prior user/assistant turns sent to the SDK (excludes the current user message) |
 | `AGENTIC_WIDGET_SKILL_LIMIT` | `2` | Max skills when keyword routing matches |
 | `AGENTIC_WIDGET_SKILLS_FALLBACK_LIMIT` | `2` | Max skills when **no** keyword match (avoids 100 skills) |
 | `AGENTIC_WIDGET_KNOWLEDGE_LIMIT` | `3` | RAG chunks per turn |
-| `AGENTIC_WIDGET_MEMORY_LIMIT` | `8` | Memory rows in prompt |
+| `AGENTIC_WIDGET_MEMORY_LIMIT` | `5` | Memory rows in prompt |
 | `AGENTIC_WIDGET_MAX_TOOLS` | `20` | Cap tools registered for the turn |
 | `AGENTIC_WIDGET_COMPACT_SKILLS` | `true` | Shorter skill blurbs in instructions |
 

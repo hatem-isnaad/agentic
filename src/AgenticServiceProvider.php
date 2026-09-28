@@ -9,6 +9,7 @@ use Agentic\Connections\OAuth2TokenManager;
 use Agentic\Console\AgentCommand;
 use Agentic\Console\ChannelAccountCommand;
 use Agentic\Console\ConnectionCommand;
+use Agentic\Console\EvalSetCommand;
 use Agentic\Console\EvaluationCommand;
 use Agentic\Console\HttpToolCommand;
 use Agentic\Console\InstallAgenticCommand;
@@ -24,6 +25,8 @@ use Agentic\Console\SyncMcpToolsCommand;
 use Agentic\Console\WidgetEmbedTokenCommand;
 use Agentic\Context\ContextBuilder;
 use Agentic\Context\ContextManager;
+use Agentic\Context\LlmInputCompactor;
+use Agentic\Context\LlmInstructionComposer;
 use Agentic\Context\Providers\ConversationContextProvider;
 use Agentic\Context\Providers\HttpRequestContextProvider;
 use Agentic\Contracts\Connections\ConnectionResolver;
@@ -42,7 +45,9 @@ use Agentic\Execution\ExecutionManager;
 use Agentic\Filament\AgenticPlugin;
 use Agentic\Http\Middleware\AuthorizeAgenticAdmin;
 use Agentic\Http\Support\AdminLocaleMeta;
+use Agentic\Http\Support\AgenticExceptionRenderer;
 use Agentic\Http\Support\AuthRequirement;
+use Illuminate\Contracts\Debug\ExceptionHandler;
 use Agentic\Integrations\LaravelAi\LaravelAiSdkAdapter;
 use Agentic\Knowledge\Contracts\EmbeddingProvider;
 use Agentic\Knowledge\Contracts\VectorStore;
@@ -69,6 +74,8 @@ use Agentic\Memory\MemoryManager;
 use Agentic\Permission\DenyAllPermissionChecker;
 use Agentic\Permission\PermissionChecker;
 use Agentic\Permission\PermissionResolver;
+use Agentic\Support\AgenticDeployMode;
+use Agentic\Support\WidgetOnlyMode;
 use Agentic\Persistence\Eloquent\EloquentAgentRepository;
 use Agentic\Persistence\Eloquent\EloquentConversationMessageRepository;
 use Agentic\Persistence\Eloquent\EloquentConversationRepository;
@@ -108,6 +115,7 @@ use Agentic\Tool\Drivers\Mcp\LaravelMcpClientGateway;
 use Agentic\Tool\Drivers\Mcp\McpToolRegistrar;
 use Agentic\Tool\Drivers\McpToolDriver;
 use Agentic\Tool\Handlers\HandlerRegistry;
+use Agentic\Tool\Handlers\HandoffCodeHandler;
 use Agentic\Tool\Registry\ToolRegistry;
 use Agentic\Tool\ToolApprovalExecutionService;
 use Agentic\Tool\ToolExecutor;
@@ -150,6 +158,8 @@ final class AgenticServiceProvider extends ServiceProvider
         $this->app->singleton(DriverResolver::class);
         $this->app->singleton(ContextBuilder::class);
         $this->app->singleton(ContextManager::class);
+        $this->app->singleton(LlmInputCompactor::class, fn () => LlmInputCompactor::fromConfig());
+        $this->app->singleton(LlmInstructionComposer::class);
         $this->app->singleton(ConversationManager::class);
         $this->app->singleton(PermissionResolver::class);
         $this->app->singleton(ToolExecutor::class);
@@ -313,6 +323,16 @@ final class AgenticServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        AgenticDeployMode::applyPresets();
+
+        $this->app->booted(function (): void {
+            AgenticExceptionRenderer::register($this->app->make(ExceptionHandler::class));
+        });
+
+        $this->app->booted(function (): void {
+            $this->app->make(HandlerRegistry::class)->register('handoff', HandoffCodeHandler::class);
+        });
+
         if (config('agentic.code_tools.auto_register', true)) {
             $this->app->booted(function (): void {
                 $this->app->make(CustomCodeToolDiscovery::class)
@@ -367,6 +387,11 @@ final class AgenticServiceProvider extends ServiceProvider
                 ->by($request->ip().'|'.$token.'|'.$guest);
         });
 
+        RateLimiter::for('agentic-admin', function ($request) {
+            return Limit::perMinute((int) config('agentic.admin.api.rate_limit.per_minute', 300))
+                ->by($request->user()?->getAuthIdentifier() ?: $request->ip());
+        });
+
         if (config('agentic.api.enabled')) {
             $prefix = trim((string) config('agentic.api.prefix', 'api/agentic'), '/');
             $apiMiddleware = config('agentic.api.middleware', ['api']);
@@ -389,8 +414,8 @@ final class AgenticServiceProvider extends ServiceProvider
         if (config('agentic.admin.enabled') && config('agentic.admin.api.enabled', true)) {
             $prefix = trim((string) config('agentic.admin.api.prefix', 'api/agentic/admin'), '/');
             $adminMiddleware = config('agentic.admin.api.middleware', ['api']);
-            if ((bool) config('agentic.api.rate_limit.enabled', true)) {
-                $adminMiddleware = $this->appendMiddleware($adminMiddleware, 'throttle:agentic-api');
+            if ((bool) config('agentic.admin.api.rate_limit.enabled', true)) {
+                $adminMiddleware = $this->appendMiddleware($adminMiddleware, 'throttle:agentic-admin');
             }
             $middleware = $this->resolveMiddleware(
                 $adminMiddleware,
@@ -490,6 +515,7 @@ final class AgenticServiceProvider extends ServiceProvider
                 SkillCommand::class,
                 KnowledgeCommand::class,
                 EvaluationCommand::class,
+                EvalSetCommand::class,
                 MakeCommand::class,
                 ManageCommand::class,
             ]);
@@ -500,6 +526,10 @@ final class AgenticServiceProvider extends ServiceProvider
 
     private function registerFilamentPlugin(): void
     {
+        if (AgenticDeployMode::isWidgetOnly()) {
+            return;
+        }
+
         if (! class_exists(Filament::class) || ! class_exists(AgenticPlugin::class)) {
             return;
         }

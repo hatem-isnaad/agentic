@@ -113,7 +113,7 @@ php artisan agentic:rag-validate`,
         steps: [
             { title: 'Published config', body: 'config/agentic.php after agentic:install — host overrides win.' },
             { title: 'Clear config cache', body: 'php artisan config:clear after .env changes.' },
-            { title: 'Every env documented', body: 'docs/DEVELOPER_HANDBOOK.md — what each key does and what happens if you raise a limit.' },
+            { title: 'Every env documented', body: 'docs/DEVELOPER_HANDBOOK.md — what each key does and what happens if you raise a limit. Widget replies: AGENTIC_WIDGET_STREAM=false, render on message.created (handbook § Widget replies).' },
             { title: 'Drivers', body: 'execution, conversation, knowledge, memory, workflow drivers: eloquent vs memory (tests).' },
             { title: 'Feature flags', body: 'admin.enabled, widget.enabled, api.enabled, workflows.enabled, memory.enabled.' },
         ],
@@ -334,12 +334,19 @@ POST /agents/{slug}/execute`,
         steps: [
             { title: 'Enable API', body: 'AGENTIC_WIDGET_ENABLED=true' },
             { title: 'Identity', body: 'X-Agentic-Guest-Id per browser, or Sanctum user when AGENTIC_WIDGET_AUTH_MODE allows auth' },
-            { title: 'Send', body: 'POST /messages with agent, message, optional conversation_id' },
+            { title: 'Send', body: 'POST /messages with agent, message, optional conversation_id. With Pusher the HTTP ack is { pending, conversation_id } — not the assistant HTML.' },
+            {
+                title: 'Render the full reply',
+                body:
+                    'AGENTIC_WIDGET_STREAM defaults to false. Show Typing, then paint one bubble on Pusher message.created (payload.message.html / blocks). Ignore message.delta unless you opt in to streaming. Images use signed GET …/files/{file}.',
+            },
             { title: 'Embed UI', body: 'See chapter 15 — standalone agentic-widget.js popup (recommended for Blade/SPA)' },
         ],
         env: [
             { key: 'AGENTIC_WIDGET_AUTH_MODE', description: 'guest | auth | both' },
             { key: 'AGENTIC_WIDGET_MAX_CONVERSATIONS', description: 'Open chats per user' },
+            { key: 'AGENTIC_WIDGET_STREAM', description: 'false (default) = wait for full message.created; true = token deltas' },
+            { key: 'AGENTIC_WIDGET_ATTACHMENTS', description: 'Image / PDF upload in the official widget' },
         ],
         api: `POST /messages
 GET /config?agent=slug
@@ -427,7 +434,7 @@ curl -O https://YOUR-HOST/vendor/agentic/widget/agentic-widget.css`,
             {
                 title: 'Theme & realtime',
                 body:
-                    'Per-agent theme via PUT /widget-settings/{agent}. Pusher: AGENTIC_WIDGET_BROADCAST_DRIVER=pusher + queue worker. See WIDGET_EMBED_SDK.md § External sites.',
+                    'Per-agent theme via PUT /widget-settings/{agent}. Pusher: AGENTIC_WIDGET_BROADCAST_DRIVER=pusher + queue:work. Replies are one full message.created (AGENTIC_WIDGET_STREAM=false). Do not paint word-by-word deltas. See WIDGET_EMBED_SDK.md and DEVELOPER_HANDBOOK.md § Widget replies.',
             },
         ],
         commands: [
@@ -491,6 +498,27 @@ POST /messages { "agent": "support", "message": "Hello" }`,
         ],
         api: 'GET /widget-settings/schema · PUT /widget-settings/{agent}',
         ui: { path: '/widget-settings', label: 'Widget settings' },
+    },
+    'staff-inbox': {
+        title: '16b · Custom staff inbox',
+        summary: 'Build the helpdesk in your own admin. Agentic only provides JSON.',
+        goal: 'List threads, take, reply, release — without using /agentic/admin/inbox.',
+        steps: [
+            { title: 'Use the admin API', body: 'GET /api/agentic/admin/inbox, GET /conversations/{id}/messages, POST …/take, …/reply, …/release. Lock with Sanctum + your gate.' },
+            { title: 'Poll', body: 'Refresh the list every few seconds. Customer lines are not always pushed on Pusher.' },
+            { title: 'Reply', body: 'POST …/reply stores a staff message and broadcasts message.created to the widget (full HTML, including images). Queued AI jobs skip human threads.' },
+        ],
+        env: [
+            { key: 'AGENTIC_WIDGET_HANDOFF', description: 'In-chat Yes/No offer + skip AI after convert' },
+            { key: 'AGENTIC_WIDGET_STREAM', description: 'Leave false — inbox and widget render complete messages' },
+        ],
+        api: `GET /inbox
+GET /conversations/{id}/messages?limit=80
+POST /conversations/{id}/take
+POST /conversations/{id}/reply
+POST /conversations/{id}/release`,
+        adminNote: 'Full guide: docs/STAFF_INBOX.md',
+        ui: { path: '/inbox', label: 'Built-in inbox (optional)' },
     },
     workflows: {
         title: '17 · Workflows',

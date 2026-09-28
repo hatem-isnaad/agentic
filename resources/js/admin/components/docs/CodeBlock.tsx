@@ -27,7 +27,7 @@ export function CodeBlock({ code, title, variant = 'dark' }: Props) {
     const isDark = variant === 'dark';
 
     return (
-        <figure className={`docs-code-block group ${isDark ? 'docs-code-block--dark' : 'docs-code-block--light'}`}>
+        <figure dir="ltr" className={`docs-code-block group ${isDark ? 'docs-code-block--dark' : 'docs-code-block--light'}`}>
             <div className="docs-code-block__toolbar">
                 <div className="flex min-w-0 items-center gap-2">
                     {isDark ? (

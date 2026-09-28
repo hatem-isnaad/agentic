@@ -4,6 +4,7 @@ namespace Agentic\Http\Middleware;
 
 use Agentic\Models\WidgetEmbedToken;
 use Agentic\Widget\Embed\WidgetEmbedRequestValidator;
+use Agentic\Widget\Support\WidgetFileSignature;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -19,6 +20,10 @@ final class ValidateWidgetEmbed
 
     public function handle(Request $request, Closure $next): Response
     {
+        if (WidgetFileSignature::isValid($request)) {
+            return $next($request);
+        }
+
         $tokenResult = $this->validator->validateTokenAndOrigin($request);
         if ($tokenResult['ok'] === false) {
             return $this->json($tokenResult['message'], $tokenResult['status']);
@@ -49,4 +54,5 @@ final class ValidateWidgetEmbed
     {
         return response()->json(['message' => $message], $status);
     }
+
 }

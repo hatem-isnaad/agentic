@@ -8,9 +8,12 @@ Words, **fresh vs finished app**: [START_HERE.md](./START_HERE.md). Widget insta
 
 ## Starter set (copy this first)
 
-This is enough to run admin + chat. Leave every other key unset — package defaults are already lean and safe.
+**Easiest:** run `php artisan agentic:install` and answer the wizard (choices + secrets → `.env`). See [INSTALL_WIZARD.md](./INSTALL_WIZARD.md).
+
+**Or paste manually** — one deployment switch plus AI keys:
 
 ```env
+AGENTIC_MODE=local
 AGENTIC_ENABLED=true
 AGENTIC_AI_PROVIDER=openai
 AGENTIC_AI_MODEL=gpt-4.1-mini
@@ -90,13 +93,18 @@ Used for admin execute / runtime. Widget uses the widget table unless lean is of
 | Key | Default | What it does | Small / large | Tokens |
 |-----|---------|--------------|---------------|--------|
 | `AGENTIC_LEAN_CONTEXT` | `true` | Cap history, skills, tools, RAG, memory | `false` = send much more of everything. Slower, often 2–5× prompt size | **Huge** if `false` |
-| `AGENTIC_CONTEXT_HISTORY` | `20` | How many older turns go into the prompt | `8` = cheaper, forgets earlier chat. `40` = remembers more, costs more | **High** — linear with turns |
+| `AGENTIC_CONTEXT_HISTORY` | `12` | How many older turns go into the prompt | `8` = cheaper, forgets earlier chat. `40` = remembers more, costs more | **High** — linear with turns |
 | `AGENTIC_CONTEXT_SKILL_LIMIT` | `4` | Skills after a keyword match | Higher = more tool groups in the prompt | **Medium** |
 | `AGENTIC_CONTEXT_SKILLS_FALLBACK` | `4` | Skills when no keyword matches | Same | **Medium** |
-| `AGENTIC_CONTEXT_KNOWLEDGE_LIMIT` | `5` | RAG chunks this turn | `2` = may miss the answer. `12` = better recall, fatter prompt | **High** |
-| `AGENTIC_CONTEXT_MEMORY_LIMIT` | `15` | Memory rows this turn | Higher = more facts, modest cost | **Low–medium** |
+| `AGENTIC_CONTEXT_KNOWLEDGE_LIMIT` | `3` | RAG chunks this turn | `2` = may miss the answer. `12` = better recall, fatter prompt | **High** |
+| `AGENTIC_CONTEXT_MEMORY_LIMIT` | `8` | Memory rows this turn | Higher = more facts, modest cost | **Low–medium** |
 | `AGENTIC_CONTEXT_MAX_TOOLS` | `30` | Tools registered this turn | `10` = model sees fewer actions. `80` = large tool JSON | **High** |
 | `AGENTIC_CONTEXT_COMPACT_SKILLS` | `true` | Shorten skill text | `false` = full descriptions | **Medium** if `false` |
+| `AGENTIC_COMPACT_INPUT` | `true` | Trim history, tool dumps, RAG, memory. **Does not hide tools** | `false` = full API JSON + long history text | **Huge** if `false` |
+| `AGENTIC_COMPACT_HISTORY_CHARS` | `700` | Max chars per older history turn | Raise if the model “forgets” mid-thread facts | **Medium** |
+| `AGENTIC_COMPACT_HISTORY_RECENT_CHARS` | `1400` | Max chars for the last 2 turns | Raise if the last answer is a long table | **Medium** |
+| `AGENTIC_COMPACT_HISTORY_TOTAL` | `3600` | Max chars of all history combined | Oldest turns drop first | **High** |
+| `AGENTIC_COMPACT_TOOL_RESULT_CHARS` | `1800` | Max chars of a tool result sent back to the model | Raise for huge invoices; default is enough for one order | **High** |
 
 ### Tokens and context (widget only)
 
@@ -105,11 +113,11 @@ Same idea, tighter defaults. Raise only if the popup “forgets” or cannot use
 | Key | Default | Small / large | Tokens |
 |-----|---------|---------------|--------|
 | `AGENTIC_WIDGET_LEAN_CONTEXT` | `true` | `false` = widget as fat as global | **Huge** if `false` |
-| `AGENTIC_WIDGET_CONTEXT_HISTORY` | `12` | `6` cheaper; `24` longer memory in the popup | **High** |
+| `AGENTIC_WIDGET_CONTEXT_HISTORY` | `8` | `6` cheaper; `24` longer memory in the popup | **High** |
 | `AGENTIC_WIDGET_SKILL_LIMIT` | `2` | Higher = more skill blurbs in the widget | **Medium** |
 | `AGENTIC_WIDGET_SKILLS_FALLBACK_LIMIT` | `2` | Same when no keyword | **Medium** |
 | `AGENTIC_WIDGET_KNOWLEDGE_LIMIT` | `3` | Higher = more FAQ/policy text per question | **High** |
-| `AGENTIC_WIDGET_MEMORY_LIMIT` | `8` | Higher = more saved facts | **Low–medium** |
+| `AGENTIC_WIDGET_MEMORY_LIMIT` | `5` | Higher = more saved facts | **Low–medium** |
 | `AGENTIC_WIDGET_MAX_TOOLS` | `20` | Higher = more tool schemas in the widget turn | **High** |
 | `AGENTIC_WIDGET_COMPACT_SKILLS` | `true` | `false` = longer skill text | **Medium** if `false` |
 
@@ -201,10 +209,28 @@ After you change embed model or dimensions, **reindex** every source and run `ph
 | `AGENTIC_WIDGET_EMBED_POSITION` | `bottom-right` | `bottom-left` / `top-*` | — |
 | `AGENTIC_WIDGET_BROADCAST_DRIVER` | `polling` | Use `pusher` for live replies | — |
 | `AGENTIC_WIDGET_ASYNC_REPLIES` | auto | Empty + Pusher = job | `false` = wait on HTTP |
+| `AGENTIC_WIDGET_STREAM` | `false` | Word-by-word `message.delta` (usually looks slow) | `true` = stream tokens; default waits for the full Pusher `message.created` |
+| `AGENTIC_WIDGET_MESSAGE_BATCH_MS` | `0` | Debounce rapid user sends before one agent turn (async only) | e.g. `3000` = wait 3s after the last line, merge with newlines |
+| `AGENTIC_WIDGET_MESSAGE_BATCH_MAX_MS` | `10000` | Cap wait during a long typing burst | Flush by this deadline even if the user keeps sending |
+| `AGENTIC_WIDGET_ATTACHMENTS` | `true` | Image / PDF on the official widget | `false` = text only |
+| `AGENTIC_WIDGET_HANDOFF` | `true` | In-chat handoff + staff inbox APIs | Custom desk: [STAFF_INBOX.md](./STAFF_INBOX.md) |
 | `AGENTIC_WIDGET_BROADCAST_POLL_MS` | `3000` | Poll interval | Lower = more HTTP |
 | `PUSHER_*` | empty | Pusher app | Needed for live widget |
 
 `QUEUE_CONNECTION=database` (or redis) + `queue:work` for async replies.
+
+### Widget replies (developer contract)
+
+**Default is not token streaming.** Leave `AGENTIC_WIDGET_STREAM` unset or `false`. The model finishes, the job saves the assistant row, then Pusher (or polling) delivers **one** `message.created` with the full `payload.message` (`html` + `blocks`). The official widget shows **Typing** until that event, then renders the bubble. Do not paint `message.delta` fragments in a custom UI unless you explicitly set `AGENTIC_WIDGET_STREAM=true` (usually looks slow).
+
+| Path | What the client does |
+|------|----------------------|
+| Async + Pusher (recommended) | `POST /messages` → `{ pending: true, conversation_id }` (and `batched: true` when message batching is on). Subscribe `{prefix}.{conversationId}`. Render on `message.created` / `message.resumed`. Typing starts when the batch flushes, not on each line. |
+| Sync HTTP | `AGENTIC_WIDGET_ASYNC_REPLIES=false` — assistant HTML may be in the HTTP body. Still prefer realtime if Pusher is on. |
+| Human handoff | After the visitor confirms in chat, `handoff` is true and **no** `ProcessWidgetMessageJob` runs. Staff replies use inbox APIs; they also broadcast `message.created`. Custom desk: [STAFF_INBOX.md](./STAFF_INBOX.md). |
+| Images / PDF | `AGENTIC_WIDGET_ATTACHMENTS=true`. History and Pusher `message.html` include `<img>` with a **signed** file URL (`GET …/conversations/{id}/files/{file}`). Re-present HTML from the API; do not cache expired signed URLs. |
+
+`GET /config?agent=` includes `stream: false` unless you opt in. Restart `queue:work` after changing stream / handoff / async env. Full events: [FRONTEND_IMPLEMENTATION_GUIDE.md](./FRONTEND_IMPLEMENTATION_GUIDE.md) §6. Embed flow: [WIDGET_EMBED_SDK.md](./WIDGET_EMBED_SDK.md).
 
 ### Admin, login, runtime API
 
@@ -325,6 +351,7 @@ Admin base: `/agentic/admin` · Admin API base: `/api/agentic/admin`
 | PHP code tool | `/custom-code-tools` | `php artisan agentic:make code-tool` | `POST /code-handlers/publish` |
 | Embed token | `/widget-embed-tokens` | `php artisan agentic:make embed-token` | `POST /widget-embed-tokens` |
 | WhatsApp / widget account | `/channel-accounts` | `php artisan agentic:make channel-account` | `POST /channel-accounts` |
+| Staff inbox (or your own desk) | `/inbox` | — | `GET /inbox` · `POST /conversations/{id}/take\|reply\|release` · [STAFF_INBOX.md](./STAFF_INBOX.md) |
 | Agent | `/agents/new` | `php artisan agentic:make agent` | `POST /agents` |
 | Skill | `/skills/new` | `php artisan agentic:make skill` | `POST /skills` |
 | Knowledge + ingest | `/knowledge-sources` | `php artisan agentic:make knowledge` then `agentic:knowledge ingest` | `POST /knowledge-sources` · `POST …/ingest` |
@@ -339,7 +366,7 @@ Admin base: `/agentic/admin` · Admin API base: `/api/agentic/admin`
 
 | Command | When |
 |---------|------|
-| `php artisan agentic:install` | First time |
+| `php artisan agentic:install` | First time — interactive wizard (use `--quick` to skip) |
 | `php artisan vendor:publish --tag=agentic-widget-assets --force` | After each package upgrade |
 | `php artisan vendor:publish --tag=agentic-admin-assets --force` | After each package upgrade |
 | `php artisan migrate` | Install / upgrade |

@@ -22,10 +22,11 @@ export function parseJsonObject(raw: string, label: string): Record<string, unkn
 export function JsonField({ value, onChange, rows = 10, placeholder }: Props) {
     return (
         <Textarea
+            dir="ltr"
             value={value}
             onChange={(e) => onChange(e.target.value)}
             rows={rows}
-            className="font-mono text-xs leading-relaxed"
+            className="ag-json font-mono text-left text-xs leading-relaxed"
             placeholder={placeholder}
             spellCheck={false}
         />

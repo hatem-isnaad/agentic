@@ -2,6 +2,34 @@ import type { AdminBoot } from './config';
 
 type JsonMap = Record<string, unknown>;
 
+export class AdminApiError extends Error {
+    readonly status: number;
+
+    constructor(message: string, status: number) {
+        super(message);
+        this.name = 'AdminApiError';
+        this.status = status;
+    }
+}
+
+function friendlyMessage(status: number, json: JsonMap, fallback: string): string {
+    const raw = typeof json.message === 'string' ? json.message.trim() : '';
+    if (raw !== '' && raw !== 'This action is unauthorized.' && raw !== 'Unauthenticated.') {
+        return raw;
+    }
+    if (status === 401) {
+        return 'Please sign in to access Agentic admin.';
+    }
+    if (status === 403) {
+        return 'You do not have permission to access Agentic admin.';
+    }
+    if (status === 429) {
+        return 'Too many requests. Please wait a moment and try again.';
+    }
+
+    return fallback;
+}
+
 async function request<T>(
     boot: AdminBoot,
     path: string,
@@ -17,11 +45,16 @@ async function request<T>(
     }
 
     const res = await fetch(url, { ...options, headers, credentials: 'same-origin' });
-    const json = await res.json().catch(() => ({}));
+    const json = (await res.json().catch(() => ({}))) as JsonMap;
 
     if (!res.ok) {
-        const message = (json as JsonMap).message ?? res.statusText;
-        throw new Error(String(message));
+        const message = friendlyMessage(res.status, json, res.statusText || 'Request failed');
+        if (typeof window !== 'undefined' && (res.status === 401 || res.status === 403)) {
+            window.dispatchEvent(
+                new CustomEvent('agentic:admin-auth-error', { detail: { status: res.status, message } }),
+            );
+        }
+        throw new AdminApiError(message, res.status);
     }
 
     return json as T;

@@ -87,7 +87,10 @@ php artisan vendor:publish --tag=agentic-admin-assets --force
 
 **Web replies are HTML.** WhatsApp replies are text only. Connect numbers in admin (`channel-accounts`) — Meta Cloud now; webjs sidecar later. See [CHANNELS.md](./CHANNELS.md).
 
-Full embed guide: [WIDGET_EMBED_SDK.md](./WIDGET_EMBED_SDK.md).
+**Widget replies are not streamed by default.** With Pusher, `POST /messages` returns `{ pending: true }`. Keep Typing on until Pusher `message.created` (full HTML). Do not implement word-by-word `message.delta` unless you set `AGENTIC_WIDGET_STREAM=true`. Handoff is in-chat Yes/No; after confirm, queue jobs skip the agent. Images render via signed file URLs. Details: [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) § Widget replies, [WIDGET_EMBED_SDK.md](./WIDGET_EMBED_SDK.md), [FRONTEND_IMPLEMENTATION_GUIDE.md](./FRONTEND_IMPLEMENTATION_GUIDE.md).
+
+Full embed guide: [WIDGET_EMBED_SDK.md](./WIDGET_EMBED_SDK.md).  
+Staff desk in **your** admin (not Agentic’s screen): [STAFF_INBOX.md](./STAFF_INBOX.md).
 
 ## 6. Lock down admin (production)
 

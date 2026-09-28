@@ -46,3 +46,13 @@ function messageRecordToReply(msg: Record<string, unknown>): { text: string; htm
 
     return null;
 }
+
+export function streamDeltaFromEvent(ev: RealtimeEvent): string | null {
+    if (ev.event !== 'message.delta') {
+        return null;
+    }
+
+    const delta = ev.payload.delta;
+
+    return typeof delta === 'string' && delta !== '' ? delta : null;
+}

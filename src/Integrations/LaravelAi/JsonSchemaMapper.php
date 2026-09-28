@@ -2,6 +2,7 @@
 
 namespace Agentic\Integrations\LaravelAi;
 
+use Agentic\Context\LlmInputCompactor;
 use Illuminate\Contracts\JsonSchema\JsonSchema;
 use Illuminate\JsonSchema\Types\Type;
 
@@ -51,7 +52,9 @@ final class JsonSchemaMapper
             $type = self::typeFor($schema, $definition['type'] ?? 'string');
 
             if (isset($definition['description']) && is_string($definition['description'])) {
-                $type = $type->description($definition['description']);
+                $type = $type->description(
+                    LlmInputCompactor::fromConfig()->schemaDescription($definition['description']),
+                );
             }
 
             $isRequired = ($definition['required'] ?? false) === true

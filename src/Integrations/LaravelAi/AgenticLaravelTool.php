@@ -2,6 +2,7 @@
 
 namespace Agentic\Integrations\LaravelAi;
 
+use Agentic\Context\LlmInputCompactor;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\ToolApprovalService;
 use Agentic\Tool\ToolExecutionContext;
@@ -34,11 +35,21 @@ final class AgenticLaravelTool implements Approvable, Tool
 
     public function description(): Stringable|string
     {
-        return $this->tool->definition()->description;
+        return LlmInputCompactor::fromConfig()->toolDescription($this->tool->definition()->description);
     }
 
     protected function needsApproval(Request $request): Approval|bool
     {
+        if ($this->tool->definition()->name === 'handoff') {
+            $channel = $this->baseContext?->runtime()->get('channel')
+                ?? ($this->baseContext?->metadata['channel'] ?? null);
+            if ($channel === 'widget' && filter_var(config('agentic.widget.handoff.enabled', true), FILTER_VALIDATE_BOOL)) {
+                return Approval::required('Connect this chat to a person?');
+            }
+
+            return false;
+        }
+
         return $this->approvals->decision($this->tool);
     }
 
@@ -66,18 +77,10 @@ final class AgenticLaravelTool implements Approvable, Tool
 
     private function stringify(ToolResult $result): string
     {
-        if (! $result->success) {
-            return 'ERROR: '.($result->error ?? 'Tool execution failed.');
-        }
-
-        if (is_string($result->data)) {
-            return 'FOUND: '.$result->data;
-        }
-
-        if ($result->data === null) {
-            return 'FOUND: ok';
-        }
-
-        return 'FOUND: '.(string) json_encode($result->data, JSON_THROW_ON_ERROR);
+        return LlmInputCompactor::fromConfig()->toolResult(
+            $result->success,
+            $result->data,
+            $result->error,
+        );
     }
 }

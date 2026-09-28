@@ -6,6 +6,8 @@ import { useAdminConfig } from '../lib/config';
 import { useI18n } from '../lib/i18n';
 import { Button } from '../components/ui/Button';
 import { Card, CardBody } from '../components/ui/Card';
+import { FormField } from '../components/ui/FormField';
+import { Textarea } from '../components/ui/Input';
 import { PageContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -25,6 +27,11 @@ export function ConversationDetailPage() {
     const [data, setData] = useState<Record<string, unknown> | null>(null);
     const [messages, setMessages] = useState<MessageRow[]>([]);
     const [loading, setLoading] = useState(true);
+    const [reply, setReply] = useState('');
+    const [busy, setBusy] = useState(false);
+
+    const handoff = (data?.metadata as { handoff?: { status?: string; by?: string } } | undefined)?.handoff;
+    const status = handoff?.status ?? 'none';
 
     const agentSlug = String(data?.agent ?? '');
     const widgetUrl =
@@ -48,6 +55,50 @@ export function ConversationDetailPage() {
             })
             .finally(() => setLoading(false));
     }, [boot, id]);
+
+    const reload = () => {
+        void Promise.all([
+            adminApi.get<{ data: Record<string, unknown> }>(boot, `/conversations/${id}`),
+            adminApi.get<{ data: MessageRow[] }>(boot, `/conversations/${id}/messages`),
+        ]).then(([conv, msgs]) => {
+            setData(conv.data);
+            setMessages(msgs.data);
+        });
+    };
+
+    const take = async () => {
+        setBusy(true);
+        try {
+            await adminApi.post(boot, `/conversations/${id}/take`, {});
+            reload();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const release = async () => {
+        setBusy(true);
+        try {
+            await adminApi.post(boot, `/conversations/${id}/release`, {});
+            reload();
+        } finally {
+            setBusy(false);
+        }
+    };
+
+    const sendReply = async () => {
+        if (!reply.trim()) {
+            return;
+        }
+        setBusy(true);
+        try {
+            await adminApi.post(boot, `/conversations/${id}/reply`, { message: reply.trim() });
+            setReply('');
+            reload();
+        } finally {
+            setBusy(false);
+        }
+    };
 
     return (
         <PageContainer>
@@ -87,7 +138,30 @@ export function ConversationDetailPage() {
                             <dt className="text-xs font-bold uppercase text-slate-400">{t('fields.user_id')}</dt>
                             <dd>{String(data?.user_id ?? '—')}</dd>
                         </div>
+                        <div>
+                            <dt className="text-xs font-bold uppercase text-slate-400">{t('inbox.status')}</dt>
+                            <dd className="capitalize">{status}{handoff?.by ? ` · ${handoff.by}` : ''}</dd>
+                        </div>
                     </dl>
+                    <div className="mt-4 flex flex-wrap gap-2">
+                        <Button type="button" variant="secondary" disabled={busy} onClick={() => void take()}>
+                            {t('inbox.take')}
+                        </Button>
+                        <Button type="button" variant="ghost" disabled={busy} onClick={() => void release()}>
+                            {t('inbox.release')}
+                        </Button>
+                    </div>
+                </CardBody>
+            </Card>
+
+            <Card className="mb-6">
+                <CardBody className="space-y-3">
+                    <FormField label={t('inbox.reply')}>
+                        <Textarea value={reply} onChange={(e) => setReply(e.target.value)} rows={3} />
+                    </FormField>
+                    <Button type="button" disabled={busy || !reply.trim()} onClick={() => void sendReply()}>
+                        {t('inbox.send')}
+                    </Button>
                 </CardBody>
             </Card>
 

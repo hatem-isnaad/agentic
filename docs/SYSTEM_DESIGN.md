@@ -47,3 +47,25 @@ flowchart TB
 3. **Published tool versions are immutable** — executions pin `tool_version_id`.
 4. **Runtime does not query Eloquent directly** — repositories + resolvers only.
 5. **Headless JSON** — production UI lives in the host app (React admin + widget).
+
+## Widget reply path (no token streaming)
+
+Default: `AGENTIC_WIDGET_STREAM=false`. The SDK uses `prompt()`, not `stream()`. The client renders **once** on `message.created`.
+
+```mermaid
+sequenceDiagram
+  participant W as Widget / custom UI
+  participant API as Widget API
+  participant Q as ProcessWidgetMessageJob
+  participant P as Pusher / poll
+  W->>API: POST /messages
+  API-->>W: pending + conversation_id
+  API->>P: assistant.typing active
+  API->>Q: dispatch (skipped if human handoff)
+  Q->>Q: AgentRuntime prompt()
+  Q->>P: message.created (full html)
+  Q->>P: assistant.typing off
+  P-->>W: render one bubble
+```
+
+Opt-in `AGENTIC_WIDGET_STREAM=true` adds `message.delta` during the job. Official embed ignores deltas. After handoff, the job no-ops. Staff replies still publish `message.created`. See [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) § Widget replies and [FRONTEND_IMPLEMENTATION_GUIDE.md](./FRONTEND_IMPLEMENTATION_GUIDE.md) §6.

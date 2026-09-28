@@ -2,7 +2,7 @@
     'agent' => config('agentic.widget.embed.default_agent'),
     'token' => config('agentic.widget.embed.token') ?: config('services.agentic.widget_embed_token'),
     'api' => null,
-    'theme' => 'system',
+    'theme' => config('agentic.widget.theme.default', 'system'),
     'position' => config('agentic.widget.embed.position', 'bottom-right'),
     'sounds' => true,
     'open' => false,

@@ -9,7 +9,7 @@ import { dayKey, formatDayLabelEn, formatMessageTimeEn } from './timestamps';
 import { playWidgetSound } from './sounds';
 import { createRealtimeConnection } from './realtime-factory';
 import { disconnectWidgetPusher } from './realtime-pusher';
-import { assistantMessageFromEvent, typingActiveFromEvent } from './realtime-events';
+import { assistantMessageFromEvent, streamDeltaFromEvent, typingActiveFromEvent } from './realtime-events';
 import type { WidgetRealtimeConnection } from './realtime-types';
 import { EMOJI_CATEGORIES, insertAtCursor } from './emoji';
 import { assistantBubbleHtml } from './rich-text';
@@ -26,6 +26,7 @@ const ICON_LIST = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7.5A2
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 const ICON_THREAD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 4h11A3.5 3.5 0 0 1 21 7.5v6A3.5 3.5 0 0 1 17.5 17h-1.7l-2.7 3.2a.85.85 0 0 1-1.4 0L8.9 17H6.5A3.5 3.5 0 0 1 3 13.5v-6A3.5 3.5 0 0 1 6.5 4Zm1.6 4.4a.75.75 0 0 0 0 1.5h7.8a.75.75 0 0 0 0-1.5Zm0 3.2a.75.75 0 0 0 0 1.5h5.1a.75.75 0 0 0 0-1.5Z"/></svg>';
 const ICON_EMOJI = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-3.3 8.2a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Zm6.6 0a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4ZM12 17.2A5.1 5.1 0 0 1 7.4 14h1.7a3.4 3.4 0 0 0 5.8 0h1.7A5.1 5.1 0 0 1 12 17.2Z"/></svg>';
+const ICON_ATTACH = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8.2 12.8 14 7a2.8 2.8 0 1 1 4 4l-7.3 7.3a4.2 4.2 0 0 1-6-6l7.1-7.1 1.2 1.2-7.1 7.1a2.5 2.5 0 0 0 3.5 3.5L18 8.6a1.1 1.1 0 1 0-1.6-1.6l-5.8 5.8 1.2 1.2 5.8-5.8a2.8 2.8 0 0 1 4 4L9.4 19.1a4.2 4.2 0 1 1-6-6l7.3-7.3 1.2 1.2-7.3 7.3a2.5 2.5 0 0 0 3.6 3.5l7.1-7.1 1.2 1.2-7.1 7.1a4.2 4.2 0 0 1-6-6Z"/></svg>';
 
 const MESSAGE_SKELETON_HTML = `
 <div class="ag-skel-row">
@@ -88,6 +89,96 @@ function stripPreviewMarkup(value: string): string {
         .trim();
 }
 
+function removeApprovalUiForId(root: HTMLElement, approvalId: string): void {
+    const needle = `"id":"${approvalId}"`;
+    const needleSpaced = `"id": "${approvalId}"`;
+
+    root.querySelectorAll<HTMLElement>('.agentic-card-handoff, .agentic-card-approval, .agentic-card').forEach((card) => {
+        const payload = card.querySelector<HTMLElement>('[data-payload]')?.dataset.payload ?? '';
+        if (!payload.includes(approvalId) && !payload.includes(needle) && !payload.includes(needleSpaced)) {
+            return;
+        }
+        const row = card.closest('.ag-row-has-approval');
+        card.remove();
+        if (row && !row.querySelector('.ag-bubble')) {
+            row.remove();
+        }
+    });
+
+    root.querySelectorAll<HTMLElement>('.agentic-actions').forEach((actions) => {
+        if (actions.closest('.agentic-card-handoff, .agentic-card-approval')) {
+            return;
+        }
+        const payload = actions.querySelector<HTMLElement>('[data-payload]')?.dataset.payload ?? '';
+        if (payload.includes(approvalId) || payload.includes(needle) || payload.includes(needleSpaced)) {
+            actions.remove();
+        }
+    });
+}
+
+function upgradeLegacyApprovalCards(root: HTMLElement): void {
+    root.querySelectorAll('p').forEach((paragraph) => {
+        const copy = paragraph.textContent?.trim() ?? '';
+        if (copy.includes('needs your approval before it can run')) {
+            paragraph.remove();
+        }
+    });
+
+    root.querySelectorAll<HTMLElement>('.agentic-card:not(.agentic-card-handoff):not(.agentic-card-approval)').forEach((card) => {
+        const title =
+            card.querySelector('header strong')?.textContent?.trim()
+            ?? card.querySelector('h3')?.textContent?.trim()
+            ?? '';
+        let actions = card.nextElementSibling as HTMLElement | null;
+        if (!actions?.classList.contains('agentic-actions')) {
+            actions = card.querySelector('.agentic-actions');
+        }
+        const isHandoff = /person/i.test(title);
+        if (!isHandoff && !actions) {
+            return;
+        }
+        if (actions && !card.contains(actions)) {
+            card.appendChild(actions);
+        }
+        card.classList.add(isHandoff ? 'agentic-card-handoff' : 'agentic-card-approval');
+        if (!card.querySelector('.agentic-card-head')) {
+            const head = document.createElement('div');
+            head.className = 'agentic-card-head';
+            const icon = document.createElement('span');
+            icon.className = 'agentic-card-icon';
+            icon.setAttribute('aria-hidden', 'true');
+            icon.textContent = '!';
+            const copy = document.createElement('div');
+            copy.className = 'agentic-card-copy';
+            const heading = card.querySelector('header strong, h3');
+            if (heading) {
+                const h3 = document.createElement('h3');
+                h3.textContent = heading.textContent?.trim() ?? title;
+                copy.append(h3);
+                heading.closest('header')?.remove();
+                card.querySelector('h3')?.remove();
+            }
+            const body = card.querySelector('.agentic-card-body') ?? card.querySelector('p');
+            if (body && !copy.querySelector('.agentic-card-body')) {
+                const wrap = document.createElement('div');
+                wrap.className = 'agentic-card-body';
+                wrap.innerHTML = body instanceof HTMLElement ? body.innerHTML : '';
+                if (wrap.textContent?.trim()) {
+                    copy.append(wrap);
+                }
+                body.remove();
+            } else if (!copy.querySelector('.agentic-card-body') && isHandoff) {
+                const wrap = document.createElement('div');
+                wrap.className = 'agentic-card-body';
+                wrap.innerHTML = '<p>The agent needs your approval before running this action.</p>';
+                copy.append(wrap);
+            }
+            head.append(icon, copy);
+            card.prepend(head);
+        }
+    });
+}
+
 function visibleBubbleText(text: string, html: string | null): string {
     if (!html) {
         return text;
@@ -111,10 +202,68 @@ function applyAssistantDirection(el: HTMLElement, text: string, html: string | n
 function agentDisplayName(cfg: WidgetConfigResponse): string {
     const agent = cfg.data.agent;
     if (typeof agent === 'object' && agent !== null && 'name' in agent) {
-        return String((agent as { name?: string }).name ?? (agent as { slug?: string }).slug ?? 'Assistant');
+        const name = (agent as { name?: string }).name;
+        if (typeof name === 'string' && name.trim() !== '') {
+            return name.trim();
+        }
+        const slug = (agent as { slug?: string }).slug;
+        if (typeof slug === 'string' && slug.trim() !== '') {
+            return fallbackAgentLabel(slug);
+        }
+
+        return 'Assistant';
     }
 
-    return String(agent);
+    if (typeof agent === 'string' && agent.trim() !== '') {
+        return fallbackAgentLabel(agent);
+    }
+
+    return 'Assistant';
+}
+
+function handoffStatusFromPayload(payload: {
+    handoff?: { active?: boolean; staff_chat?: boolean; status?: string };
+    metadata?: Record<string, unknown>;
+} | null | undefined): string | null {
+    const direct = payload?.handoff?.status;
+    if (typeof direct === 'string' && direct !== '') {
+        return direct;
+    }
+    const meta = payload?.metadata;
+    if (!meta || typeof meta !== 'object') {
+        return null;
+    }
+    const status = (meta as { handoff?: { status?: string } }).handoff?.status;
+
+    return typeof status === 'string' && status !== '' ? status : null;
+}
+
+function handoffActiveFromPayload(payload: {
+    handoff?: { active?: boolean; staff_chat?: boolean; status?: string };
+    metadata?: Record<string, unknown>;
+} | null | undefined): boolean {
+    if (payload?.handoff?.active === true) {
+        return true;
+    }
+    const status = handoffStatusFromPayload(payload);
+
+    return status === 'requested' || status === 'taken';
+}
+
+function staffChatActiveFromPayload(payload: {
+    handoff?: { active?: boolean; staff_chat?: boolean; status?: string };
+    metadata?: Record<string, unknown>;
+} | null | undefined): boolean {
+    return payload?.handoff?.staff_chat === true;
+}
+
+function fallbackAgentLabel(agentSlug: string): string {
+    const words = agentSlug.replace(/[-_]+/g, ' ').trim();
+    if (words === '') {
+        return 'Assistant';
+    }
+
+    return words.replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 export class WidgetUi {
@@ -128,6 +277,7 @@ export class WidgetUi {
     private api: WidgetApiClient;
     private config: AgenticWidgetInit;
     private agentLabel = 'Assistant';
+    private titleEl: HTMLElement | null = null;
     private realtime: WidgetRealtimeConnection | null = null;
     private pollMs = 3000;
     private realtimeDriver = 'null';
@@ -135,10 +285,10 @@ export class WidgetUi {
     private pusherConfig: { key?: string | null; cluster?: string | null } = {};
     private realtimeSinceId = 0;
     private replyMode: 'sync' | 'async' = 'sync';
-    private typingEl: HTMLElement | null = null;
     private typingBarEl: HTMLElement | null = null;
     private historyPageSize = 20;
     private historyMaxPageSize = 50;
+    private messageBatchWindowMs = 0;
     private configReady = false;
     private historyStatusEl: HTMLElement | null = null;
     private skeletonShownAt = 0;
@@ -168,6 +318,21 @@ export class WidgetUi {
     private emojiPop!: HTMLElement;
     private emojiGrid!: HTMLElement;
     private emojiOpen = false;
+    private fileInput!: HTMLInputElement;
+    private attachBtn!: HTMLButtonElement;
+    private fileChipEl!: HTMLElement;
+    private pendingFiles: File[] = [];
+    private attachmentsEnabled = true;
+    private maxFiles = 3;
+    private humanTaken = false;
+    private staffChatActive = false;
+    private attachmentsStaffOnly = true;
+    /** Highest message cursor loaded from history — ignore older staff events on realtime replay. */
+    private maxHistoryCursor = 0;
+    /** False until initial history + handoff meta are applied (blocks realtime replay enabling attach). */
+    private composerHistorySynced = false;
+    private streamEl: HTMLElement | null = null;
+    private streamText = '';
 
     constructor(config: AgenticWidgetInit, api: WidgetApiClient) {
         this.config = config;
@@ -204,9 +369,12 @@ export class WidgetUi {
             <div class="ag-title-wrap">
                 <div class="ag-agent-avatar">${ICON_SPARK}</div>
                 <div class="ag-title-copy">
-                    <strong class="ag-title">Assistant</strong>
+                    <strong class="ag-title ag-title-loading" aria-busy="true">
+                        <span class="ag-title-skel" aria-hidden="true"></span>
+                    </strong>
                     <span class="ag-subtitle">
-                        <span class="ag-realtime-dot" data-state="disconnected" title="Realtime"></span>
+                        <span class="ag-presence-dot" aria-hidden="true"></span>
+                        <span class="ag-realtime-dot" data-state="connected" title="Realtime" hidden></span>
                         <span class="ag-status-text">Online</span>
                     </span>
                 </div>
@@ -217,6 +385,8 @@ export class WidgetUi {
             </div>
         `;
         this.realtimeDot = header.querySelector('.ag-realtime-dot');
+        this.titleEl = header.querySelector('.ag-title');
+        this.setPresenceOnline();
         header.querySelector('.ag-close')?.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -227,7 +397,6 @@ export class WidgetUi {
             e.stopPropagation();
             void this.toggleInbox();
         });
-
         this.messagesEl = document.createElement('div');
         this.messagesEl.className = 'ag-messages';
         this.messagesEl.setAttribute('aria-live', 'polite');
@@ -253,7 +422,31 @@ export class WidgetUi {
         this.input.type = 'text';
         this.input.placeholder = 'Type a message…';
         this.input.disabled = true;
-        this.input.required = true;
+        this.fileInput = document.createElement('input');
+        this.fileInput.type = 'file';
+        this.fileInput.hidden = true;
+        this.fileInput.accept = 'image/jpeg,image/png,image/webp,image/gif,application/pdf';
+        this.fileInput.multiple = true;
+        this.fileInput.addEventListener('change', () => {
+            this.pendingFiles = Array.from(this.fileInput.files ?? []).slice(0, this.maxFiles);
+            this.renderFileChip();
+        });
+        this.attachBtn = document.createElement('button');
+        this.attachBtn.type = 'button';
+        this.attachBtn.className = 'ag-attach-btn ag-emoji-btn';
+        this.attachBtn.setAttribute('aria-label', 'Attach file');
+        this.attachBtn.innerHTML = ICON_ATTACH;
+        this.attachBtn.hidden = true;
+        this.attachBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            if (!this.staffChatActive) {
+                return;
+            }
+            this.fileInput.click();
+        });
+        this.fileChipEl = document.createElement('div');
+        this.fileChipEl.className = 'ag-file-chip';
+        this.fileChipEl.hidden = true;
         this.emojiBtn = document.createElement('button');
         this.emojiBtn.type = 'button';
         this.emojiBtn.className = 'ag-emoji-btn';
@@ -271,7 +464,7 @@ export class WidgetUi {
         send.className = 'ag-send';
         send.setAttribute('aria-label', 'Send');
         send.innerHTML = ICON_SEND;
-        form.append(this.input, this.emojiBtn, send, this.emojiPop);
+        form.append(this.fileChipEl, this.input, this.emojiBtn, send, this.emojiPop);
         form.addEventListener('submit', (e) => {
             e.preventDefault();
             this.setEmojiOpen(false);
@@ -322,7 +515,7 @@ export class WidgetUi {
         this.typingBarEl.setAttribute('aria-label', 'Assistant is typing');
         this.typingBarEl.innerHTML = TYPING_LABEL_HTML;
 
-        this.panel.append(header, this.messagesEl, this.typingBarEl, form, this.inboxBackdropEl, this.inboxEl);
+        this.panel.append(header, this.messagesEl, this.typingBarEl, form, this.fileInput, this.inboxBackdropEl, this.inboxEl);
         this.root.append(this.launcherEl, this.panel);
         this.bindHistoryObserver();
         document.addEventListener('keydown', (e) => {
@@ -340,10 +533,21 @@ export class WidgetUi {
             }
         });
 
-        applyTheme(this.root, this.config.theme ?? 'system');
+        applyTheme(this.root, this.resolveThemeMode({}));
+        this.syncComposerAttachments();
         if (this.config.open) {
             this.setPanelOpen(true);
         }
+    }
+
+    /** init theme wins unless it is the generic "system" placeholder — then use GET /config (AGENTIC_WIDGET_THEME). */
+    private resolveThemeMode(themeCfg: Record<string, unknown>): string {
+        const initTheme = this.config.theme;
+        if (initTheme && initTheme !== 'system') {
+            return initTheme;
+        }
+
+        return modeFromConfig(initTheme ?? 'system', themeCfg);
     }
 
     async bootstrap(): Promise<boolean> {
@@ -356,14 +560,15 @@ export class WidgetUi {
             }
 
             this.agentLabel = agentDisplayName(cfg);
+            this.setHeaderIdentity(this.agentLabel);
 
-            const themeCfg = cfg.data.theme ?? {};
-            const mode = this.config.theme ?? modeFromConfig('system', themeCfg as Record<string, unknown>);
-            applyTheme(this.root!, mode, themeVarsFromConfig(themeCfg as Record<string, unknown>));
+            const themeCfg = (cfg.data.theme ?? {}) as Record<string, unknown>;
+            const mode = this.resolveThemeMode(themeCfg);
+            applyTheme(this.root!, mode, themeVarsFromConfig(themeCfg));
 
             const rt = cfg.data.realtime ?? {};
             this.realtimeDriver = rt.driver ?? 'null';
-            if (this.realtimeDriver !== 'pusher' && this.realtimeDot) {
+            if (this.realtimeDot) {
                 this.realtimeDot.hidden = true;
             }
             this.channelPrefix = rt.channel_prefix ?? 'agentic-widget';
@@ -378,6 +583,11 @@ export class WidgetUi {
                 this.historyMaxPageSize,
             );
             this.resumeAfterHours = Math.max(1, cfg.data.conversation?.resume_after_hours ?? 24);
+            this.attachmentsEnabled = cfg.data.attachments?.enabled !== false;
+            this.attachmentsStaffOnly = cfg.data.attachments?.staff_only !== false;
+            this.maxFiles = Math.max(1, cfg.data.attachments?.max_files ?? 3);
+            this.syncComposerAttachments();
+            this.messageBatchWindowMs = Math.max(0, cfg.data.message_batch?.window_ms ?? 0);
 
             const welcome = cfg.data.welcome ?? cfg.data.intake?.welcome_message;
             this.welcomeText = typeof welcome === 'string' && welcome.trim() ? welcome : null;
@@ -391,14 +601,7 @@ export class WidgetUi {
                 await this.onPanelOpened();
             }
 
-            const title = this.root?.querySelector('.ag-title');
-            if (title) {
-                title.textContent = this.agentLabel;
-            }
-            const status = this.root?.querySelector('.ag-status-text');
-            if (status) {
-                status.textContent = this.realtimeDriver === 'pusher' ? 'Live support' : 'Online';
-            }
+            this.setPresenceOnline();
 
             this.input.placeholder = 'Type a message…';
             this.input.disabled = false;
@@ -406,6 +609,9 @@ export class WidgetUi {
             return true;
         } catch (err) {
             console.error('[AgenticChat]', err);
+            this.agentLabel = fallbackAgentLabel(this.config.agent);
+            this.setHeaderIdentity(this.agentLabel);
+            this.setPresenceOnline();
             if (this.input) {
                 this.input.placeholder = 'Chat unavailable';
                 this.input.disabled = true;
@@ -413,6 +619,21 @@ export class WidgetUi {
 
             return false;
         }
+    }
+
+    private setHeaderIdentity(label: string): void {
+        const title = this.titleEl ?? this.root?.querySelector('.ag-title');
+        if (!title) {
+            return;
+        }
+        title.classList.remove('ag-title-loading');
+        title.removeAttribute('aria-busy');
+        title.textContent = label.trim() !== '' ? label : 'Assistant';
+        this.titleEl = title;
+    }
+
+    private setPresenceOnline(): void {
+        this.setStatusText('Online');
     }
 
     private async refreshConversationList(): Promise<WidgetConversationSummary[]> {
@@ -448,6 +669,7 @@ export class WidgetUi {
         const storedRow = stored ? list.find((row) => row.id === stored) : undefined;
         if (storedRow) {
             this.conversationId = storedRow.id;
+            this.applyHandoffFromServer(handoffActiveFromPayload(storedRow), false);
 
             return;
         }
@@ -476,6 +698,7 @@ export class WidgetUi {
             if (!this.conversationId) {
                 this.clearChatBubbles();
                 this.seenMessageIds.clear();
+                this.composerHistorySynced = true;
                 this.showWelcomeIfEmpty();
 
                 return;
@@ -669,6 +892,13 @@ export class WidgetUi {
         this.syncHistorySentinel(false);
         this.awaitingAssistantReply = false;
         this.pendingAssistantAfterCursor = null;
+        this.humanTaken = false;
+        this.staffChatActive = false;
+        this.maxHistoryCursor = 0;
+        this.composerHistorySynced = true;
+        this.clearStreamBubble();
+        this.setPresenceOnline();
+        this.syncComposerAttachments();
         clearStoredConversationId(this.config.agent, this.api.guestId);
         this.clearChatBubbles();
         this.showWelcomeIfEmpty();
@@ -777,12 +1007,16 @@ export class WidgetUi {
         });
 
         if (isInitial) {
+            this.composerHistorySynced = false;
             this.clearChatBubbles();
             this.seenMessageIds.clear();
+            this.maxHistoryCursor = 0;
             if (messages.length === 0) {
                 this.showWelcomeIfEmpty();
             } else {
                 for (const msg of messages) {
+                    const cursor = typeof (msg as { cursor?: number }).cursor === 'number' ? (msg as { cursor: number }).cursor : 0;
+                    this.maxHistoryCursor = Math.max(this.maxHistoryCursor, cursor);
                     this.registerHistoryMessage(msg);
                     this.insertHistoryMessage(msg, false);
                 }
@@ -811,6 +1045,15 @@ export class WidgetUi {
 
         this.hasMoreHistory = meta.has_more;
         this.nextBefore = meta.next_before;
+        if (isInitial) {
+            const staffChat = meta.handoff?.staff_chat === true;
+            this.applyHandoffFromServer(meta.handoff?.active === true, staffChat);
+            const tailId = (meta as { realtime_tail_id?: number }).realtime_tail_id;
+            if (typeof tailId === 'number' && tailId > 0) {
+                this.realtimeSinceId = Math.max(this.realtimeSinceId, tailId);
+            }
+            this.composerHistorySynced = true;
+        }
         this.syncHistorySentinel(false);
     }
 
@@ -894,21 +1137,59 @@ export class WidgetUi {
         stack.className = 'ag-msg';
         if (role === 'assistant') {
             const rich = assistantBubbleHtml(html, text);
+            const cards: HTMLElement[] = [];
             if (rich) {
                 el.classList.add('ag-rich');
                 el.innerHTML = rich;
-            } else {
-                el.textContent = text;
+                upgradeLegacyApprovalCards(el);
+                el.querySelectorAll<HTMLElement>('.agentic-card-approval, .agentic-card-handoff').forEach((card) => {
+                    cards.push(card);
+                    card.remove();
+                });
             }
-            applyAssistantDirection(el, text, html);
+            const leftover = (el.innerHTML || '').replace(/<p>\s*<\/p>/g, '').trim();
             const avatar = document.createElement('div');
             avatar.className = 'ag-mini-avatar';
             avatar.innerHTML = ICON_SPARK;
-            stack.append(el);
-            this.appendMessageTime(stack, sentAt);
-            row.append(avatar, stack);
+            if (leftover || !rich) {
+                if (leftover) {
+                    this.bindAssistantActions(el);
+                    applyAssistantDirection(el, text, leftover);
+                } else {
+                    el.textContent = text;
+                    applyAssistantDirection(el, text, html);
+                }
+                stack.append(el);
+                this.appendMessageTime(stack, sentAt);
+                if (cards.length > 0) {
+                    const main = document.createElement('div');
+                    main.className = 'ag-row-main';
+                    main.append(avatar, stack);
+                    row.append(main);
+                } else {
+                    row.append(avatar, stack);
+                }
+            }
+            if (cards.length > 0) {
+                row.classList.add('ag-row-has-approval');
+                cards.forEach((card) => {
+                    this.bindAssistantActions(card);
+                    row.append(card);
+                });
+            }
         } else {
-            el.textContent = text;
+            const needsRichUserHtml = html != null && /<(figure|img|p\s+class="ag-attach)/i.test(html);
+            if (needsRichUserHtml && html) {
+                const rich = assistantBubbleHtml(html, text);
+                if (rich) {
+                    el.classList.add('ag-rich');
+                    el.innerHTML = rich;
+                } else {
+                    el.textContent = text;
+                }
+            } else {
+                el.textContent = text;
+            }
             stack.append(el);
             this.appendMessageTime(stack, sentAt);
             row.append(stack);
@@ -930,6 +1211,62 @@ export class WidgetUi {
         time.dateTime = sentAt;
         time.textContent = label;
         stack.append(time);
+    }
+
+    private bindAssistantActions(root: HTMLElement): void {
+        root.querySelectorAll<HTMLButtonElement>('[data-action]').forEach((button) => {
+            if (button.dataset.bound === '1') {
+                return;
+            }
+            button.dataset.bound = '1';
+            button.addEventListener('click', () => {
+                void this.handleAssistantAction(button);
+            });
+        });
+    }
+
+    private async handleAssistantAction(button: HTMLButtonElement): Promise<void> {
+        const action = button.dataset.action ?? '';
+        let payload: Record<string, unknown> = {};
+        try {
+            payload = JSON.parse(button.dataset.payload || '{}') as Record<string, unknown>;
+        } catch {
+            payload = {};
+        }
+
+        const id = typeof payload.id === 'string' ? payload.id : '';
+        if ((action !== 'approve' && action !== 'reject') || id === '') {
+            return;
+        }
+
+        const group = button.closest('.agentic-actions');
+        group?.querySelectorAll('button').forEach((el) => {
+            el.setAttribute('disabled', 'true');
+        });
+
+        try {
+            const result = action === 'approve' ? await this.api.approve(id) : await this.api.reject(id);
+            const handedOff = action === 'approve' && (result.tool === 'handoff' || result.handoff === true);
+            removeApprovalUiForId(this.messagesEl, id);
+            if (handedOff) {
+                this.markHumanHelping();
+            }
+
+            const execution = result.execution as { resume?: { message?: { html?: string; text?: string } } } | undefined;
+            const resumed = execution?.resume?.message;
+            if (!handedOff && resumed && (resumed.html || resumed.text)) {
+                this.messagesEl.appendChild(
+                    this.createBubbleElement('assistant', resumed.text ?? '', resumed.html ?? null, new Date().toISOString()),
+                );
+                this.refreshDayDividers();
+            }
+        } catch (error) {
+            group?.querySelectorAll('button').forEach((el) => el.removeAttribute('disabled'));
+            const failed = document.createElement('p');
+            failed.className = 'ag-approval-status';
+            failed.textContent = error instanceof Error ? error.message : 'Approval failed.';
+            group?.after(failed);
+        }
     }
 
     private refreshDayDividers(): void {
@@ -1022,6 +1359,13 @@ export class WidgetUi {
             this.realtimeSinceId = Math.max(this.realtimeSinceId, ev.id);
         }
 
+        if (ev.event === 'handoff.updated' && ev.payload.handoff && typeof ev.payload.handoff === 'object') {
+            const handoff = ev.payload.handoff as { active?: boolean; staff_chat?: boolean };
+            this.applyHandoffFromServer(handoff.active === true, handoff.staff_chat === true);
+
+            return;
+        }
+
         const typing = typingActiveFromEvent(ev);
         if (typing !== null) {
             this.setTyping(typing);
@@ -1029,12 +1373,21 @@ export class WidgetUi {
             return;
         }
 
-        const reply = assistantMessageFromEvent(ev);
-        if (!reply) {
+        if (streamDeltaFromEvent(ev)) {
             return;
         }
 
         const msg = ev.payload.message;
+        if (msg && typeof msg === 'object' && (msg as { source?: string }).source === 'staff') {
+            if (this.shouldEnableStaffAttachFromRealtime(msg as { cursor?: number })) {
+                this.enableStaffChatUi();
+            }
+        }
+
+        const reply = assistantMessageFromEvent(ev);
+        if (!reply) {
+            return;
+        }
         const mid =
             msg && typeof msg === 'object' && typeof (msg as { id?: string }).id === 'string'
                 ? (msg as { id: string }).id
@@ -1096,9 +1449,14 @@ export class WidgetUi {
 
         this.seenMessageIds.add(primary);
         this.seenMessageIds.add(textOnly);
+        this.clearStreamBubble();
         this.setTyping(false);
         this.awaitingAssistantReply = false;
         this.pendingAssistantAfterCursor = null;
+        this.sending = false;
+        if (this.configReady) {
+            this.input.disabled = false;
+        }
         this.addBubble('assistant', text, html, sentAt ?? new Date().toISOString());
         playWidgetSound('receive', this.config.sounds ?? true);
 
@@ -1186,31 +1544,37 @@ export class WidgetUi {
     }
 
     private setTyping(active: boolean): void {
+        this.messagesEl?.querySelectorAll('.ag-row.ag-typing').forEach((row) => row.remove());
+        if (active && this.streamEl) {
+            return;
+        }
         if (this.typingBarEl) {
             this.typingBarEl.hidden = !active;
         }
         this.panel?.classList.toggle('ag-is-typing', active);
+    }
 
-        if (!active) {
-            this.typingEl?.remove();
-            this.typingEl = null;
-
-            return;
+    private optimisticUserHtml(text: string, files: File[]): string | null {
+        if (files.length === 0) {
+            return null;
+        }
+        const escape = (value: string) =>
+            value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+        const parts: string[] = [];
+        if (text) {
+            parts.push(`<p>${escape(text)}</p>`);
+        }
+        for (const file of files) {
+            if (file.type.startsWith('image/')) {
+                parts.push(
+                    `<figure class="ag-attach"><img src="${URL.createObjectURL(file)}" alt="" loading="lazy" decoding="async" class="ag-attach-img"><figcaption class="ag-attach-caption">${escape(file.name)}</figcaption></figure>`,
+                );
+            } else {
+                parts.push(`<p class="ag-attach-file">${escape(file.name)}</p>`);
+            }
         }
 
-        if (this.typingEl) {
-            this.scrollMessagesToBottom();
-
-            return;
-        }
-
-        this.typingEl = document.createElement('div');
-        this.typingEl.className = 'ag-row ag-row-assistant ag-typing';
-        this.typingEl.setAttribute('aria-live', 'polite');
-        this.typingEl.setAttribute('aria-label', 'Assistant is typing');
-        this.typingEl.innerHTML = TYPING_LABEL_HTML;
-        this.messagesEl.appendChild(this.typingEl);
-        this.scrollMessagesToBottom();
+        return parts.join('');
     }
 
     private addBubble(role: 'user' | 'assistant', text: string, html: string | null = null, sentAt?: string | null): void {
@@ -1244,19 +1608,133 @@ export class WidgetUi {
         }
     }
 
+    private renderFileChip(): void {
+        if (this.pendingFiles.length === 0) {
+            this.fileChipEl.hidden = true;
+            this.fileChipEl.textContent = '';
+            return;
+        }
+        this.fileChipEl.hidden = false;
+        this.fileChipEl.textContent = this.pendingFiles.map((file) => file.name).join(', ');
+    }
+
+    private appendStreamDelta(delta: string): void {
+        this.streamText += delta;
+        if (!this.streamEl) {
+            this.setTyping(false);
+            this.streamEl = this.createBubbleElement('assistant', this.streamText, null, new Date().toISOString());
+            this.streamEl.classList.add('ag-stream');
+            this.messagesEl.appendChild(this.streamEl);
+            this.refreshDayDividers();
+        } else {
+            const bubble = this.streamEl.querySelector('.ag-bubble');
+            if (bubble) {
+                bubble.textContent = this.streamText;
+            }
+        }
+        this.scrollMessagesToBottom();
+    }
+
+    private clearStreamBubble(): void {
+        this.streamEl?.remove();
+        this.streamEl = null;
+        this.streamText = '';
+    }
+
+    private markHumanHelping(): void {
+        this.applyHandoffFromServer(true, false);
+    }
+
+    private applyHandoffFromServer(active: boolean, staffChat = false): void {
+        this.humanTaken = active;
+        this.staffChatActive = staffChat;
+        if (active) {
+            this.setTyping(false);
+            this.awaitingAssistantReply = false;
+            this.setStatusText(staffChat ? 'Person helping' : 'Waiting for a person');
+        } else {
+            this.setPresenceOnline();
+        }
+        this.syncComposerAttachments();
+    }
+
+    private shouldEnableStaffAttachFromRealtime(msg: { cursor?: number }): boolean {
+        if (!this.composerHistorySynced) {
+            return false;
+        }
+
+        const cursor = msg.cursor;
+        if (typeof cursor !== 'number' || cursor <= this.maxHistoryCursor) {
+            return false;
+        }
+
+        this.maxHistoryCursor = cursor;
+
+        return true;
+    }
+
+    private enableStaffChatUi(): void {
+        this.staffChatActive = true;
+        this.humanTaken = true;
+        this.setStatusText('Person helping');
+        this.syncComposerAttachments();
+    }
+
+    /** Attachments only when a team member has taken the chat (not during AI auto-reply). */
+    private syncComposerAttachments(): void {
+        const show =
+            this.attachmentsEnabled && (!this.attachmentsStaffOnly || this.staffChatActive);
+        if (show) {
+            if (!this.attachBtn.isConnected && this.emojiBtn?.parentElement) {
+                this.emojiBtn.insertAdjacentElement('beforebegin', this.attachBtn);
+            }
+            this.attachBtn.hidden = false;
+            this.attachBtn.classList.add('is-visible');
+            this.attachBtn.setAttribute('aria-hidden', 'false');
+        } else {
+            this.attachBtn.classList.remove('is-visible');
+            this.attachBtn.hidden = true;
+            this.attachBtn.setAttribute('aria-hidden', 'true');
+            this.attachBtn.remove();
+            this.pendingFiles = [];
+            this.fileInput.value = '';
+            this.renderFileChip();
+        }
+    }
+
+    private setStatusText(label: string): void {
+        const status = this.root?.querySelector('.ag-status-text');
+        if (status) {
+            status.textContent = label;
+        }
+    }
+
     private async onSend(): Promise<void> {
         const text = this.input.value.trim();
-        if (!text || this.sending || !this.configReady) {
+        const files = this.pendingFiles;
+        if ((!text && files.length === 0) || this.sending || !this.configReady) {
+            return;
+        }
+        if (files.length > 0 && this.attachmentsStaffOnly && !this.staffChatActive) {
             return;
         }
         this.sending = true;
         this.input.value = '';
         this.input.disabled = true;
+        this.pendingFiles = [];
+        this.fileInput.value = '';
+        this.renderFileChip();
+        this.clearStreamBubble();
         this.pendingAssistantAfterCursor = await this.captureConversationTailCursor();
-        this.addBubble('user', text);
+        const previewText = text || (files.length > 0 ? '' : '');
+        this.addBubble('user', previewText, this.optimisticUserHtml(text, files));
         playWidgetSound('send', this.config.sounds ?? true);
-        this.setTyping(true);
-        this.awaitingAssistantReply = this.replyMode === 'async' || this.realtimeDriver === 'pusher';
+        const batching = this.messageBatchWindowMs > 0 && files.length === 0;
+        if (!this.humanTaken && !batching) {
+            this.setTyping(true);
+        }
+        this.awaitingAssistantReply =
+            !this.humanTaken && (batching || this.replyMode === 'async' || this.realtimeDriver === 'pusher');
         if (this.conversationId) {
             this.startRealtime();
         }
@@ -1265,7 +1743,8 @@ export class WidgetUi {
                 this.config.agent,
                 text,
                 this.conversationId,
-            )) as WidgetMessageAck;
+                files,
+            )) as WidgetMessageAck & { handoff?: boolean };
 
             if (typeof data.conversation_id === 'string') {
                 this.conversationId = data.conversation_id;
@@ -1275,6 +1754,12 @@ export class WidgetUi {
 
             if (this.conversationId) {
                 this.startRealtime();
+            }
+
+            if (data.handoff === true) {
+                this.markHumanHelping();
+
+                return;
             }
 
             if (isPendingMessageAck(data)) {
@@ -1314,9 +1799,11 @@ export class WidgetUi {
             this.awaitingAssistantReply = false;
             this.addBubble('assistant', err instanceof Error ? err.message : 'Error', null);
         } finally {
-            this.sending = false;
-            this.input.disabled = false;
-            this.input.focus();
+            if (!this.awaitingAssistantReply) {
+                this.sending = false;
+                this.input.disabled = false;
+                this.input.focus();
+            }
         }
     }
 

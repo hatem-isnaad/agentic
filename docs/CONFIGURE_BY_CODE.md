@@ -86,7 +86,7 @@ $agents->save([
 | UI | Config | Widget API |
 |----|--------|------------|
 | Widget settings per agent | `config/agentic.php` → `widget.*` · per-agent rows via admin or API | `GET /config?agent=` |
-| Guest chat | `AGENTIC_WIDGET_*` | `POST /messages` + header `X-Agentic-Guest-Id` |
+| Guest chat | `AGENTIC_WIDGET_*` (`STREAM` default false) | `POST /messages` + `X-Agentic-Guest-Id` → `{ pending }` then Pusher `message.created` |
 | Resume conversation | — | `GET /conversations/{id}/messages` · `conversation_id` on `POST /messages` |
 
 ## Tool approvals

@@ -3,6 +3,7 @@
 namespace Agentic\Http\Controllers\Admin;
 
 use Agentic\Http\Support\AdminLocaleMeta;
+use Agentic\Support\AgenticDeployMode;
 use Illuminate\Http\JsonResponse;
 
 final class PackageSettingsController
@@ -14,6 +15,7 @@ final class PackageSettingsController
         return response()->json([
             'data' => [
                 'features' => [
+                    'deploy_mode' => AgenticDeployMode::current(),
                     'api' => (bool) config('agentic.api.enabled'),
                     'admin_api' => (bool) config('agentic.admin.api.enabled'),
                     'admin_web' => (bool) config('agentic.admin.web.enabled'),

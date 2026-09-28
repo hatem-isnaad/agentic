@@ -17,7 +17,7 @@
                 [__('agentic::admin.fields.description'), $workflow->description ?: '—'],
             ]])
             <h2 style="font-size:1rem;margin:1.5rem 0 0.75rem;">{{ __('agentic::admin.fields.steps') }}</h2>
-            <pre class="ag-code">{{ json_encode($workflow->steps, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+            <pre class="ag-code" dir="ltr">{{ json_encode($workflow->steps, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
         </div>
     </div>
 @endsection

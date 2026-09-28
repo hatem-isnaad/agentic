@@ -17,11 +17,19 @@ export function historyMessageToBubble(msg: WidgetHistoryMessage): {
     const sentAt = typeof msg.created_at === 'string' && msg.created_at.trim() ? msg.created_at : null;
 
     if (html) {
-        const tmp = document.createElement('div');
-        tmp.innerHTML = html;
+        const text = plainTextExcludingAttachments(html);
 
-        return { role, text: tmp.textContent || '', html: role === 'assistant' ? html : null, sentAt };
+        return { role, text, html, sentAt };
     }
 
     return { role, text: '', html: null, sentAt };
+}
+
+/** Avoid duplicating filenames from <img alt> / figcaption in plain-text bubbles. */
+function plainTextExcludingAttachments(html: string): string {
+    const tmp = document.createElement('div');
+    tmp.innerHTML = html;
+    tmp.querySelectorAll('figure.ag-attach, .ag-attach-file').forEach((el) => el.remove());
+
+    return (tmp.textContent || '').trim();
 }

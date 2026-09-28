@@ -14,10 +14,10 @@
                 [__('agentic::admin.fields.started'), optional($execution->started_at)->toDateTimeString() ?? '—'],
             ]])
             <h2 style="font-size:1rem;margin:1.5rem 0 0.75rem;">{{ __('agentic::admin.fields.output') }}</h2>
-            <pre class="ag-code">{{ json_encode($execution->output, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+            <pre class="ag-code" dir="ltr">{{ json_encode($execution->output, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
             @if ($execution->steps->isNotEmpty())
                 <h2 style="font-size:1rem;margin:1.5rem 0 0.75rem;">{{ __('agentic::admin.fields.trace') }}</h2>
-                <pre class="ag-code">{{ json_encode($execution->steps->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+                <pre class="ag-code" dir="ltr">{{ json_encode($execution->steps->toArray(), JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
             @endif
         </div>
     </div>

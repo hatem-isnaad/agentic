@@ -4,10 +4,13 @@ import {
     BookOpen,
     Braces,
     Code2,
+    Coins,
     GitBranch,
     Brain,
     History,
+    Inbox,
     KeyRound,
+    ListChecks,
     LayoutDashboard,
     Link2,
     Menu,
@@ -22,8 +25,8 @@ import {
     X,
     Zap,
 } from 'lucide-react';
-import { useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { useAdminMode } from '../../lib/adminMode';
 import { navGroupsForMode, navItemUsesEndMatch } from '../../lib/nav';
 import { useI18n } from '../../lib/i18n';
@@ -43,7 +46,10 @@ const navIcons: Record<string, typeof Bot> = {
     '/workflows': GitBranch,
     '/workflow-runs': History,
     '/executions': PanelsTopLeft,
+    '/usage': Coins,
+    '/inbox': Inbox,
     '/conversations': MessageSquare,
+    '/eval-sets': ListChecks,
     '/widget-settings': MessageSquare,
     '/widget-embed-tokens': KeyRound,
     '/docs': BookOpen,
@@ -122,6 +128,21 @@ export function AppShell() {
     const { expertMode, toggleExpertMode } = useAdminMode();
     const navGroups = navGroupsForMode(expertMode);
     const [mobileOpen, setMobileOpen] = useState(false);
+    const [authNotice, setAuthNotice] = useState<string | null>(null);
+    const location = useLocation();
+
+    useEffect(() => {
+        const onAuthError = (event: Event) => {
+            const detail = (event as CustomEvent<{ message?: string }>).detail;
+            if (typeof detail?.message === 'string' && detail.message.trim() !== '') {
+                setAuthNotice(detail.message);
+            }
+        };
+        window.addEventListener('agentic:admin-auth-error', onAuthError);
+
+        return () => window.removeEventListener('agentic:admin-auth-error', onAuthError);
+    }, []);
+    const isInbox = location.pathname === '/inbox' || location.pathname.endsWith('/inbox');
 
     const sidebar = (
         <>
@@ -153,7 +174,7 @@ export function AppShell() {
     );
 
     return (
-        <div className="flex min-h-full" dir={direction}>
+        <div className={`flex ${isInbox ? 'h-full max-h-full overflow-hidden' : 'min-h-full'}`} dir={direction}>
             <aside className="ag-sidebar-gradient hidden w-64 shrink-0 flex-col border-e border-white/8 lg:sticky lg:top-0 lg:flex lg:h-screen lg:max-h-screen">
                 {sidebar}
             </aside>
@@ -188,8 +209,8 @@ export function AppShell() {
                 )}
             </AnimatePresence>
 
-            <div className="ag-mesh flex min-h-screen min-w-0 flex-1 flex-col">
-                <header className="sticky top-0 z-40 border-b border-slate-200/70 bg-white/75 backdrop-blur-xl">
+            <div className={`ag-mesh flex min-w-0 flex-1 flex-col ${isInbox ? 'h-full max-h-full overflow-hidden' : 'min-h-screen'}`}>
+                <header className="sticky top-0 z-40 shrink-0 border-b border-slate-200/70 bg-white/75 backdrop-blur-xl">
                     <div className="flex items-center gap-3 px-4 py-2.5 sm:px-6 lg:px-8">
                         <button
                             type="button"
@@ -208,13 +229,25 @@ export function AppShell() {
                     <div className="border-t border-slate-100/80 px-4 py-1.5 sm:px-6 lg:px-8">
                         <Breadcrumbs />
                     </div>
+                    {authNotice && (
+                        <div
+                            className="border-t border-amber-200/80 bg-amber-50 px-4 py-2.5 text-sm text-amber-950 sm:px-6 lg:px-8"
+                            role="status"
+                        >
+                            {authNotice}
+                            <span className="mt-1 block text-xs text-amber-800/90">
+                                Sign in via Agentic auth (passkey / Sanctum) or set AGENTIC_ADMIN_REQUIRE_AUTH=false for
+                                local-only access.
+                            </span>
+                        </div>
+                    )}
                 </header>
 
-                <main className="w-full flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8">
+                <main className={isInbox ? 'flex min-h-0 w-full flex-1 overflow-hidden' : 'w-full flex-1 px-4 py-6 sm:px-6 lg:px-8 lg:py-8'}>
                     <Outlet />
                 </main>
 
-                <AppFooter />
+                {!isInbox && <AppFooter />}
             </div>
         </div>
     );

@@ -28,11 +28,11 @@ final class AgentContextPolicy
 
         return [
             'enabled' => true,
-            'max_history_messages' => max(0, (int) ($cfg['max_history_messages'] ?? 20)),
+            'max_history_messages' => max(0, (int) ($cfg['max_history_messages'] ?? 12)),
             'skill_routing_limit' => max(1, (int) ($cfg['skill_routing_limit'] ?? 4)),
             'skills_fallback_limit' => max(1, (int) ($cfg['skills_fallback_limit'] ?? 4)),
-            'knowledge_chunk_limit' => max(0, (int) ($cfg['knowledge_chunk_limit'] ?? 5)),
-            'memory_entry_limit' => max(0, (int) ($cfg['memory_entry_limit'] ?? 15)),
+            'knowledge_chunk_limit' => max(0, (int) ($cfg['knowledge_chunk_limit'] ?? 3)),
+            'memory_entry_limit' => max(0, (int) ($cfg['memory_entry_limit'] ?? 8)),
             'max_tools' => max(1, (int) ($cfg['max_tools'] ?? 30)),
             'compact_skill_descriptions' => (bool) ($cfg['compact_skill_descriptions'] ?? true),
         ];

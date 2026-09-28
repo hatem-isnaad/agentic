@@ -7,6 +7,15 @@ use Agentic\Widget\Support\WidgetReplyDelivery;
 
 final class WidgetRealtimeService
 {
+    public function tailEventId(string $conversationId): int
+    {
+        $id = BroadcastEvent::query()
+            ->where('channel', WidgetReplyDelivery::conversationChannel($conversationId))
+            ->max('id');
+
+        return (int) ($id ?? 0);
+    }
+
     /**
      * @return list<array<string, mixed>>
      */

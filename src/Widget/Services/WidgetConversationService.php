@@ -2,6 +2,7 @@
 
 namespace Agentic\Widget\Services;
 
+use Agentic\Conversation\ConversationHandoffService;
 use Agentic\Conversation\ConversationManager;
 use Agentic\Models\Conversation;
 use Agentic\Models\ConversationMessage;
@@ -10,7 +11,18 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 final class WidgetConversationService
 {
-    public function __construct(private ConversationManager $conversations) {}
+    public function __construct(
+        private ConversationManager $conversations,
+        private WidgetAttachmentService $attachments,
+        private WidgetMessageHtmlPresenter $messageHtml,
+        private ConversationHandoffService $handoff,
+        private WidgetRealtimeService $realtime,
+    ) {}
+
+    public function assertVisible(string $conversationUuid, WidgetIdentity $identity): Conversation
+    {
+        return $this->resolveConversationForIdentity($conversationUuid, $identity);
+    }
 
     /**
      * @return list<array<string, mixed>>
@@ -47,7 +59,7 @@ final class WidgetConversationService
      *
      * @return array{messages: list<array<string, mixed>>, meta: array{has_more: bool, next_before: int|null}}
      */
-    public function messagesPage(string $conversationUuid, WidgetIdentity $identity, int $limit = 20, ?int $beforeCursor = null): array
+    public function messagesPage(string $conversationUuid, WidgetIdentity $identity, int $limit = 20, ?int $beforeCursor = null, bool $adminFileUrls = false): array
     {
         $conversation = $this->resolveConversationForIdentity($conversationUuid, $identity);
 
@@ -62,6 +74,7 @@ final class WidgetConversationService
             ->limit($limit);
 
         $rows = $query->get()->reverse()->values();
+        $rows->loadMissing('conversation');
 
         $oldestId = $rows->first()?->id;
         $hasMore = false;
@@ -75,11 +88,13 @@ final class WidgetConversationService
 
         return [
             'messages' => $rows
-                ->map(fn (ConversationMessage $message) => $this->serializeMessage($message))
+                ->map(fn (ConversationMessage $message) => $this->serializeMessage($message, $adminFileUrls))
                 ->all(),
             'meta' => [
                 'has_more' => $hasMore,
                 'next_before' => $hasMore ? $oldestId : null,
+                'handoff' => $this->handoffPayload($conversation),
+                'realtime_tail_id' => $this->realtime->tailEventId($conversationUuid),
             ],
         ];
     }
@@ -103,19 +118,31 @@ final class WidgetConversationService
     /**
      * @return array<string, mixed>
      */
-    private function serializeMessage(ConversationMessage $message): array
+    private function serializeMessage(ConversationMessage $message, bool $adminFileUrls = false): array
     {
         $blocks = is_array($message->metadata['blocks'] ?? null) ? $message->metadata['blocks'] : null;
+        $files = is_array($message->metadata['attachments'] ?? null) ? $message->metadata['attachments'] : [];
+        $conversationId = (string) ($message->conversation?->uuid ?? '');
 
         return [
             'id' => $message->uuid,
             'cursor' => (int) $message->id,
             'role' => $message->role,
-            'html' => $message->content_html,
+            'html' => $this->messageHtml->render($message, $adminFileUrls),
             'format' => $message->format,
             'blocks' => $blocks,
+            'attachments' => $conversationId !== '' ? $this->attachments->present($files, $conversationId, $adminFileUrls) : [],
             'created_at' => optional($message->created_at)?->toISOString(),
+            'source' => is_string($message->metadata['source'] ?? null) ? $message->metadata['source'] : null,
         ];
+    }
+
+    /**
+     * @return array{active: bool, staff_chat: bool, status: string}
+     */
+    private function handoffPayload(Conversation $row): array
+    {
+        return $this->handoff->widgetPayloadForId((string) $row->uuid);
     }
 
     /**
@@ -131,6 +158,7 @@ final class WidgetConversationService
             'id' => $row->uuid,
             'agent' => $row->agent,
             'user_id' => $row->user_id,
+            'handoff' => $this->handoffPayload($row),
             'metadata' => $row->metadata ?? [],
             'preview' => mb_substr($preview, 0, 120),
             'last_message_at' => optional($lastAt)?->toISOString(),

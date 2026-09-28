@@ -7,6 +7,7 @@ use Agentic\Agent\AgentPersona;
 use Agentic\Agent\AgentResolver;
 use Agentic\Exceptions\AgentNotFoundException;
 use Agentic\Models\WidgetEmbedToken;
+use Agentic\Widget\Support\WidgetMessageBatchSettings;
 use Agentic\Widget\Support\WidgetReplyDelivery;
 
 final class WidgetConfigService
@@ -57,6 +58,17 @@ final class WidgetConfigService
                 'resume_after_hours' => max(1, (int) config('agentic.widget.conversation.resume_after_hours', 24)),
             ],
             'embed' => $this->embedPolicyForClient($embed),
+            'handoff' => [
+                'enabled' => filter_var(config('agentic.widget.handoff.enabled', true), FILTER_VALIDATE_BOOL),
+            ],
+            'attachments' => [
+                'enabled' => filter_var(config('agentic.widget.attachments.enabled', true), FILTER_VALIDATE_BOOL),
+                'staff_only' => true,
+                'visible' => false,
+                'max_files' => max(1, (int) config('agentic.widget.attachments.max_files', 3)),
+            ],
+            'message_batch' => WidgetMessageBatchSettings::clientPayload(),
+            'stream' => filter_var(config('agentic.widget.stream', false), FILTER_VALIDATE_BOOL),
         ];
 
         $locale = $merged['locale'] ?? config('agentic.widget.locale.default', 'en');

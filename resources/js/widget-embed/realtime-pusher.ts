@@ -121,6 +121,9 @@ export class WidgetRealtimePusher implements WidgetRealtimeConnection {
         this.channel.bind('assistant.typing', (payload: Record<string, unknown>) => {
             forward('assistant.typing', payload);
         });
+        this.channel.bind('message.delta', (payload: Record<string, unknown>) => {
+            forward('message.delta', payload);
+        });
     }
 
     stop(): void {

@@ -42,16 +42,34 @@ export class WidgetApiClient {
         return json as WidgetConfigResponse;
     }
 
-    async sendMessage(agent: string, message: string, conversationId: string | null): Promise<unknown> {
-        const body: Record<string, string> = { agent, message };
-        if (conversationId) {
-            body.conversation_id = conversationId;
+    async sendMessage(
+        agent: string,
+        message: string,
+        conversationId: string | null,
+        files: File[] = [],
+    ): Promise<unknown> {
+        const url = `${this.opts.apiBase.replace(/\/$/, '')}/messages`;
+        let res: Response;
+        if (files.length > 0) {
+            const body = new FormData();
+            body.append('agent', agent);
+            if (message) {
+                body.append('message', message);
+            }
+            if (conversationId) {
+                body.append('conversation_id', conversationId);
+            }
+            for (const file of files) {
+                body.append('files[]', file);
+            }
+            res = await fetch(url, { method: 'POST', headers: this.headers(), body });
+        } else {
+            const body: Record<string, string> = { agent, message };
+            if (conversationId) {
+                body.conversation_id = conversationId;
+            }
+            res = await fetch(url, { method: 'POST', headers: this.headers(true), body: JSON.stringify(body) });
         }
-        const res = await fetch(`${this.opts.apiBase.replace(/\/$/, '')}/messages`, {
-            method: 'POST',
-            headers: this.headers(true),
-            body: JSON.stringify(body),
-        });
         const json = await res.json();
         if (!res.ok) {
             throw new Error(json.message || `Send failed (${res.status})`);
@@ -60,12 +78,31 @@ export class WidgetApiClient {
         return unwrapMessageResponse(json);
     }
 
+    async requestHandoff(conversationId: string): Promise<Record<string, unknown>> {
+        const res = await fetch(`${this.opts.apiBase.replace(/\/$/, '')}/conversations/${encodeURIComponent(conversationId)}/handoff`, {
+            method: 'POST',
+            headers: this.headers(true),
+            body: JSON.stringify({}),
+        });
+        const json = (await res.json()) as { data?: Record<string, unknown>; message?: string };
+        if (!res.ok) {
+            throw new Error(json.message || `Handoff failed (${res.status})`);
+        }
+
+        return (json.data ?? json) as Record<string, unknown>;
+    }
+
     async fetchMessages(
         conversationId: string,
         options: { limit?: number; before?: number | null; maxLimit?: number } = {},
     ): Promise<{
-        messages: { id?: string; cursor?: number; role: string; html?: string; created_at?: string }[];
-        meta: { has_more: boolean; next_before: number | null };
+        messages: { id?: string; cursor?: number; role: string; html?: string; created_at?: string; source?: string | null }[];
+        meta: {
+            has_more: boolean;
+            next_before: number | null;
+            handoff?: { active?: boolean; staff_chat?: boolean; status?: string };
+            realtime_tail_id?: number;
+        };
     }> {
         const params = new URLSearchParams();
         if (options.limit) {
@@ -89,6 +126,7 @@ export class WidgetApiClient {
             meta: (json.meta ?? { has_more: false, next_before: null }) as {
                 has_more: boolean;
                 next_before: number | null;
+                handoff?: { active?: boolean; status?: string };
             },
         };
     }
@@ -128,6 +166,28 @@ export class WidgetApiClient {
         const list = await this.fetchConversations(agent);
 
         return list[0]?.id ?? null;
+    }
+
+    async approve(id: string): Promise<Record<string, unknown>> {
+        return this.postApproval(id, 'approve');
+    }
+
+    async reject(id: string): Promise<Record<string, unknown>> {
+        return this.postApproval(id, 'reject');
+    }
+
+    private async postApproval(id: string, action: 'approve' | 'reject'): Promise<Record<string, unknown>> {
+        const res = await fetch(`${this.opts.apiBase.replace(/\/$/, '')}/approvals/${encodeURIComponent(id)}/${action}`, {
+            method: 'POST',
+            headers: this.headers(true),
+            body: JSON.stringify({}),
+        });
+        const json = (await res.json()) as { data?: Record<string, unknown>; message?: string };
+        if (!res.ok) {
+            throw new Error(json.message || `${action} failed (${res.status})`);
+        }
+
+        return (json.data ?? json) as Record<string, unknown>;
     }
 
     async pollRealtime(conversationId: string, sinceId: number): Promise<

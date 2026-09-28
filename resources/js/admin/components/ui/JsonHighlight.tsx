@@ -24,7 +24,10 @@ export function JsonHighlight({ data, value }: JsonHighlightProps) {
     }, [text]);
 
     return (
-        <pre className="max-h-[32rem] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-[13px] leading-relaxed text-slate-800">
+        <pre
+            dir="ltr"
+            className="ag-json max-h-[32rem] overflow-auto rounded-xl border border-slate-200 bg-slate-50 p-4 text-left text-[13px] leading-relaxed text-slate-800"
+        >
             <code ref={ref} className="language-json !bg-transparent">{text}</code>
         </pre>
     );

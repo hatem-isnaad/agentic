@@ -29,7 +29,7 @@
         :token="$embedToken !== '' ? $embedToken : null"
         :conversation="$initialConversationId"
         :open="true"
-        theme="system"
+        :theme="config('agentic.widget.theme.default', 'system')"
         position="bottom-right"
         :sounds="true"
     />

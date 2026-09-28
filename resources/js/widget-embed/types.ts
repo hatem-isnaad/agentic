@@ -57,6 +57,8 @@ export type WidgetConversationSummary = {
     last_message_at?: string | null;
     created_at?: string | null;
     updated_at?: string | null;
+    handoff?: { active?: boolean; staff_chat?: boolean; status?: string };
+    metadata?: Record<string, unknown>;
 };
 
 export type WidgetConfigResponse = {
@@ -81,5 +83,9 @@ export type WidgetConfigResponse = {
             auth_required?: boolean;
             sanctum_allowed?: boolean;
         };
+        handoff?: { enabled?: boolean };
+        attachments?: { enabled?: boolean; staff_only?: boolean; max_files?: number };
+        message_batch?: { window_ms?: number; max_ms?: number };
+        stream?: boolean;
     };
 };

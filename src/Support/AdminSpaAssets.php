@@ -27,20 +27,45 @@ final class AdminSpaAssets
             return ['style' => null, 'script' => null, 'dev' => true];
         }
 
+        $publicRoot = function_exists('public_path') ? public_path('vendor/agentic/admin') : null;
         $base = asset('vendor/agentic/admin');
-        $script = $base.'/'.ltrim($entry['file'], '/');
-        $style = isset($entry['css'][0]) ? $base.'/'.ltrim($entry['css'][0], '/') : null;
+        $scriptPath = ltrim($entry['file'], '/');
+        $stylePath = isset($entry['css'][0]) ? ltrim($entry['css'][0], '/') : null;
+
+        $script = $base.'/'.$scriptPath.self::assetVersion($publicRoot, $scriptPath);
+        $style = $stylePath !== null
+            ? $base.'/'.$stylePath.self::assetVersion($publicRoot, $stylePath)
+            : null;
 
         return ['style' => $style, 'script' => $script, 'dev' => false];
     }
 
     public static function manifestPath(): string
     {
+        $published = function_exists('public_path')
+            ? public_path('vendor/agentic/admin/.vite/manifest.json')
+            : null;
+
+        if (is_string($published) && is_readable($published)) {
+            return $published;
+        }
+
         return dirname(__DIR__, 2).'/resources/dist/admin/.vite/manifest.json';
     }
 
     public static function distPath(): string
     {
         return dirname(__DIR__, 2).'/resources/dist/admin';
+    }
+
+    private static function assetVersion(?string $publicRoot, string $relative): string
+    {
+        if (! is_string($publicRoot)) {
+            return '';
+        }
+
+        $absolute = $publicRoot.'/'.$relative;
+
+        return is_readable($absolute) ? '?v='.(string) filemtime($absolute) : '';
     }
 }

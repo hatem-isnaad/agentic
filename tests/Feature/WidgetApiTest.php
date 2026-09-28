@@ -3,6 +3,7 @@
 namespace Agentic\Tests\Feature;
 
 use Agentic\Enums\Status;
+use Agentic\Jobs\ProcessWidgetBatchedAgentTurnJob;
 use Agentic\Jobs\ProcessWidgetMessageJob;
 use Agentic\Models\Agent;
 use Agentic\Models\BroadcastEvent;
@@ -48,6 +49,9 @@ final class WidgetApiTest extends TestCase
             ->assertJsonPath('data.realtime.driver', 'polling')
             ->assertJsonPath('data.realtime.interval_ms', 3000)
             ->assertJsonPath('data.embed.require_token', false)
+            ->assertJsonPath('data.handoff.enabled', true)
+            ->assertJsonPath('data.attachments.enabled', true)
+            ->assertJsonPath('data.stream', false)
             ->assertJsonPath('data.conversation.resume_after_hours', 24)
             ->assertJsonMissingPath('data.providers')
             ->assertJsonMissingPath('meta');
@@ -115,6 +119,7 @@ final class WidgetApiTest extends TestCase
         ]);
 
         config()->set('agentic.widget.async_replies', true);
+        config()->set('agentic.widget.message_batch.window_ms', 0);
 
         $this->postJson('/api/agentic/widget/messages', [
             'agent' => 'support',
@@ -128,6 +133,45 @@ final class WidgetApiTest extends TestCase
             ->assertJsonMissingPath('data.text');
 
         Queue::assertPushed(ProcessWidgetMessageJob::class);
+    }
+
+    public function test_widget_batches_rapid_messages_when_batch_window_enabled(): void
+    {
+        Queue::fake();
+
+        Agent::query()->create([
+            'name' => 'Support',
+            'slug' => 'support',
+            'status' => Status::Published,
+            'instructions' => 'Help',
+        ]);
+
+        config()->set('agentic.widget.async_replies', true);
+        config()->set('agentic.widget.message_batch.window_ms', 3000);
+        config()->set('agentic.widget.message_batch.max_ms', 10_000);
+
+        $headers = ['X-Agentic-Guest-Id' => 'guest-batch-test'];
+
+        $first = $this->postJson('/api/agentic/widget/messages', [
+            'agent' => 'support',
+            'message' => 'menu',
+        ], $headers)->assertOk()->json('data.conversation_id');
+
+        $this->postJson('/api/agentic/widget/messages', [
+            'agent' => 'support',
+            'conversation_id' => $first,
+            'message' => 'delivery',
+        ], $headers)->assertOk()->assertJsonPath('data.batched', true);
+
+        $this->postJson('/api/agentic/widget/messages', [
+            'agent' => 'support',
+            'conversation_id' => $first,
+            'message' => 'Tanta',
+        ], $headers)->assertOk()->assertJsonPath('data.batched', true);
+
+        $this->assertSame(3, ConversationMessage::query()->where('role', 'user')->count());
+        Queue::assertPushed(ProcessWidgetBatchedAgentTurnJob::class, 3);
+        Queue::assertNotPushed(ProcessWidgetMessageJob::class);
     }
 
     public function test_widget_message_without_conversation_id_starts_a_new_thread(): void

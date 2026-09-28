@@ -79,6 +79,7 @@ OLLAMA_URL=http://localhost:11434`,
         steps: [
             { title: 'ملف الإعداد المنشور', body: 'config/agentic.php بعد agentic:install' },
             { title: 'مسح كاش الإعداد', body: 'php artisan config:clear بعد تغيير .env' },
+            { title: 'دليل المفاتيح', body: 'docs/DEVELOPER_HANDBOOK.md — ردود الويدجت كاملة على message.created (AGENTIC_WIDGET_STREAM=false).' },
             { title: 'المحركات', body: 'execution، conversation، knowledge، memory، workflow: eloquent أو memory' },
             { title: 'أعلام الميزات', body: 'admin، widget، api، workflows، memory' },
         ],
@@ -169,6 +170,12 @@ OLLAMA_URL=http://localhost:11434`,
         steps: [
             { title: 'تفعيل API', body: 'AGENTIC_WIDGET_ENABLED=true' },
             { title: 'الهوية', body: 'X-Agentic-Guest-Id أو Sanctum' },
+            { title: 'إرسال', body: 'POST /messages. مع Pusher الرد HTTP هو { pending, conversation_id } وليس HTML المساعد.' },
+            {
+                title: 'عرض الرد كاملاً',
+                body:
+                    'AGENTIC_WIDGET_STREAM=false افتراضياً. أظهر Typing ثم ارسم فقاعة واحدة عند message.created. تجاهل message.delta إلا إذا فعّلت البث كلمة بكلمة. الصور عبر رابط ملفات موقّع.',
+            },
             { title: 'الفصل 15', body: 'ويدجت منبثق agentic-widget.js (مُفضّل لـ Blade/SPA)' },
         ],
         adminNote: 'vendor/hatem-isnaad/agentic/docs/WIDGET_EMBED_SDK.md',
@@ -241,6 +248,11 @@ curl -O https://YOUR-HOST/vendor/agentic/widget/agentic-widget.css`,
                 body:
                     'قد ينسخ ملف JS لكن طلبات API من نطاق آخر تُرفض. wgt_… مسروق لا يعمل خارج allowed_origins. قيّد allowed_agents.',
             },
+            {
+                title: 'المظهر والبث',
+                body:
+                    'Pusher: AGENTIC_WIDGET_BROADCAST_DRIVER=pusher و queue:work. الرد فقاعة كاملة على message.created (AGENTIC_WIDGET_STREAM=false). لا ترسم message.delta كلمة بكلمة. التفاصيل: WIDGET_EMBED_SDK.md و DEVELOPER_HANDBOOK.md.',
+            },
         ],
         commands: [
             {
@@ -267,6 +279,18 @@ curl -O https://YOUR-HOST/vendor/agentic/widget/agentic-widget.css`,
         summary: 'ترحيب، استبيان، مظهر.',
         goal: 'تخصيص UX المحادثة.',
         steps: [{ title: 'تجاوزات', body: 'PUT /widget-settings/{agent}' }],
+    },
+    'staff-inbox': {
+        title: '16ب · صندوق موظفين خاص',
+        summary: 'ابنِ المكتب في نظامك. أجنتك يوفّر JSON فقط.',
+        goal: 'قائمة محادثات، استلام، رد، إعادة للوكيل — دون شاشة /agentic/admin/inbox.',
+        steps: [
+            { title: 'API الإدارة', body: 'GET /inbox و GET /conversations/{id}/messages و POST take/reply/release. أغلقها بـ Sanctum وبوابتك.' },
+            { title: 'تحديث حي', body: 'أعد جلب القائمة كل ثوانٍ. رسائل العميل لا تُبث دائماً على Pusher. لا تبنِ بث كلمة بكلمة — AGENTIC_WIDGET_STREAM=false.' },
+            { title: 'الرد', body: 'POST …/reply يخزّن رد الموظف ويبث message.created (HTML كامل مع الصور). وظائف الذكاء تتوقف بعد التحويل.' },
+        ],
+        adminNote: 'الدليل: docs/STAFF_INBOX.md',
+        ui: { path: '/inbox', label: 'الصندوق المدمج (اختياري)' },
     },
     workflows: {
         title: '17 · سير العمل',

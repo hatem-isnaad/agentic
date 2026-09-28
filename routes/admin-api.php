@@ -5,16 +5,20 @@ use Agentic\Http\Controllers\Admin\AiRegistryController;
 use Agentic\Http\Controllers\Admin\ChannelAccountController;
 use Agentic\Http\Controllers\Admin\CodeToolHandlerController;
 use Agentic\Http\Controllers\Admin\ConnectionController;
+use Agentic\Http\Controllers\Admin\ConversationAttachmentController;
 use Agentic\Http\Controllers\Admin\ConversationController;
 use Agentic\Http\Controllers\Admin\DashboardController;
+use Agentic\Http\Controllers\Admin\EvalSetController;
 use Agentic\Http\Controllers\Admin\EvaluationController;
 use Agentic\Http\Controllers\Admin\ExecutionController;
+use Agentic\Http\Controllers\Admin\InboxController;
 use Agentic\Http\Controllers\Admin\KnowledgeSourceController;
 use Agentic\Http\Controllers\Admin\LocaleController;
 use Agentic\Http\Controllers\Admin\PackageSettingsController;
 use Agentic\Http\Controllers\Admin\SkillController;
 use Agentic\Http\Controllers\Admin\ToolController;
 use Agentic\Http\Controllers\Admin\TranslationsController;
+use Agentic\Http\Controllers\Admin\UsageController;
 use Agentic\Http\Controllers\Admin\WidgetEmbedTokenController;
 use Agentic\Http\Controllers\Admin\WidgetSettingsController;
 use Agentic\Http\Controllers\Admin\WorkflowController;
@@ -28,6 +32,7 @@ use Agentic\Http\Controllers\Api\WorkflowResumeController;
 use Illuminate\Support\Facades\Route;
 
 Route::get('dashboard', DashboardController::class)->name('dashboard');
+Route::get('usage', UsageController::class)->name('usage');
 Route::get('settings', [PackageSettingsController::class, 'show'])->name('settings.show');
 Route::get('ai-registry', AiRegistryController::class)->name('ai-registry');
 Route::get('translations', TranslationsController::class)->name('translations');
@@ -57,6 +62,15 @@ Route::apiResource('connections', ConnectionController::class)->parameters(['con
 Route::get('channel-accounts/options', [ChannelAccountController::class, 'options'])->name('channel-accounts.options');
 Route::apiResource('channel-accounts', ChannelAccountController::class)->parameters(['channel-accounts' => 'id']);
 Route::apiResource('evaluations', EvaluationController::class)->only(['index', 'store']);
+Route::get('inbox', [InboxController::class, 'index'])->name('inbox.index');
+Route::post('conversations/{id}/take', [InboxController::class, 'take'])->name('conversations.take');
+Route::post('conversations/{id}/release', [InboxController::class, 'release'])->name('conversations.release');
+Route::post('conversations/{id}/reply', [InboxController::class, 'reply'])->name('conversations.reply');
+Route::get('eval-sets', [EvalSetController::class, 'index'])->name('eval-sets.index');
+Route::post('eval-sets', [EvalSetController::class, 'store'])->name('eval-sets.store');
+Route::get('eval-sets/{slug}', [EvalSetController::class, 'show'])->name('eval-sets.show');
+Route::post('eval-sets/{slug}/cases', [EvalSetController::class, 'addCase'])->name('eval-sets.cases');
+Route::post('eval-sets/{slug}/run', [EvalSetController::class, 'run'])->name('eval-sets.run');
 
 Route::get('widget-settings/schema', [WidgetSettingsController::class, 'schema'])->name('widget-settings.schema');
 Route::apiResource('widget-settings', WidgetSettingsController::class)->except('store')->parameters(['widget-settings' => 'agentSlug']);
@@ -64,6 +78,9 @@ Route::apiResource('widget-settings', WidgetSettingsController::class)->except('
 Route::apiResource('executions', ExecutionController::class)->only(['index', 'show'])->parameters(['executions' => 'id']);
 Route::apiResource('conversations', ConversationController::class)->only(['index', 'show'])->parameters(['conversations' => 'id']);
 Route::get('conversations/{id}/messages', [ConversationController::class, 'messages'])->name('conversations.messages');
+Route::get('conversations/{id}/files/{file}', [ConversationAttachmentController::class, 'show'])
+    ->where('file', '[A-Za-z0-9._-]+')
+    ->name('conversations.files.show');
 
 Route::apiResource('workflows', WorkflowController::class)->parameters(['workflows' => 'slug']);
 Route::post('workflows/{slug}/execute', WorkflowExecuteController::class)->name('workflows.execute');

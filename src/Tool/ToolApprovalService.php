@@ -15,7 +15,7 @@ final class ToolApprovalService
         $policy = $definition->approval
             ?? config('agentic.approvals.default', 'never');
 
-        if ($policy === 'always') {
+        if ($policy === 'always' || $this->matchesWidgetPattern($tool)) {
             return Approval::required(
                 (string) config(
                     'agentic.approvals.reason',

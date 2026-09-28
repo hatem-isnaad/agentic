@@ -8,7 +8,7 @@ Manage from **UI** (`/agentic/admin/channel-accounts`) or **CLI** (`php artisan 
 |---------|----------------------------------|----------|
 | `widget` | `embed` | Same widget API (`wgt_…` + origin) |
 | `whatsapp` | `meta_cloud` or `webjs` | **Meta Cloud is the live path.** `webjs` is an HTTP sidecar contract |
-| `messenger` | `meta_cloud` | Presenter only — add a webhook when you have a Page |
+| `messenger` | `meta_cloud` | **Live.** Meta Page webhook + Graph send |
 
 ## Connect a WhatsApp number
 
@@ -34,6 +34,7 @@ Manage from **UI** (`/agentic/admin/channel-accounts`) or **CLI** (`php artisan 
 ```
 
 Webhook URL for Meta: `https://your-app.test/api/agentic/channels/whatsapp/meta`  
+Messenger Page webhook: `https://your-app.test/api/agentic/channels/messenger/meta` (same GET verify + `X-Hub-Signature-256`). Create a `messenger` + `meta_cloud` row; `external_id` is the Page ID.  
 GET verify uses `hub.verify_token` (account or `AGENTIC_WHATSAPP_VERIFY_TOKEN`). POST must send `X-Hub-Signature-256`.
 
 **webjs (link a device later)** — same table, other driver. Agentic does not run WhatsApp Web in PHP. A sidecar (whatsapp-web.js, or a hosted HTTP API such as WAHA / Evolution with the same shape) talks to WhatsApp. You store:

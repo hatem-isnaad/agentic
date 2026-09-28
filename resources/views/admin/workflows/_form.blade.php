@@ -11,4 +11,4 @@
 
 <label for="steps_json">{{ __('agentic::admin.fields.steps') }}</label>
 <p class="lead" style="margin:0.25rem 0 0.5rem;font-size:0.85rem;color:var(--ag-muted);">{{ __('agentic::admin.workflows.steps_hint') }}</p>
-<textarea name="steps_json" id="steps_json" class="code" required>{{ old('steps_json', $stepsJson ?? '') }}</textarea>
+<textarea name="steps_json" id="steps_json" class="code" dir="ltr" required>{{ old('steps_json', $stepsJson ?? '') }}</textarea>

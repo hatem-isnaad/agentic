@@ -24,11 +24,12 @@ final readonly class AgentExecutionContext
         public ?Conversation $conversation = null,
         public ?string $conversationId = null,
         public ?string $executionId = null,
+        public array $attachments = [],
     ) {}
 
     public function runtime(): RuntimeContext
     {
-        $runtime = $this->runtime ?? new RuntimeContext();
+        $runtime = $this->runtime ?? new RuntimeContext;
 
         if ($this->conversation !== null && ! $runtime->has('conversation')) {
             $runtime = $runtime->with('conversation', $this->conversation);

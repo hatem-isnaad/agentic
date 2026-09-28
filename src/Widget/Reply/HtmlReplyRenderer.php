@@ -125,20 +125,35 @@ final class HtmlReplyRenderer
      */
     private function card(array $payload): string
     {
+        $variant = preg_replace('/[^a-z0-9-]/', '', strtolower((string) ($payload['variant'] ?? ''))) ?? '';
         $title = $this->markdown->convertInline((string) ($payload['title'] ?? ''));
+        $kicker = $this->markdown->convertInline((string) ($payload['kicker'] ?? ''));
         $body = $this->markdown->convert((string) ($payload['body'] ?? $payload['text'] ?? ''));
         $footer = $this->markdown->convertInline((string) ($payload['footer'] ?? ''));
+        $buttons = is_array($payload['buttons'] ?? null) ? $payload['buttons'] : [];
+        $class = 'agentic-card'.($variant !== '' ? ' agentic-card-'.$variant : '');
 
-        $html = '<article class="agentic-card">';
+        $html = '<article class="'.$class.'">';
+        $showIcon = $variant === 'handoff' || $variant === 'approval';
+        $html .= '<div class="agentic-card-head">';
+        if ($showIcon) {
+            $html .= '<span class="agentic-card-icon" aria-hidden="true">!</span>';
+        }
+        $html .= '<div class="agentic-card-copy">';
+        if ($kicker !== '') {
+            $html .= '<p class="agentic-card-kicker">'.$kicker.'</p>';
+        }
         if ($title !== '') {
-            $html .= '<header><strong>'.$title.'</strong></header>';
+            $html .= '<h3>'.$title.'</h3>';
         }
         if ($body !== '') {
-            $html .= $body;
+            $html .= '<div class="agentic-card-body">'.$body.'</div>';
         }
+        $html .= '</div></div>';
         if ($footer !== '') {
             $html .= '<footer><small>'.$footer.'</small></footer>';
         }
+        $html .= $this->actions($buttons);
         $html .= '</article>';
 
         return $html;

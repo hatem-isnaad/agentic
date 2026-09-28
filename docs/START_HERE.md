@@ -65,15 +65,31 @@ After either path: extra `.env` keys and token cost live only in [DEVELOPER_HAND
 ```bash
 composer require hatem-isnaad/agentic
 php artisan agentic:install
+```
+
+**Interactive wizard (default):** choose deployment mode, AI provider, model, RAG, and credentials — answers are written to `.env`. Details: [INSTALL_WIZARD.md](./INSTALL_WIZARD.md).
+
+Skip wizard (CI / manual `.env`):
+
+```bash
+php artisan agentic:install --quick
+```
+
+The wizard can also publish assets, migrate, and create an embed token when you confirm at the end.
+
+Manual follow-up if you used `--quick`:
+
+```bash
 php artisan vendor:publish --tag=ai-config
 php artisan vendor:publish --tag=agentic-widget-assets --force
 php artisan vendor:publish --tag=agentic-admin-assets --force
 php artisan migrate
 ```
 
-Starter `.env` (this is enough — do not copy every key from old examples):
+Minimal `.env` if you configure by hand (or use `AGENTIC_MODE` — see handbook):
 
 ```env
+AGENTIC_MODE=local
 AGENTIC_ENABLED=true
 AGENTIC_AI_PROVIDER=openai
 AGENTIC_AI_MODEL=gpt-4.1-mini
@@ -103,6 +119,8 @@ On your laptop this is open so you can work. On a live server you must log in, a
 | Any extra `.env` key, limits, or token cost | [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) — only catalog |
 | Get a chatbot working in one sitting | [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md) |
 | Put the popup on a real website | [WIDGET_EMBED_SDK.md](./WIDGET_EMBED_SDK.md) |
+| How the widget gets replies (no word-by-word stream) | [WIDGET_EMBED_SDK.md](./WIDGET_EMBED_SDK.md) § Typing + async · [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) § Widget replies · [FRONTEND_IMPLEMENTATION_GUIDE.md](./FRONTEND_IMPLEMENTATION_GUIDE.md) §5–6 |
+| Build a staff inbox in **my** admin (not Agentic’s) | [STAFF_INBOX.md](./STAFF_INBOX.md) |
 | Connect WhatsApp numbers (Meta now, link-device later) | [CHANNELS.md](./CHANNELS.md) |
 | Fresh app vs attach to a finished app | This page — **Two situations** |
 | Host checklist after attach | [HOST_BOOTSTRAP.md](./HOST_BOOTSTRAP.md) |

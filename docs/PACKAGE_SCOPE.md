@@ -28,8 +28,8 @@ Agentic is a **Laravel package**, not a standalone SaaS product.
 
 ## Intentional limits
 
-- **Parallel workflow branches** run sequentially in one PHP process (variables are isolated; results merge).
-- **MCP prompts** are available via API; automatic prompt injection into agents is not enabled (use agent instructions or host logic).
+- **Parallel workflow branches** run concurrently via Laravel `Concurrency` (`AGENTIC_WORKFLOW_PARALLEL_DRIVER=process`). Hosts without pcntl fall back to isolated sequential branches.
+- **WhatsApp webjs** stays a host sidecar (PHP does not run WhatsApp Web).
 - **Filament** is an operator shortcut, not a replacement for the headless admin API or React dashboard.
 
 When the host checklist in [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md) is done, the **stack** is production-ready—not only the package in isolation.

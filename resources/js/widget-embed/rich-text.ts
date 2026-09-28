@@ -1,14 +1,23 @@
 const ALLOWED_TAGS = new Set([
-    'A', 'ARTICLE', 'BLOCKQUOTE', 'BR', 'CODE', 'DIV', 'EM', 'FOOTER', 'H1', 'H2', 'H3', 'H4',
+    'A', 'ARTICLE', 'BLOCKQUOTE', 'BR', 'BUTTON', 'CODE', 'DIV', 'EM', 'FOOTER', 'H1', 'H2', 'H3', 'H4',
     'HEADER', 'HR', 'I', 'LI', 'OL', 'P', 'PRE', 'SMALL', 'SPAN', 'STRONG', 'B', 'TABLE',
-    'TBODY', 'TD', 'TH', 'THEAD', 'TR', 'UL',
+    'TBODY', 'TD', 'TH', 'THEAD', 'TR', 'UL', 'IMG', 'FIGURE', 'FIGCAPTION',
 ]);
 
 const ALLOWED_ATTRS: Record<string, string[]> = {
     A: ['href', 'title', 'rel', 'target'],
+    ARTICLE: ['class'],
+    H3: ['class'],
+    SPAN: ['class', 'aria-hidden'],
+    BUTTON: ['type', 'class', 'data-action', 'data-payload', 'disabled'],
     CODE: ['class'],
+    DIV: ['class', 'role'],
     TH: ['colspan', 'rowspan'],
     TD: ['colspan', 'rowspan'],
+    IMG: ['src', 'alt', 'class', 'loading', 'decoding'],
+    FIGURE: ['class'],
+    FIGCAPTION: ['class'],
+    P: ['class'],
 };
 
 export function assistantBubbleHtml(html: string | null, text: string): string {
@@ -35,7 +44,7 @@ function looksLikeUnrenderedMarkdownTable(source: string, text: string): boolean
 }
 
 function looksLikeRichHtml(value: string): boolean {
-    return /<(?!br\s*\/?>)(p|ul|ol|li|table|thead|tbody|tr|th|td|h[1-6]|pre|code|blockquote|strong|em|article)\b/i.test(value);
+    return /<(?!br\s*\/?>)(p|ul|ol|li|table|thead|tbody|tr|th|td|h[1-6]|pre|code|blockquote|strong|em|article|button|div|img|figure)\b/i.test(value);
 }
 
 function plainFromStoredHtml(value: string): string {
@@ -169,6 +178,15 @@ function sanitizeNode(node: ParentNode): void {
             }
             el.setAttribute('rel', 'noopener noreferrer');
             el.setAttribute('target', '_blank');
+        }
+
+        if (tag === 'IMG') {
+            const src = el.getAttribute('src') ?? '';
+            if (!/^(https?:|blob:|\/)/i.test(src) || /^javascript:/i.test(src)) {
+                el.remove();
+
+                return;
+            }
         }
 
         sanitizeNode(el);

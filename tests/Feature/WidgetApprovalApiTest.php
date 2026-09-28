@@ -46,4 +46,29 @@ final class WidgetApprovalApiTest extends TestCase
             ->assertJsonPath('data.status', 'approved')
             ->assertJsonPath('data.tool', 'orders.update');
     }
+
+    public function test_widget_can_reject_pending_tool_approval(): void
+    {
+        app(ToolFactory::class)->register(new ToolDefinition(
+            name: 'orders.delete',
+            description: 'Delete order',
+            driver: 'code',
+            configuration: ['handler' => 'noop'],
+            approval: 'always',
+        ));
+
+        $tool = app(ToolRegistry::class)->resolve('orders.delete');
+        $approval = app(ToolApprovalService::class)->createPending(
+            $tool,
+            ['id' => 1],
+            agent: 'support',
+        );
+
+        $prefix = trim((string) config('agentic.widget.prefix'), '/');
+
+        $this->postJson('/'.$prefix.'/approvals/'.$approval->uuid.'/reject')
+            ->assertOk()
+            ->assertJsonPath('data.status', 'rejected')
+            ->assertJsonPath('data.tool', 'orders.delete');
+    }
 }

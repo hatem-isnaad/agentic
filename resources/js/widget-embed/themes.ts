@@ -50,9 +50,9 @@ const LIGHT_CHROME: ChromeTokens = {
     '--ag-muted': '#6e6e73',
     '--ag-header-text': '#ffffff',
     '--ag-header-muted': 'rgba(255,255,255,0.7)',
-    '--ag-shadow': '0 18px 48px rgba(15, 23, 42, 0.12), 0 2px 8px rgba(15, 23, 42, 0.06)',
-    '--ag-glow': '0 8px 20px rgba(15, 23, 42, 0.16)',
-    '--ag-radius': '16px',
+    '--ag-shadow': '0 20px 50px rgba(15, 23, 42, 0.14), 0 4px 14px rgba(15, 23, 42, 0.06)',
+    '--ag-glow': '0 10px 28px color-mix(in srgb, var(--ag-primary) 28%, rgba(15, 23, 42, 0.12))',
+    '--ag-radius': '20px',
 };
 
 const DARK_CHROME: ChromeTokens = {
@@ -63,9 +63,9 @@ const DARK_CHROME: ChromeTokens = {
     '--ag-muted': '#8e8e93',
     '--ag-header-text': '#ffffff',
     '--ag-header-muted': 'rgba(255,255,255,0.62)',
-    '--ag-shadow': '0 22px 56px rgba(0, 0, 0, 0.42), 0 2px 8px rgba(0, 0, 0, 0.28)',
-    '--ag-glow': '0 8px 20px rgba(0, 0, 0, 0.32)',
-    '--ag-radius': '16px',
+    '--ag-shadow': '0 24px 56px rgba(0, 0, 0, 0.45), 0 4px 14px rgba(0, 0, 0, 0.22)',
+    '--ag-glow': '0 10px 28px rgba(0, 0, 0, 0.35)',
+    '--ag-radius': '20px',
 };
 
 function hexToRgb(hex: string): string {

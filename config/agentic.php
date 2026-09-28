@@ -13,6 +13,23 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Deployment mode (routes + auth — start here)
+    |--------------------------------------------------------------------------
+    |
+    | AGENTIC_MODE=local       Laptop: admin + widget demo, admin API open (no Sanctum).
+    | AGENTIC_MODE=production  Server: admin + widget, Sanctum on admin API, embed token required.
+    | AGENTIC_MODE=widget      Server: only /api/agentic/widget/* + embed token (no admin).
+    |
+    | If unset: local when APP_ENV=local, else production.
+    | AGENTIC_WIDGET_ONLY=true is legacy alias for AGENTIC_MODE=widget.
+    |
+    */
+    'deploy' => [
+        'mode' => env('AGENTIC_MODE'),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Default AI provider / model (Laravel AI SDK)
     |--------------------------------------------------------------------------
     |
@@ -94,7 +111,7 @@ return [
         'route_name_prefix' => 'agentic.auth.',
         'middleware' => ['api'],
         'protect' => [
-            // true = Sanctum. false = open (laptop only). Admin + runtime APIs default closed.
+            // Overridden by AGENTIC_MODE presets at boot. Set AGENTIC_MODE= (empty) to use these directly.
             'admin_api' => env('AGENTIC_ADMIN_REQUIRE_AUTH', true),
             'admin_web' => env('AGENTIC_ADMIN_WEB_REQUIRE_AUTH'),
             'runtime_api' => env('AGENTIC_API_REQUIRE_AUTH', true),
@@ -111,18 +128,9 @@ return [
         'enabled' => env('AGENTIC_ADMIN_ENABLED', true),
 
         /*
-        |--------------------------------------------------------------------------
-        | Admin authorization (Telescope-style)
-        |--------------------------------------------------------------------------
-        |
-        | Authentication (who) then authorization (allowed):
-        |   - AGENTIC_ADMIN_REQUIRE_AUTH defaults true (auth:sanctum on admin JSON).
-        |   - AGENTIC_API_REQUIRE_AUTH defaults true (auth:sanctum on /api/agentic).
-        |   - Set either to false only on a trusted laptop.
-        |   - AGENTIC_ADMIN_GATE=viewAgentic + Gate::define('viewAgentic', ...)
-        |     in AppServiceProvider (Telescope/Horizon allow list).
-        | Without a gate, production admin and the widget demo return 403.
-        |
+        | Who may open admin (after Sanctum when mode=production):
+        | AGENTIC_ADMIN_GATE=viewAgentic + Gate::define('viewAgentic', ...) in AppServiceProvider.
+        | Local mode skips the gate when APP_ENV=local.
         */
         'authorization' => [
             'gate' => env('AGENTIC_ADMIN_GATE'),
@@ -137,6 +145,10 @@ return [
                 AuthorizeAgenticAdmin::class,
             ],
             'route_name_prefix' => 'agentic.admin.api.',
+            'rate_limit' => [
+                'enabled' => filter_var(env('AGENTIC_ADMIN_RATE_LIMIT_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+                'per_minute' => (int) env('AGENTIC_ADMIN_RATE_LIMIT_PER_MINUTE', 300),
+            ],
         ],
         'web' => [
             'enabled' => env('AGENTIC_ADMIN_WEB_ENABLED', false),
@@ -220,11 +232,11 @@ return [
         */
         'context' => [
             'enabled' => filter_var(env('AGENTIC_WIDGET_LEAN_CONTEXT', true), FILTER_VALIDATE_BOOL),
-            'max_history_messages' => (int) env('AGENTIC_WIDGET_CONTEXT_HISTORY', 12),
+            'max_history_messages' => (int) env('AGENTIC_WIDGET_CONTEXT_HISTORY', 8),
             'skill_routing_limit' => (int) env('AGENTIC_WIDGET_SKILL_LIMIT', 2),
             'skills_fallback_limit' => (int) env('AGENTIC_WIDGET_SKILLS_FALLBACK_LIMIT', 2),
             'knowledge_chunk_limit' => (int) env('AGENTIC_WIDGET_KNOWLEDGE_LIMIT', 3),
-            'memory_entry_limit' => (int) env('AGENTIC_WIDGET_MEMORY_LIMIT', 8),
+            'memory_entry_limit' => (int) env('AGENTIC_WIDGET_MEMORY_LIMIT', 5),
             'max_tools' => (int) env('AGENTIC_WIDGET_MAX_TOOLS', 20),
             'compact_skill_descriptions' => filter_var(env('AGENTIC_WIDGET_COMPACT_SKILLS', true), FILTER_VALIDATE_BOOL),
         ],
@@ -252,6 +264,20 @@ return [
         | true/false = force async or sync. Async requires: php artisan queue:work
         */
         'async_replies' => env('AGENTIC_WIDGET_ASYNC_REPLIES'),
+        'message_batch' => [
+            'window_ms' => (int) env('AGENTIC_WIDGET_MESSAGE_BATCH_MS', 0),
+            'max_ms' => (int) env('AGENTIC_WIDGET_MESSAGE_BATCH_MAX_MS', 10_000),
+        ],
+        'stream' => filter_var(env('AGENTIC_WIDGET_STREAM', false), FILTER_VALIDATE_BOOLEAN),
+        'handoff' => [
+            'enabled' => filter_var(env('AGENTIC_WIDGET_HANDOFF', true), FILTER_VALIDATE_BOOLEAN),
+        ],
+        'attachments' => [
+            'enabled' => filter_var(env('AGENTIC_WIDGET_ATTACHMENTS', true), FILTER_VALIDATE_BOOLEAN),
+            'max_files' => (int) env('AGENTIC_WIDGET_ATTACHMENTS_MAX', 3),
+            'signed_url_hours' => (int) env('AGENTIC_WIDGET_ATTACHMENTS_SIGNED_HOURS', 12),
+            'mimes' => ['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'],
+        ],
         'broadcast' => [
             'driver' => env('AGENTIC_WIDGET_BROADCAST_DRIVER', 'polling'),
             'channel_prefix' => env('AGENTIC_WIDGET_BROADCAST_PREFIX', 'agentic-widget'),
@@ -293,6 +319,11 @@ return [
             'verify_token' => env('AGENTIC_WHATSAPP_VERIFY_TOKEN'),
             'app_secret' => env('AGENTIC_WHATSAPP_APP_SECRET'),
         ],
+        'messenger' => [
+            'graph_version' => env('AGENTIC_MESSENGER_GRAPH_VERSION', 'v21.0'),
+            'verify_token' => env('AGENTIC_MESSENGER_VERIFY_TOKEN'),
+            'app_secret' => env('AGENTIC_MESSENGER_APP_SECRET'),
+        ],
     ],
 
     /*
@@ -307,13 +338,32 @@ return [
     */
     'context' => [
         'lean_enabled' => filter_var(env('AGENTIC_LEAN_CONTEXT', true), FILTER_VALIDATE_BOOL),
-        'max_history_messages' => (int) env('AGENTIC_CONTEXT_HISTORY', 20),
+        'max_history_messages' => (int) env('AGENTIC_CONTEXT_HISTORY', 12),
         'skill_routing_limit' => (int) env('AGENTIC_CONTEXT_SKILL_LIMIT', 4),
         'skills_fallback_limit' => (int) env('AGENTIC_CONTEXT_SKILLS_FALLBACK', 4),
-        'knowledge_chunk_limit' => (int) env('AGENTIC_CONTEXT_KNOWLEDGE_LIMIT', 5),
-        'memory_entry_limit' => (int) env('AGENTIC_CONTEXT_MEMORY_LIMIT', 15),
+        'knowledge_chunk_limit' => (int) env('AGENTIC_CONTEXT_KNOWLEDGE_LIMIT', 3),
+        'memory_entry_limit' => (int) env('AGENTIC_CONTEXT_MEMORY_LIMIT', 8),
         'max_tools' => (int) env('AGENTIC_CONTEXT_MAX_TOOLS', 30),
         'compact_skill_descriptions' => filter_var(env('AGENTIC_CONTEXT_COMPACT_SKILLS', true), FILTER_VALIDATE_BOOL),
+        /*
+        | Trim what the model sees (history, tool dumps, RAG, memory).
+        | Does not hide tools — that is AGENTIC_WIDGET_MAX_TOOLS / deferred tools.
+        */
+        'compact' => [
+            'enabled' => filter_var(env('AGENTIC_COMPACT_INPUT', true), FILTER_VALIDATE_BOOL),
+            'history_message_chars' => (int) env('AGENTIC_COMPACT_HISTORY_CHARS', 700),
+            'history_recent_chars' => (int) env('AGENTIC_COMPACT_HISTORY_RECENT_CHARS', 1400),
+            'history_recent_count' => (int) env('AGENTIC_COMPACT_HISTORY_RECENT', 2),
+            'history_total_chars' => (int) env('AGENTIC_COMPACT_HISTORY_TOTAL', 3600),
+            'tool_result_chars' => (int) env('AGENTIC_COMPACT_TOOL_RESULT_CHARS', 1800),
+            'knowledge_chunk_chars' => (int) env('AGENTIC_COMPACT_KNOWLEDGE_CHARS', 360),
+            'memory_entry_chars' => (int) env('AGENTIC_COMPACT_MEMORY_CHARS', 180),
+            'tool_description_chars' => (int) env('AGENTIC_COMPACT_TOOL_DESCRIPTION_CHARS', 160),
+            'schema_description_chars' => (int) env('AGENTIC_COMPACT_SCHEMA_DESCRIPTION_CHARS', 80),
+            'json_string_chars' => (int) env('AGENTIC_COMPACT_JSON_STRING_CHARS', 240),
+            'json_list_limit' => (int) env('AGENTIC_COMPACT_JSON_LIST_LIMIT', 12),
+            'omit_skill_tool_lists' => filter_var(env('AGENTIC_COMPACT_OMIT_SKILL_TOOLS', true), FILTER_VALIDATE_BOOL),
+        ],
     ],
 
     'skill_routing' => [
@@ -454,6 +504,7 @@ return [
         'driver' => env('AGENTIC_WORKFLOW_DRIVER', 'eloquent'),
         'max_steps' => (int) env('AGENTIC_WORKFLOW_MAX_STEPS', 100),
         'max_parallel_branches' => (int) env('AGENTIC_WORKFLOW_MAX_PARALLEL_BRANCHES', 10),
+        'parallel_driver' => env('AGENTIC_WORKFLOW_PARALLEL_DRIVER', 'process'),
         'runs' => [
             'retention_days' => (int) env('AGENTIC_WORKFLOW_RUN_RETENTION_DAYS', 90),
         ],
@@ -546,6 +597,25 @@ return [
         'tool_prefix' => env('AGENTIC_MCP_TOOL_PREFIX', ''),
         'servers' => [],
         'inject_resources' => env('AGENTIC_MCP_INJECT_RESOURCES', true),
+        'inject_prompts' => env('AGENTIC_MCP_INJECT_PROMPTS', true),
         'max_resource_injections' => (int) env('AGENTIC_MCP_MAX_RESOURCE_INJECTIONS', 5),
+    ],
+
+    /*
+    | Token cost estimates for the admin usage screen (USD per 1M tokens).
+    | Tune to your provider invoice — used for planning only, not billing.
+    */
+    'usage' => [
+        'currency' => env('AGENTIC_USAGE_CURRENCY', 'USD'),
+        'default' => [
+            'input' => (float) env('AGENTIC_USAGE_DEFAULT_INPUT', 2.0),
+            'output' => (float) env('AGENTIC_USAGE_DEFAULT_OUTPUT', 10.0),
+        ],
+        'models' => [
+            'claude-sonnet-5' => ['input' => 3.0, 'output' => 15.0],
+            'claude-sonnet-4-6' => ['input' => 3.0, 'output' => 15.0],
+            'gpt-4.1-mini' => ['input' => 0.4, 'output' => 1.6],
+            'gpt-4o' => ['input' => 2.5, 'output' => 10.0],
+        ],
     ],
 ];

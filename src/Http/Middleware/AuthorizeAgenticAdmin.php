@@ -2,6 +2,7 @@
 
 namespace Agentic\Http\Middleware;
 
+use Agentic\Http\Support\AuthRequirement;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -19,7 +20,16 @@ final class AuthorizeAgenticAdmin
         $gate = config('agentic.admin.authorization.gate');
 
         if (is_string($gate) && $gate !== '') {
-            Gate::authorize($gate);
+            if (
+                $request->user() === null
+                && AuthRequirement::enabled(config('agentic.auth.protect.admin_api'))
+            ) {
+                abort(401, __('agentic::errors.admin_sign_in_required'));
+            }
+
+            if (! Gate::allows($gate)) {
+                abort(403, __('agentic::errors.admin_access_denied'));
+            }
 
             return $next($request);
         }
@@ -28,6 +38,6 @@ final class AuthorizeAgenticAdmin
             return $next($request);
         }
 
-        abort(403, 'Define AGENTIC_ADMIN_GATE and Gate::define() before exposing Agentic admin.');
+        abort(403, __('agentic::errors.admin_gate_required'));
     }
 }

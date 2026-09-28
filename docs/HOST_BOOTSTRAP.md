@@ -42,6 +42,13 @@ Or wire your own app with:
 
 ```bash
 php artisan agentic:install
+```
+
+This runs the **interactive wizard** (choices + credentials → `.env`). See [INSTALL_WIZARD.md](./INSTALL_WIZARD.md). Use `--quick` to skip.
+
+The wizard can run `migrate` and publish assets when you confirm at the end. Otherwise:
+
+```bash
 php artisan vendor:publish --tag=ai-config
 php artisan migrate
 ```
@@ -106,9 +113,9 @@ Schedule::command('agentic:prune-workflow-runs')->daily();
 | Surface | URL (defaults) | Notes |
 |---------|----------------|-------|
 | Blade admin | `/agentic/admin` | `AGENTIC_ADMIN_WEB_ENABLED=true` |
-| Widget chat page | `/agentic/widget` | `AGENTIC_WIDGET_WEB_ENABLED=true` |
+| Widget chat page | `/agentic/widget` | `AGENTIC_WIDGET_WEB_ENABLED=true`. Pusher + `queue:work`. Stream off: full `message.created` — [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) § Widget replies |
 | Admin API (SPA) | `/api/agentic/admin` | [FRONTEND_IMPLEMENTATION_GUIDE.md](./FRONTEND_IMPLEMENTATION_GUIDE.md) |
-| Widget API (embed) | `/api/agentic/widget` | Same guide |
+| Widget API (embed) | `/api/agentic/widget` | Same guide §5–6 (`pending` + `message.created`, ignore `message.delta`) |
 
 Copy prompt for custom React SPAs: [COPY_PROMPT_FOR_AI.md](./COPY_PROMPT_FOR_AI.md)
 

@@ -17,9 +17,9 @@
                 <p class="alert alert-error" style="margin-top:1rem;">{{ $run->error }}</p>
             @endif
             <h2 style="font-size:1rem;margin:1.5rem 0 0.75rem;">{{ __('agentic::admin.fields.variables') }}</h2>
-            <pre class="ag-code">{{ json_encode($run->variables, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+            <pre class="ag-code" dir="ltr">{{ json_encode($run->variables, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
             <h2 style="font-size:1rem;margin:1.5rem 0 0.75rem;">{{ __('agentic::admin.fields.trace') }}</h2>
-            <pre class="ag-code">{{ json_encode($run->trace, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
+            <pre class="ag-code" dir="ltr">{{ json_encode($run->trace, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES) }}</pre>
         </div>
     </div>
 @endsection

@@ -27,7 +27,11 @@ final class ApprovalController
             'arguments' => $approval->arguments,
         ];
         if (config('agentic.tool_approval.auto_execute_on_approve', true)) {
-            $data['execution'] = $this->executor->execute($approval->uuid);
+            $execution = $this->executor->execute($approval->uuid);
+            $data['execution'] = $execution;
+            if (($execution['handoff'] ?? false) === true) {
+                $data['handoff'] = true;
+            }
         }
 
         return JsonApiResponse::data($data);

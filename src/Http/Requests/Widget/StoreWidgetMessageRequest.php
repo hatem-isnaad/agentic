@@ -6,6 +6,7 @@ use Agentic\Http\Requests\Widget\Concerns\ValidatesWidgetAgent;
 use Agentic\Widget\DTO\WidgetIdentity;
 use Agentic\Widget\DTO\WidgetMessageData;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\UploadedFile;
 
 final class StoreWidgetMessageRequest extends FormRequest
 {
@@ -20,10 +21,12 @@ final class StoreWidgetMessageRequest extends FormRequest
     {
         return [
             ...$this->agentRules(),
-            'message' => ['required', 'string', 'max:8000'],
+            'message' => ['nullable', 'string', 'max:8000', 'required_without:files'],
             'conversation_id' => ['nullable', 'string', 'max:64'],
             'locale' => ['nullable', 'string', 'max:16'],
             'metadata' => ['nullable', 'array', 'max:32'],
+            'files' => ['nullable', 'array', 'max:3'],
+            'files.*' => ['file', 'max:5120', 'mimes:jpg,jpeg,png,webp,gif,pdf'],
         ];
     }
 
@@ -31,6 +34,26 @@ final class StoreWidgetMessageRequest extends FormRequest
     {
         $validated = $this->validated();
 
-        return new WidgetMessageData(agent: $validated['agent'], message: $validated['message'], identity: WidgetIdentity::fromRequest($this), conversationId: $conversationId ?? ($validated['conversation_id'] ?? null), metadata: $validated['metadata'] ?? []);
+        return new WidgetMessageData(
+            agent: $validated['agent'],
+            message: trim((string) ($validated['message'] ?? '')) ?: 'Please look at this file.',
+            identity: WidgetIdentity::fromRequest($this),
+            conversationId: $conversationId ?? ($validated['conversation_id'] ?? null),
+            metadata: $validated['metadata'] ?? [],
+            files: $this->uploadedFiles(),
+        );
+    }
+
+    /**
+     * @return list<UploadedFile>
+     */
+    private function uploadedFiles(): array
+    {
+        $files = $this->file('files');
+        if ($files === null) {
+            return [];
+        }
+
+        return is_array($files) ? array_values($files) : [$files];
     }
 }

@@ -70,9 +70,12 @@ final class StructuredReplyBuilder
                 'list' => ['type' => 'list', 'items' => is_array($block['items'] ?? null) ? $block['items'] : []],
                 'card' => [
                     'type' => 'card',
+                    'variant' => (string) ($block['variant'] ?? ''),
+                    'kicker' => (string) ($block['kicker'] ?? ''),
                     'title' => (string) ($block['title'] ?? ''),
                     'body' => (string) ($block['body'] ?? $block['text'] ?? ''),
                     'footer' => (string) ($block['footer'] ?? ''),
+                    'buttons' => $this->normalizeButtons(is_array($block['buttons'] ?? null) ? $block['buttons'] : []),
                 ],
                 'code' => [
                     'type' => 'code',

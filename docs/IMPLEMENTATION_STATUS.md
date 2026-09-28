@@ -26,16 +26,21 @@
 | Memory (scoped) | ✅ | API + context injection |
 | Workflows | ✅ | set / tool / agent / condition / parallel / approval / complete; persisted runs (`workflow_run_id`); `GET .../workflow-runs` + `GET .../workflow-runs/{uuid}`; admin API parity; `POST .../resume` continues from saved step pointer |
 | Admin API | ✅ | Agents, skills, tools, knowledge, workflows (CRUD + execute/resume), workflow runs, executions, widget settings |
-| Widget API | ✅ | Config, conversations, messages, approvals, realtime; Form Requests + DTOs; `JsonApiResponse` |
-| Widget embed SDK | ✅ | Published JS/CSS, `wgt_…` + origins, themes, inbox drawer, emoji, RTL |
+| Widget API | ✅ | Config, conversations, messages, approvals, attachments, handoff; realtime; Form Requests + DTOs; `JsonApiResponse` |
+| Widget embed SDK | ✅ | Published JS/CSS, `wgt_…` + origins, themes, inbox drawer, emoji, RTL. **`AGENTIC_WIDGET_STREAM` default `false`** — render on `message.created`, ignore `message.delta` |
+| Widget streaming | ⚪ opt-in | `AGENTIC_WIDGET_STREAM=true` publishes `message.delta`; official widget ignores deltas |
+| Staff inbox / handoff | ✅ | In-chat Yes/No; jobs skip when human; admin `/inbox` + APIs for a custom desk ([STAFF_INBOX.md](./STAFF_INBOX.md)) |
 | Channel replies | ✅ | Web/widget → Markdown HTML; WhatsApp/Messenger text presenters |
-| Channel accounts | ✅ | Many connections: `widget`/`embed`, WhatsApp `meta_cloud` (live) + `webjs` (sidecar). Messenger kind reserved |
+| Channel accounts | ✅ | Many connections: `widget`/`embed`, WhatsApp `meta_cloud` (live) + `webjs` (sidecar), Messenger `meta_cloud` (live) |
 | WhatsApp live | ✅ | Meta Cloud webhook + Graph send; webjs HTTP contract for a later sidecar |
+| Messenger live | ✅ | Meta Page webhook + Graph send (`/api/agentic/channels/messenger/meta`) |
+| Widget approvals | ✅ | Official embed Approve/Reject buttons + widget API |
+| Usage & cost | ✅ | Admin `GET /usage` + Usage screen from execution tokens |
 | Agent evals | ✅ | Admin `POST /evaluations` score 1–5 |
 | Agent persona | ✅ | Name, gender, language/dialect, tone in `config.persona` + admin form |
 | Lean context | ✅ | Default on; widget caps history/skills/tools/RAG per turn |
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |
-| MCP discovery | ✅ | Tool sync, catalog API, optional resource injection via agent `config.mcp` |
+| MCP discovery | ✅ | Tool sync, catalog API, resource + prompt injection via agent `config.mcp` |
 | API rate limiting | ✅ | `throttle:agentic-api` on runtime; `throttle:agentic-widget` on widget |
 | Filament UI (optional) | ✅ | Agents (+ skills), skills, tools, knowledge, workflows, workflow runs (read-only), executions (read-only) |
 | Rule-based tool permissions | ✅ | `RuleBasedPermissionChecker` + allow/deny fnmatch patterns |

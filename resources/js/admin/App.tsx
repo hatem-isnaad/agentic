@@ -28,6 +28,9 @@ import { CustomCodeToolsPage } from './pages/CustomCodeToolsPage';
 import { ConnectionsPage } from './pages/ConnectionsPage';
 import { ChannelAccountsPage } from './pages/ChannelAccountsPage';
 import { EvaluationsPage } from './pages/EvaluationsPage';
+import { EvalSetsPage } from './pages/EvalSetsPage';
+import { InboxPage } from './pages/InboxPage';
+import { UsagePage } from './pages/UsagePage';
 
 const col = (key: string, labelKey: string, type?: 'status' | 'text') => ({ key, labelKey, type });
 
@@ -103,6 +106,9 @@ export default function App() {
                 <Route path="connections" element={<ConnectionsPage />} />
                 <Route path="channel-accounts" element={<ChannelAccountsPage />} />
                 <Route path="evaluations" element={<EvaluationsPage />} />
+                <Route path="eval-sets" element={<EvalSetsPage />} />
+                <Route path="inbox" element={<InboxPage />} />
+                <Route path="usage" element={<UsagePage />} />
                 <Route path="tools/new" element={<ToolFormPage />} />
                 <Route path="tools/:slug" element={<EntityDetailPage apiBase="/tools" resourceBase="tools" />} />
                 <Route path="tools/:slug/edit" element={<ToolFormPage />} />

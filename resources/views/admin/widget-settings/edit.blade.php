@@ -16,7 +16,7 @@
                 @method('PUT')
                 <label for="settings_json">{{ __('agentic::admin.fields.settings') }}</label>
                 <p class="lead" style="margin:0.25rem 0 0.5rem;font-size:0.85rem;color:var(--ag-muted);">{{ __('agentic::admin.widget_settings.json_hint') }}</p>
-                <textarea name="settings_json" id="settings_json" class="code" required>{{ old('settings_json', $settingsJson) }}</textarea>
+                <textarea name="settings_json" id="settings_json" class="code" dir="ltr" required>{{ old('settings_json', $settingsJson) }}</textarea>
                 <div class="form-actions">
                     <button type="submit" class="btn btn-primary">{{ __('agentic::admin.actions.update') }}</button>
                 </div>

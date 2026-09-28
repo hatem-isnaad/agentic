@@ -12,7 +12,9 @@ final class MetaWebhookVerifier
             return false;
         }
 
-        $secret = (string) ($account?->credential('app_secret', '') ?: config('agentic.channels.whatsapp.app_secret', ''));
+        $secret = (string) ($account?->credential('app_secret', '')
+            ?: config('agentic.channels.whatsapp.app_secret', '')
+            ?: config('agentic.channels.messenger.app_secret', ''));
         if ($secret === '') {
             return false;
         }

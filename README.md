@@ -78,14 +78,13 @@ Step-by-step for both: [docs/START_HERE.md](docs/START_HERE.md). Extra env keys:
 ```bash
 composer require hatem-isnaad/agentic
 php artisan agentic:install
-php artisan vendor:publish --tag=ai-config
-php artisan vendor:publish --tag=agentic-widget-assets --force
-php artisan vendor:publish --tag=agentic-admin-assets --force
-php artisan migrate
-php artisan agentic:rag-validate --offline
 ```
 
-Copy variables from [`.env.example`](.env.example) into your application `.env`. **What each key does, and what happens if you raise a limit:** [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md). Host checklist: [docs/HOST_BOOTSTRAP.md](docs/HOST_BOOTSTRAP.md). Optional **Blade admin** and **widget chat page** ship in the package (`AGENTIC_ADMIN_WEB_ENABLED`, `AGENTIC_WIDGET_WEB_ENABLED`); custom SPAs can still target the JSON APIs (see [Frontend documentation](#frontend-documentation)). Optional **Filament** CRUD is available via `Agentic\Filament\AgenticPlugin` when `filament/filament` is installed.
+The install command runs an **interactive wizard** (deployment mode, provider, model, RAG, credentials) and merges results into `.env`. Guide: [docs/INSTALL_WIZARD.md](docs/INSTALL_WIZARD.md). Use `php artisan agentic:install --quick` to skip the wizard.
+
+Then: `php artisan agentic:rag-validate`
+
+**Every env key explained:** [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md). Host checklist: [docs/HOST_BOOTSTRAP.md](docs/HOST_BOOTSTRAP.md).
 
 **Monorepo:** after package changes, run `composer agentic-sync` in `laravel-host/`.
 
@@ -603,6 +602,8 @@ Base URL: **`/api/agentic/widget`**. Supports **guest** and **authenticated** us
 
 **Embed on any site:** publish `agentic-widget.js` + `.css`, create a `wgt_…` token with `allowed_origins`, inject the token from your server. See **[docs/WIDGET_EMBED_SDK.md](docs/WIDGET_EMBED_SDK.md)**.
 
+**Replies:** with Pusher, `POST /messages` is `{ pending, conversation_id }`. The official widget shows Typing, then paints the **full** assistant HTML on `message.created`. Token streaming (`AGENTIC_WIDGET_STREAM`) is **off** by default — developer contract in [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md) § Widget replies and [docs/FRONTEND_IMPLEMENTATION_GUIDE.md](docs/FRONTEND_IMPLEMENTATION_GUIDE.md) §6.
+
 **Web vs other platforms:** widget/admin replies are **Markdown → safe HTML**. WhatsApp uses text markers (no HTML). Connect many numbers in admin — Meta Cloud is live; webjs is a sidecar contract. See [docs/CHANNELS.md](docs/CHANNELS.md).
 
 | Endpoint | Purpose |
@@ -683,13 +684,14 @@ The package ships an **admin SPA** (`/agentic/admin`) and an **embeddable widget
 | Document | Purpose |
 |----------|---------|
 | [docs/START_HERE.md](docs/START_HERE.md) | **Anyone** — word list and first install |
-| [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md) | Every `.env` key, limits, login, widget, commands |
+| [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md) | Every `.env` key, limits, login, **widget reply contract** (no token stream by default) |
 | [docs/DEVELOPER_QUICKSTART.md](docs/DEVELOPER_QUICKSTART.md) | Install → tools → RAG → chatbot |
-| [docs/WIDGET_EMBED_SDK.md](docs/WIDGET_EMBED_SDK.md) | Popup embed, tokens, themes, Pusher, HTML replies |
+| [docs/WIDGET_EMBED_SDK.md](docs/WIDGET_EMBED_SDK.md) | Popup embed, tokens, themes, Pusher, full `message.created` |
+| [docs/STAFF_INBOX.md](docs/STAFF_INBOX.md) | Custom staff inbox in **your** UI (admin inbox APIs) |
 | [docs/CONFIGURE_BY_CODE.md](docs/CONFIGURE_BY_CODE.md) | Persona, widget, and agent config from PHP |
-| [docs/FRONTEND_IMPLEMENTATION_GUIDE.md](docs/FRONTEND_IMPLEMENTATION_GUIDE.md) | Every route, header, event, block type |
+| [docs/FRONTEND_IMPLEMENTATION_GUIDE.md](docs/FRONTEND_IMPLEMENTATION_GUIDE.md) | Every route, header, event (`message.created` vs ignore `message.delta`) |
 | [docs/COPY_PROMPT_FOR_AI.md](docs/COPY_PROMPT_FOR_AI.md) | Paste into Cursor/Claude to scaffold Admin + Widget |
-| [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) | Sequence diagrams (approval, realtime, auth) |
+| [docs/SYSTEM_DESIGN.md](docs/SYSTEM_DESIGN.md) | Sequence diagrams (widget reply, approval, realtime) |
 | [docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECKLIST.md) | Host app setup, auth, RAG, MCP, launch verification |
 | [docs/SECURITY.md](docs/SECURITY.md) | Secure defaults and SSRF notes |
 | [.env.example](.env.example) | Backend environment reference |

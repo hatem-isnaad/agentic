@@ -102,7 +102,7 @@ The package does **not** ship production React apps.
 | Admin SPA | `/api/agentic/admin` | [FRONTEND_IMPLEMENTATION_GUIDE.md](./FRONTEND_IMPLEMENTATION_GUIDE.md) |
 | Widget SPA | `/api/agentic/widget` | Same guide (messages, approvals, realtime) |
 
-Configure Pusher or polling for widget realtime (`AGENTIC_WIDGET_BROADCAST_DRIVER`).
+Configure Pusher or polling for widget realtime (`AGENTIC_WIDGET_BROADCAST_DRIVER`). Leave `AGENTIC_WIDGET_STREAM` unset/`false` so clients render the full Pusher `message.created` (not token deltas). Run `queue:work`. Custom desk: [STAFF_INBOX.md](./STAFF_INBOX.md). Contract: [FRONTEND_IMPLEMENTATION_GUIDE.md](./FRONTEND_IMPLEMENTATION_GUIDE.md) §5–6.
 
 ## 7. Optional Filament ops UI
 

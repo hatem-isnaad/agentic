@@ -34,6 +34,7 @@ export const DOC_CATALOG: DocCatalogEntry[] = [
     { slug: 'widget', part: 'runtime', labelKey: 'widget', order: 14 },
     { slug: 'widget-embed', part: 'runtime', labelKey: 'widget_embed', order: 15 },
     { slug: 'widget-settings', part: 'runtime', labelKey: 'widget_settings', order: 16 },
+    { slug: 'staff-inbox', part: 'runtime', labelKey: 'staff_inbox', order: 16.5 },
     { slug: 'workflows', part: 'runtime', labelKey: 'workflows', order: 17 },
     { slug: 'runtime-api', part: 'platform', labelKey: 'runtime_api', order: 18 },
     { slug: 'auth-admin', part: 'platform', labelKey: 'auth_admin', order: 19 },

@@ -6,13 +6,14 @@ use Agentic\Agent\AgentDefinition;
 use Agentic\Tool\Contracts\McpClientGateway;
 
 /**
- * Injects MCP resource text into agent knowledge context when configured on the agent.
+ * Injects MCP resource text and selected prompts into agent knowledge context.
  *
  * Agent config (JSON):
  * {
  *   "mcp": {
  *     "server": "docs",
- *     "resource_uris": ["file:///policy.md"]
+ *     "resource_uris": ["file:///policy.md"],
+ *     "prompts": ["support-style"]
  *   }
  * }
  */
@@ -27,10 +28,6 @@ final class McpAgentKnowledgeEnricher
      */
     public function enrich(AgentDefinition $agent): array
     {
-        if (! (bool) config('agentic.mcp.inject_resources', true)) {
-            return [];
-        }
-
         $mcp = $this->resolveMcpConfig($agent);
 
         if ($mcp === null) {
@@ -43,13 +40,31 @@ final class McpAgentKnowledgeEnricher
             return [];
         }
 
-        $uris = $mcp['resource_uris'] ?? [];
+        $max = max(1, (int) config('agentic.mcp.max_resource_injections', 5));
+        $entries = [];
 
+        if ((bool) config('agentic.mcp.inject_resources', true)) {
+            $entries = array_merge($entries, $this->resourceEntries($server, $mcp, $max));
+        }
+
+        if ((bool) config('agentic.mcp.inject_prompts', true)) {
+            $entries = array_merge($entries, $this->promptEntries($server, $mcp, $max));
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $mcp
+     * @return list<array{source: string, content: string}>
+     */
+    private function resourceEntries(string $server, array $mcp, int $max): array
+    {
+        $uris = $mcp['resource_uris'] ?? [];
         if (! is_array($uris) || $uris === []) {
             return [];
         }
 
-        $max = max(1, (int) config('agentic.mcp.max_resource_injections', 5));
         $entries = [];
 
         foreach (array_slice($uris, 0, $max) as $uri) {
@@ -71,6 +86,73 @@ final class McpAgentKnowledgeEnricher
         }
 
         return $entries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $mcp
+     * @return list<array{source: string, content: string}>
+     */
+    private function promptEntries(string $server, array $mcp, int $max): array
+    {
+        $prompts = $mcp['prompts'] ?? [];
+        if (! is_array($prompts) || $prompts === []) {
+            return [];
+        }
+
+        $entries = [];
+
+        foreach (array_slice($prompts, 0, $max) as $prompt) {
+            $name = is_string($prompt) ? $prompt : (string) ($prompt['name'] ?? '');
+            $arguments = is_array($prompt) && is_array($prompt['arguments'] ?? null) ? $prompt['arguments'] : [];
+
+            if ($name === '') {
+                continue;
+            }
+
+            $payload = $this->gateway->getPrompt($server, $name, $arguments);
+            $text = $this->promptText($payload);
+
+            if ($text === '') {
+                continue;
+            }
+
+            $entries[] = [
+                'source' => 'mcp-prompt:'.$server.':'.$name,
+                'content' => $text,
+            ];
+        }
+
+        return $entries;
+    }
+
+    /**
+     * @param  array<string, mixed>  $payload
+     */
+    private function promptText(array $payload): string
+    {
+        $chunks = [];
+        $description = trim((string) ($payload['description'] ?? ''));
+        if ($description !== '') {
+            $chunks[] = $description;
+        }
+
+        foreach ($payload['messages'] ?? [] as $message) {
+            if (! is_array($message)) {
+                continue;
+            }
+
+            $content = $message['content'] ?? '';
+            if (is_array($content)) {
+                $content = (string) ($content['text'] ?? json_encode($content, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES));
+            }
+
+            $line = trim((string) $content);
+            if ($line !== '') {
+                $chunks[] = $line;
+            }
+        }
+
+        return trim(implode("\n", $chunks));
     }
 
     /**

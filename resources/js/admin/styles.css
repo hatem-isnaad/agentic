@@ -36,6 +36,18 @@ body {
     font-family: 'Cairo', 'Inter', ui-sans-serif, system-ui, sans-serif;
 }
 
+/* JSON / code stays LTR in the Arabic dashboard so braces and keys read correctly. */
+[dir='rtl'] .ag-json,
+[dir='rtl'] textarea.font-mono,
+[dir='rtl'] .docs-code-block,
+[dir='rtl'] .docs-code-block__pre,
+[dir='rtl'] pre:has(code.language-json),
+[dir='rtl'] code.language-json {
+    direction: ltr;
+    text-align: left;
+    unicode-bidi: isolate;
+}
+
 .ag-mesh {
     background-color: #f5f7fb;
     background-image:
@@ -313,4 +325,300 @@ body {
 
 .docs-chapter-index-num {
     @apply mt-0.5 flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-gradient-to-br from-slate-100 to-slate-50 text-xs font-bold text-slate-700 ring-1 ring-slate-200/80;
+}
+
+.ag-inbox-app {
+    display: grid;
+    width: 100%;
+    height: 100%;
+    min-height: 0;
+    overflow: hidden;
+    border: 0;
+    background: #fff;
+}
+
+@media (max-width: 899px) {
+    .ag-inbox-app {
+        grid-template-rows: 11rem minmax(0, 1fr);
+    }
+}
+
+@media (min-width: 900px) {
+    .ag-inbox-app {
+        grid-template-columns: 20rem minmax(0, 1fr);
+    }
+}
+
+.ag-inbox-threads {
+    display: flex;
+    min-height: 0;
+    height: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    border-inline-end: 1px solid #e2e8f0;
+    background: #f8fafc;
+}
+
+.ag-inbox-threads__head {
+    flex-shrink: 0;
+    padding: 1rem 1.1rem 0.85rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #fff;
+}
+
+.ag-inbox-threads__head h1 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0f172a;
+}
+
+.ag-inbox-threads__head p {
+    margin: 0.2rem 0 0;
+    font-size: 0.75rem;
+    color: #16a34a;
+}
+
+.ag-inbox-threads__list {
+    min-height: 0;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.ag-inbox-thread {
+    display: flex;
+    width: 100%;
+    gap: 0.75rem;
+    padding: 0.8rem 1rem;
+    text-align: start;
+    border: 0;
+    border-bottom: 1px solid #eef2f6;
+    background: transparent;
+    cursor: pointer;
+}
+
+.ag-inbox-thread:hover,
+.ag-inbox-thread.is-open {
+    background: #fff;
+}
+
+.ag-inbox-thread.is-hot {
+    box-shadow: inset 3px 0 0 #16a34a;
+}
+
+[dir='rtl'] .ag-inbox-thread.is-hot {
+    box-shadow: inset -3px 0 0 #16a34a;
+}
+
+.ag-inbox-thread__avatar {
+    display: grid;
+    width: 2.5rem;
+    height: 2.5rem;
+    flex-shrink: 0;
+    place-items: center;
+    border-radius: 999px;
+    background: #dbeafe;
+    color: #1d4ed8;
+    font-size: 0.85rem;
+    font-weight: 700;
+}
+
+.ag-inbox-thread__copy {
+    min-width: 0;
+    flex: 1;
+}
+
+.ag-inbox-thread__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 0.5rem;
+}
+
+.ag-inbox-thread__top strong {
+    font-size: 0.875rem;
+    color: #0f172a;
+}
+
+.ag-inbox-thread__top time,
+.ag-inbox-thread__preview {
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.ag-inbox-thread__preview {
+    display: block;
+    margin-top: 0.15rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.ag-inbox-thread__badge {
+    display: inline-block;
+    margin-top: 0.3rem;
+    border-radius: 999px;
+    background: #dcfce7;
+    padding: 0.1rem 0.45rem;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: capitalize;
+    color: #166534;
+}
+
+.ag-inbox-chat {
+    display: flex;
+    min-height: 0;
+    height: 100%;
+    flex-direction: column;
+    overflow: hidden;
+    background: #ece5dd;
+}
+
+.ag-inbox-chat__head {
+    display: flex;
+    flex-shrink: 0;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    padding: 0.85rem 1rem;
+    background: #fff;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.ag-inbox-chat__head strong {
+    display: block;
+    font-size: 0.95rem;
+    color: #0f172a;
+}
+
+.ag-inbox-chat__head p {
+    margin: 0.15rem 0 0;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+.ag-inbox-chat__alert {
+    flex-shrink: 0;
+    padding: 0.45rem 1rem;
+    background: #fef3c7;
+    color: #92400e;
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+
+.ag-inbox-chat__scroller {
+    display: flex;
+    min-height: 0;
+    flex: 1;
+    flex-direction: column;
+    gap: 0.45rem;
+    overflow-y: auto;
+    padding: 1rem 1.1rem;
+}
+
+.ag-inbox-bubble-row {
+    display: flex;
+    width: 100%;
+}
+
+.ag-inbox-bubble-row.is-theirs {
+    justify-content: flex-start;
+}
+
+.ag-inbox-bubble-row.is-mine {
+    justify-content: flex-end;
+}
+
+.ag-inbox-bubble {
+    max-width: min(78%, 32rem);
+    border-radius: 0.85rem;
+    padding: 0.5rem 0.7rem 0.35rem;
+    box-shadow: 0 1px 1px rgba(15, 23, 42, 0.08);
+}
+
+.ag-inbox-bubble p,
+.ag-inbox-bubble__html {
+    margin: 0;
+    white-space: pre-wrap;
+    word-break: break-word;
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: #0f172a;
+}
+
+.ag-inbox-bubble .ag-attach,
+.ag-inbox-bubble__html .ag-attach {
+    margin: 0.35rem 0 0;
+    max-width: min(100%, 16rem);
+}
+
+.ag-inbox-bubble img,
+.ag-inbox-bubble__html img,
+.ag-inbox-bubble .ag-attach-img {
+    display: block;
+    width: 100%;
+    max-width: min(100%, 16rem);
+    height: auto;
+    margin: 0;
+    border-radius: 10px;
+    object-fit: contain;
+    background: #f1f5f9;
+}
+
+.ag-inbox-bubble .ag-attach-caption,
+.ag-inbox-bubble__html .ag-attach-caption {
+    margin: 0.25rem 0 0;
+    font-size: 0.72rem;
+    color: #64748b;
+    word-break: break-word;
+}
+
+.ag-inbox-bubble .ag-attach-file a,
+.ag-inbox-bubble__html .ag-attach-file a {
+    color: #4f46e5;
+    text-decoration: underline;
+    word-break: break-word;
+}
+
+.ag-inbox-bubble time {
+    display: block;
+    margin-top: 0.2rem;
+    text-align: end;
+    font-size: 0.65rem;
+    color: #64748b;
+}
+
+.ag-inbox-bubble.is-theirs {
+    background: #fff;
+    border-start-start-radius: 0.2rem;
+}
+
+.ag-inbox-bubble.is-mine {
+    background: #d9fdd3;
+    border-start-end-radius: 0.2rem;
+}
+
+.ag-inbox-composer {
+    display: flex;
+    flex-shrink: 0;
+    align-items: flex-end;
+    gap: 0.6rem;
+    padding: 0.75rem 0.9rem;
+    background: #f0f2f5;
+    border-top: 1px solid #e2e8f0;
+}
+
+.ag-inbox-composer textarea {
+    min-height: 2.6rem;
+    max-height: 7rem;
+    flex: 1;
+    resize: none;
+    border: 0;
+    border-radius: 1.25rem;
+    background: #fff;
+    padding: 0.65rem 0.9rem;
+    font: inherit;
+    color: #0f172a;
+    outline: none;
 }

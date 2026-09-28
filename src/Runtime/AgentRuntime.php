@@ -9,6 +9,7 @@ use Agentic\Context\ContextManager;
 use Agentic\Context\ContextPolicyResolver;
 use Agentic\Conversation\ConversationHistoryForLlm;
 use Agentic\Conversation\ConversationManager;
+use Agentic\Conversation\HandoffOfferService;
 use Agentic\Exceptions\AgentExecutionFailedException;
 use Agentic\Execution\AgentExecutionContext;
 use Agentic\Execution\AgentExecutionResult;
@@ -19,6 +20,8 @@ use Agentic\Persistence\ToolVersionResolver;
 use Agentic\Skill\SkillRouter;
 use Agentic\Tool\Contracts\ToolContract;
 use Agentic\Tool\Registry\ToolRegistry;
+use Agentic\Tool\ToolApprovalService;
+use Agentic\Widget\Reply\WidgetApprovalCard;
 use Throwable;
 
 /**
@@ -40,6 +43,8 @@ final class AgentRuntime implements ChannelAgentRunner
         private SkillRouter $skillRouter,
         private ToolVersionResolver $toolVersions,
         private ConversationHistoryForLlm $conversationHistory,
+        private ToolApprovalService $approvals,
+        private HandoffOfferService $handoffOffers,
     ) {}
 
     public function run(AgentDefinition $agent, AgentExecutionContext $context): AgentExecutionResult
@@ -84,6 +89,7 @@ final class AgentRuntime implements ChannelAgentRunner
             conversation: $conversation,
             conversationId: $conversation?->id ?? $context->conversationId,
             executionId: $context->executionId,
+            attachments: $context->attachments,
         );
 
         $execution = $this->executions->start(
@@ -110,6 +116,7 @@ final class AgentRuntime implements ChannelAgentRunner
                 conversation: $context->conversation,
                 conversationId: $context->conversationId,
                 executionId: $execution->id,
+                attachments: $context->attachments,
             );
 
             $this->executions->addStep($execution, 'agent_start', [
@@ -151,6 +158,11 @@ final class AgentRuntime implements ChannelAgentRunner
             if ($maxTools > 0 && count($selectedTools) > $maxTools) {
                 $selectedTools = array_slice($selectedTools, 0, $maxTools);
             }
+            $selectedTools = $this->handoffOffers->attachToTools($selectedTools, $context);
+            $built['instructions'] = $this->handoffOffers->withInstruction(
+                (string) ($built['instructions'] ?? ''),
+                $selectedTools,
+            );
             $pinnedVersions = $this->pinToolVersions($selectedTools);
 
             $context = new AgentExecutionContext(
@@ -162,6 +174,7 @@ final class AgentRuntime implements ChannelAgentRunner
                 conversation: $context->conversation,
                 conversationId: $context->conversationId,
                 executionId: $execution->id,
+                attachments: $context->attachments,
             );
 
             $this->executions->addStep($execution, 'skill_selection', output: [
@@ -187,14 +200,27 @@ final class AgentRuntime implements ChannelAgentRunner
                 );
             }
 
+            $pending = $this->persistPendingApprovals(
+                $response,
+                $agent->identifier(),
+                $execution->id,
+                $conversation?->id,
+            );
+
             $output = [
                 'text' => $response->text,
                 'invocation_id' => $response->invocationId,
                 'conversation_id' => $conversation?->id,
                 'sdk_conversation_id' => $response->conversationId,
-                'usage' => $response->usage,
+                'usage' => $this->usageArray($response->usage),
                 'execution_id' => $execution->id,
+                'pending_approvals' => $pending,
             ];
+
+            if ($pending !== []) {
+                $output['format'] = 'blocks';
+                $output['blocks'] = WidgetApprovalCard::blocks($pending, (string) $response->text);
+            }
 
             $this->executions->addStep($execution, 'final_response', output: [
                 'text' => $response->text,
@@ -258,5 +284,66 @@ final class AgentRuntime implements ChannelAgentRunner
         }
 
         return $pinned;
+    }
+
+    /**
+     * @return list<array{id: string, tool: string, arguments: array<string, mixed>, reason: string|null}>
+     */
+    private function persistPendingApprovals(mixed $response, string $agent, string $executionId, ?string $conversationId): array
+    {
+        $pending = $response->pendingApprovals ?? null;
+        if (! is_iterable($pending)) {
+            return [];
+        }
+
+        $rows = [];
+
+        foreach ($pending as $item) {
+            $toolName = is_object($item) ? (string) ($item->tool ?? '') : (string) ($item['tool'] ?? '');
+            $arguments = [];
+            if (is_object($item) && is_array($item->arguments ?? null)) {
+                $arguments = $item->arguments;
+            } elseif (is_array($item) && is_array($item['arguments'] ?? null)) {
+                $arguments = $item['arguments'];
+            }
+            $reason = is_object($item) ? ($item->reason ?? null) : (is_array($item) ? ($item['reason'] ?? null) : null);
+
+            if ($toolName === '' || ! $this->tools->has($toolName)) {
+                continue;
+            }
+
+            $record = $this->approvals->createPending(
+                $this->tools->resolve($toolName),
+                $arguments,
+                executionUuid: $executionId,
+                conversationUuid: $conversationId,
+                agent: $agent,
+                metadata: [
+                    'sdk_approval_id' => is_object($item) ? ($item->id ?? null) : ($item['id'] ?? null),
+                    'reason' => $reason,
+                ],
+            );
+
+            $rows[] = [
+                'id' => $record->uuid,
+                'tool' => $record->tool,
+                'arguments' => is_array($record->arguments) ? $record->arguments : [],
+                'reason' => is_string($reason) ? $reason : null,
+            ];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function usageArray(mixed $usage): array
+    {
+        if (is_object($usage) && method_exists($usage, 'toArray')) {
+            return $usage->toArray();
+        }
+
+        return is_array($usage) ? $usage : [];
     }
 }

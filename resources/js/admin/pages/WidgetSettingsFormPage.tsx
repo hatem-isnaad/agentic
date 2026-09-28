@@ -215,7 +215,7 @@ export function WidgetSettingsFormPage() {
                                     <Input {...register('reply_formats')} />
                                 </FormField>
                                 <FormField label={t('widget_settings.fields.theme')} hint={t('widget_settings.theme_hint')}>
-                                    <Textarea {...register('theme_json')} rows={8} className="font-mono text-xs" />
+                                    <Textarea {...register('theme_json')} rows={8} dir="ltr" className="ag-json font-mono text-xs" />
                                 </FormField>
                                 {hasOverride && (
                                     <Button type="button" variant="danger" onClick={() => void onResetOverrides()}>

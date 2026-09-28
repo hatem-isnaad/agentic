@@ -2,7 +2,7 @@
 
 **Instructions:** Copy everything inside the fenced block below into a new Cursor/Claude chat when starting the Admin and/or Widget React projects. Attach or point the agent at `docs/FRONTEND_IMPLEMENTATION_GUIDE.md` in the `hatem-isnaad/agentic` repo for full detail.
 
-**Last updated:** 2026-09-27
+**Last updated:** 2026-09-28
 
 ---
 
@@ -39,37 +39,45 @@ Read the repo docs:
 - POST `/knowledge-sources/{slug}/index`, POST `/knowledge-sources/{slug}/search` — body: `{ query, limit? }`
 - GET `/widget-settings/schema`, CRUD `/widget-settings`, PUT `/widget-settings/{agentSlug}` — body: `{ settings: { auth_mode, intake_*, welcome_message, theme, reply_formats, ... } }`
 - GET paginated `/executions`, `/conversations` — query: `page`, `per_page`, `q`, `status`, `agent`, `fetch_limit`
+- Staff inbox (optional — or build in the host app): `GET /inbox`, `GET /conversations/{id}/messages`, `POST /conversations/{id}/take|reply|release` — see `docs/STAFF_INBOX.md`
 - All list responses include `meta.total`, `meta.page`, `meta.per_page`, `meta.locale`, `meta.direction`, `meta.is_rtl`
 
 ## Widget API routes to implement
 
-- GET `/config?agent={slug}` — theme, intake, locale, realtime driver, providers
+- GET `/config?agent={slug}` — theme, intake, locale, realtime driver, `stream` (default **false**), providers
 - GET `/conversations?agent=`, POST `/conversations`
-- POST `/messages` — `{ agent, message, conversation_id?, locale?, metadata? }`
-- GET|POST `/conversations/{id}/messages`
-- POST `/approvals/{id}/approve|reject|execute`
+- POST `/messages` — `{ agent, message, conversation_id?, locale?, metadata? }`. With Pusher this returns `{ pending: true, conversation_id }` — **not** the assistant HTML.
+- GET|POST `/conversations/{id}/messages` — history `html` may include signed `<img>` for uploads
+- POST `/approvals/{id}/approve|reject|execute` — Approve/Reject in the official widget
 - GET `/conversations/{id}/realtime?since_id=&limit=` when driver=polling
+- GET `/conversations/{id}/files/{file}` — signed image/PDF (no guest header; URL is the auth)
 
 ## Realtime events (channel: `{prefix}.{conversationId}`, default prefix `agentic-widget`)
 
-- `message.created` — payload includes `message` with `html` and optional `blocks`
-- `message.resumed` — after approval auto-resume
+- `assistant.typing` — `{ active }` while the queue job runs
+- `message.created` — **render this** (`payload.message.html` + optional `blocks`). Staff inbox replies use the same event.
+- `message.resumed` — after approval auto-resume (same shape)
+- `message.delta` — token fragments **only** if `GET /config` has `stream: true` (`AGENTIC_WIDGET_STREAM=true`). Default is off; **ignore deltas** and wait for the full `message.created`.
 - `tool.approval.executed` — tool result metadata
 
 Drivers: `pusher` (pusher-js), `polling` (HTTP poll realtime endpoint), `socketio` (host relay — same event names).
 
 ## Message rendering
 
+**Do not stream tokens by default.** Show Typing until `message.created` / `message.resumed`, then paint the complete bubble once.
+
 Prefer `message.blocks` when `format === "blocks"`. Block types:
 `text`, `html`, `table`, `list`, `card`, `code`, `actions` (buttons with label, action, style, payload).
 
-Sanitize HTML blocks. Wire `actions` buttons to approval APIs when action is approve/reject.
+Sanitize HTML blocks. Render `<img>` in attachment HTML. Wire `actions` / official Approve–Reject / in-chat handoff Yes–No to approval APIs.
 
 Detect pending tool approval from tool error JSON: `{ "code": "pending_approval", "approval_id", "tool" }`.
 
+After human handoff (`handoff: true` or inbox take), do not expect an agent job. Custom staff desk: `docs/STAFF_INBOX.md`. Env catalog: `docs/DEVELOPER_HANDBOOK.md` § Widget replies.
+
 ## Admin UI pages (React Router)
 
-/, /agents, /agents/:slug, /skills, /tools, /knowledge, /executions, /conversations, /widget-settings, /widget-settings/:agentSlug, /settings/locale
+/, /inbox, /agents, /agents/:slug, /skills, /tools, /knowledge, /executions, /conversations, /widget-settings, /widget-settings/:agentSlug, /settings/locale
 
 Load copy from GET `/translations`. Apply RTL layout when `meta.direction === "rtl"`.
 
@@ -87,6 +95,7 @@ Load copy from GET `/translations`. Apply RTL layout when `meta.direction === "r
 
 - Admin CRUD works against live API with pagination and ar/en locale switch
 - Widget sends/receives messages, shows token counts, handles approval flow end-to-end
+- Realtime: Typing until **full** `message.created` (do not stream tokens unless `config.stream` is true)
 - Realtime updates messages when driver is pusher or polling
 - Widget settings form validates against GET `/widget-settings/schema`
 

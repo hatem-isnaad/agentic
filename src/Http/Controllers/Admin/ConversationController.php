@@ -25,15 +25,16 @@ final class ConversationController
         return response()->json(AdminPaginator::paginate($items, $request));
     }
 
-    public function messages(string $id): JsonResponse
+    public function messages(Request $request, string $id): JsonResponse
     {
         if ($this->conversations->find($id) === null) {
             return JsonApiResponse::error('Conversation not found.', 404);
         }
 
-        $page = $this->widgetConversations->messagesPage($id, new WidgetIdentity(null, null), (int) config('agentic.widget.history.max_page_size', 50));
+        $limit = min(100, max(1, (int) $request->query('limit', 50)));
+        $page = $this->widgetConversations->messagesPage($id, new WidgetIdentity(null, null), $limit, adminFileUrls: true);
 
-        return JsonApiResponse::data($page['messages'], meta: AdminLocaleMeta::build());
+        return JsonApiResponse::data($page['messages'], meta: AdminLocaleMeta::build($page['meta']));
     }
 
     public function show(string $id): JsonResponse
