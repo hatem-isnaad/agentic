@@ -17,8 +17,8 @@ final class ConversationManagerTest extends TestCase
     {
         $manager = app(ConversationManager::class);
 
-        $first = $manager->start('support', userId: 7, tenantId: 'acme');
-        $again = $manager->continueOrStart('support', userId: 7, tenantId: 'acme');
+        $first = $manager->start('support', userId: 7);
+        $again = $manager->continueOrStart('support', userId: 7);
 
         $this->assertSame($first->id, $again->id);
     }

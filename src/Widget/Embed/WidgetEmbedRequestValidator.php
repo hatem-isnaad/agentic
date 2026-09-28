@@ -10,9 +10,7 @@ use Illuminate\Http\Request;
  */
 final class WidgetEmbedRequestValidator
 {
-    public function __construct(
-        private WidgetEmbedCredentialResolver $credentials,
-    ) {}
+    public function __construct(private WidgetEmbedCredentialResolver $credentials) {}
 
     /**
      * @return array{ok: true, token: WidgetEmbedToken|null}|array{ok: false, message: string, status: int}
@@ -63,8 +61,6 @@ final class WidgetEmbedRequestValidator
         $authenticated = $request->user() !== null;
         $guestId = $request->header('X-Agentic-Guest-Id');
         $hasGuest = is_string($guestId) && $guestId !== '';
-        $userHeader = $request->header('X-Agentic-User-Id');
-        $hasUserHeader = is_string($userHeader) && $userHeader !== '';
 
         if ($authenticated && $embed->sanctum_allowed) {
             return ['ok' => true];
@@ -74,15 +70,11 @@ final class WidgetEmbedRequestValidator
             return ['ok' => true];
         }
 
-        if (! $embed->guest_allowed && ($hasUserHeader || $authenticated)) {
-            return ['ok' => true];
+        if (! $embed->guest_allowed) {
+            return ['ok' => false, 'message' => 'Widget access denied: signed-in session required for this embed token.'];
         }
 
-        if ($embed->guest_allowed && ! $hasGuest && ! $authenticated) {
-            return ['ok' => false, 'message' => 'X-Agentic-Guest-Id required for this embed token.'];
-        }
-
-        return ['ok' => false, 'message' => 'Widget access denied: signed-in user id required for this embed token.'];
+        return ['ok' => false, 'message' => 'X-Agentic-Guest-Id required for this embed token.'];
     }
 
     public function resolveAgentSlug(Request $request): ?string
@@ -101,20 +93,17 @@ final class WidgetEmbedRequestValidator
         return is_string($guestId) && $guestId !== '' ? $guestId : null;
     }
 
-    /** Conversation user_id column value for a signed-in site user (not guest). */
+    /**
+     * Conversation user_id for a signed-in host user. Client headers are never identity.
+     */
     public function resolveUserIdentity(Request $request): ?string
     {
         $authId = $request->user()?->getAuthIdentifier();
-        if ($authId !== null) {
-            return 'user:'.(string) $authId;
+        if ($authId === null) {
+            return null;
         }
 
-        $header = $request->header('X-Agentic-User-Id');
-        if (is_string($header) && $header !== '') {
-            return 'user:'.$header;
-        }
-
-        return null;
+        return 'user:'.(string) $authId;
     }
 
     private function validateIdentityFromGlobalConfig(Request $request): array

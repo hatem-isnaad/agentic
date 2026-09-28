@@ -24,7 +24,6 @@ final class ConversationController
                 'id' => $conversation->id,
                 'agent' => $conversation->agent,
                 'user_id' => $conversation->userId,
-                'tenant_id' => $conversation->tenantId,
                 'sdk_conversation_id' => $conversation->sdkConversationId,
                 'metadata' => $conversation->metadata,
             ],

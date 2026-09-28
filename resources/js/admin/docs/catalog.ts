@@ -37,12 +37,11 @@ export const DOC_CATALOG: DocCatalogEntry[] = [
     { slug: 'workflows', part: 'runtime', labelKey: 'workflows', order: 17 },
     { slug: 'runtime-api', part: 'platform', labelKey: 'runtime_api', order: 18 },
     { slug: 'auth-admin', part: 'platform', labelKey: 'auth_admin', order: 19 },
-    { slug: 'tenant', part: 'platform', labelKey: 'tenant', order: 20 },
-    { slug: 'http-security', part: 'platform', labelKey: 'http_security', order: 21 },
-    { slug: 'drivers-storage', part: 'platform', labelKey: 'drivers_storage', order: 22 },
-    { slug: 'monitoring', part: 'platform', labelKey: 'monitoring', order: 23 },
-    { slug: 'seeding', part: 'platform', labelKey: 'seeding', order: 24 },
-    { slug: 'artisan', part: 'platform', labelKey: 'artisan', order: 25 },
+    { slug: 'http-security', part: 'platform', labelKey: 'http_security', order: 20 },
+    { slug: 'drivers-storage', part: 'platform', labelKey: 'drivers_storage', order: 21 },
+    { slug: 'monitoring', part: 'platform', labelKey: 'monitoring', order: 22 },
+    { slug: 'seeding', part: 'platform', labelKey: 'seeding', order: 23 },
+    { slug: 'artisan', part: 'platform', labelKey: 'artisan', order: 24 },
 ];
 
 export function catalogBySlug(slug: string): DocCatalogEntry | undefined {

@@ -7,15 +7,15 @@ use Agentic\Knowledge\Indexers\VectorKnowledgeIndexer;
 use Agentic\Knowledge\KnowledgeSourceDefinition;
 use Agentic\Knowledge\Retrievers\VectorKnowledgeRetriever;
 use Agentic\Knowledge\Stores\ArrayVectorStore;
-use Agentic\Context\RuntimeContext;
 use Agentic\Tests\TestCase;
 
 final class VectorKnowledgeIndexerTest extends TestCase
 {
     public function test_index_chunks_documents_and_reindex_replaces_namespace(): void
     {
-        $store = new ArrayVectorStore();
-        $embeddings = new class implements EmbeddingProvider {
+        $store = new ArrayVectorStore;
+        $embeddings = new class implements EmbeddingProvider
+        {
             public function embed(string $text): array
             {
                 return [crc32($text) % 100 / 100];
@@ -56,10 +56,11 @@ final class VectorKnowledgeIndexerTest extends TestCase
         $this->assertStringContainsString('30 days', $chunks[0]->content);
     }
 
-    public function test_tenant_metadata_filters_retrieval_results(): void
+    public function test_search_is_limited_to_the_source_namespace(): void
     {
-        $store = new ArrayVectorStore();
-        $embeddings = new class implements EmbeddingProvider {
+        $store = new ArrayVectorStore;
+        $embeddings = new class implements EmbeddingProvider
+        {
             public function embed(string $text): array
             {
                 return [0.5];
@@ -72,28 +73,37 @@ final class VectorKnowledgeIndexerTest extends TestCase
         };
 
         $indexer = new VectorKnowledgeIndexer($embeddings, $store);
-
         $indexer->index(new KnowledgeSourceDefinition(
-            slug: 'tenant-docs',
-            name: 'Tenant Docs',
+            slug: 'alpha-docs',
+            name: 'A',
             driver: 'vector',
             configuration: [
-                'tenant' => 'acme',
-                'documents' => ['Acme-only policy text.'],
+                'documents' => ['Alpha one', 'Alpha two', 'Alpha three'],
+            ],
+        ));
+        $indexer->index(new KnowledgeSourceDefinition(
+            slug: 'beta-docs',
+            name: 'B',
+            driver: 'vector',
+            configuration: [
+                'documents' => ['Beta only document'],
             ],
         ));
 
         $retriever = new VectorKnowledgeRetriever($embeddings, $store);
-        $source = new KnowledgeSourceDefinition(
-            slug: 'tenant-docs',
-            name: 'Tenant Docs',
-            driver: 'vector',
+        $beta = $retriever->retrieve(
+            new KnowledgeSourceDefinition(slug: 'beta-docs', name: 'Docs', driver: 'vector'),
+            'document',
+            5,
+        );
+        $alpha = $retriever->retrieve(
+            new KnowledgeSourceDefinition(slug: 'alpha-docs', name: 'Docs', driver: 'vector'),
+            'document',
+            5,
         );
 
-        $allowed = $retriever->retrieve($source, 'policy', 5, new RuntimeContext(['tenant_id' => 'acme']));
-        $denied = $retriever->retrieve($source, 'policy', 5, new RuntimeContext(['tenant_id' => 'other']));
-
-        $this->assertCount(1, $allowed);
-        $this->assertCount(0, $denied);
+        $this->assertCount(1, $beta);
+        $this->assertStringContainsString('Beta', $beta[0]->content);
+        $this->assertCount(3, $alpha);
     }
 }

@@ -14,10 +14,9 @@ return new class extends Migration
             $table->string('agent')->index();
             $table->string('sdk_conversation_id')->nullable()->index();
             $table->string('user_id')->nullable()->index();
-            $table->string('tenant_id')->nullable()->index();
             $table->json('metadata')->nullable();
             $table->timestamps();
-            $table->index(['agent', 'user_id', 'tenant_id']);
+            $table->index(['agent', 'user_id']);
         });
     }
 

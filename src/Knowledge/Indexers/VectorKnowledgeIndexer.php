@@ -9,6 +9,7 @@ use Agentic\Knowledge\Documents\DocumentCollector;
 use Agentic\Knowledge\KnowledgeChunk;
 use Agentic\Knowledge\KnowledgeSourceDefinition;
 use Agentic\Knowledge\Support\EmbeddingVectorValidator;
+use Agentic\Knowledge\Support\KnowledgeNamespace;
 
 /**
  * Chunks documents, embeds them, and upserts into the configured vector store.
@@ -18,7 +19,7 @@ final class VectorKnowledgeIndexer implements Indexer
     public function __construct(
         private EmbeddingProvider $embeddings,
         private VectorStore $store,
-        private DocumentCollector $documents = new DocumentCollector(),
+        private DocumentCollector $documents = new DocumentCollector,
     ) {}
 
     public function supports(KnowledgeSourceDefinition $source): bool
@@ -28,15 +29,9 @@ final class VectorKnowledgeIndexer implements Indexer
 
     public function index(KnowledgeSourceDefinition $source): void
     {
-        $namespace = is_string($source->configuration['namespace'] ?? null)
-            ? $source->configuration['namespace']
-            : $source->slug;
+        $namespace = KnowledgeNamespace::forSource($source);
 
         $this->store->deleteNamespace($namespace);
-
-        $tenant = is_string($source->configuration['tenant'] ?? null)
-            ? $source->configuration['tenant']
-            : null;
 
         $contents = array_values($this->documents->collect($source));
 
@@ -51,19 +46,17 @@ final class VectorKnowledgeIndexer implements Indexer
             $vector = $vectors[$index] ?? [];
             $this->assertEmbeddingVector($vector, $expectedDimensions);
 
-            $id = $source->slug.':chunk:'.$index;
+            $id = $namespace.':chunk:'.$index;
 
             $this->store->upsert(
                 $id,
                 $vector,
                 new KnowledgeChunk($content, $source->slug, metadata: [
                     'chunk' => $index,
-                    'tenant' => $tenant,
                 ]),
                 [
                     'namespace' => $namespace,
                     'chunk' => $index,
-                    'tenant' => $tenant,
                 ],
             );
         }

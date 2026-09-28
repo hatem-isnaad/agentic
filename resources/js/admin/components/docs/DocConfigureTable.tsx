@@ -22,9 +22,27 @@ const ROWS: Row[] = [
     },
     {
         taskKey: 'docs.cfg_http_tools',
-        cli: '—',
-        api: 'POST /tools (driver: http)',
-        code: 'ToolRepository::save()',
+        cli: 'agentic:make connection · agentic:make http-tool',
+        api: 'POST /connections · POST /tools (driver: http)',
+        code: 'Connection + ToolRepository::save()',
+    },
+    {
+        taskKey: 'docs.cfg_connections',
+        cli: 'agentic:make connection · agentic:connection list|refresh',
+        api: 'POST /connections · POST /connections/{id}/refresh',
+        code: 'ConnectionService · OAuth2TokenManager',
+    },
+    {
+        taskKey: 'docs.cfg_channels',
+        cli: 'agentic:make channel-account · agentic:channel-account list',
+        api: 'POST /channel-accounts',
+        code: 'ChannelAccountService',
+    },
+    {
+        taskKey: 'docs.cfg_evaluations',
+        cli: 'agentic:make evaluation · agentic:evaluation list',
+        api: 'GET|POST /evaluations',
+        code: 'Evaluation model',
     },
     {
         taskKey: 'docs.cfg_mcp',
@@ -34,19 +52,19 @@ const ROWS: Row[] = [
     },
     {
         taskKey: 'docs.cfg_skills',
-        cli: '—',
+        cli: 'agentic:make skill · agentic:skill list',
         api: 'POST|PUT /skills',
         code: 'SkillRepository::save()',
     },
     {
         taskKey: 'docs.cfg_agents',
-        cli: '—',
+        cli: 'agentic:make agent · agentic:agent list',
         api: 'POST|PUT /agents · POST /agents/{slug}/execute',
         code: 'AgentRepository::save()',
     },
     {
         taskKey: 'docs.cfg_knowledge',
-        cli: 'agentic:rag-validate',
+        cli: 'agentic:make knowledge · agentic:knowledge ingest',
         api: 'POST /knowledge-sources · …/ingest · …/index',
         code: 'KnowledgeIngestor::ingest()',
     },

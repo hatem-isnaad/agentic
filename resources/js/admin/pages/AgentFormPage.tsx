@@ -5,8 +5,6 @@ import { adminApi } from '../lib/api';
 import { useAdminConfig } from '../lib/config';
 import { useStatusOptions } from '../lib/hooks';
 import { useI18n } from '../lib/i18n';
-import { Button } from '../components/ui/Button';
-import { Card, CardBody } from '../components/ui/Card';
 import { FormField } from '../components/ui/FormField';
 import { Input, Textarea } from '../components/ui/Input';
 import { NativeSelect } from '../components/ui/NativeSelect';
@@ -14,8 +12,8 @@ import { FormContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Skeleton } from '../components/ui/Skeleton';
 import { JsonField, parseJsonObject } from '../components/ui/JsonField';
-import { FormSection } from '../components/ui/FormSection';
-import { HelpCallout } from '../components/ui/HelpCallout';
+import { ErrorBanner } from '../components/ui/DataTable';
+import { FormWizard } from '../components/forms/FormWizard';
 import { SlugCheckboxList } from '../components/forms/SlugCheckboxList';
 import { slugify } from '../lib/slugify';
 
@@ -73,7 +71,7 @@ export function AgentFormPage() {
         },
     });
     const [registryReady, setRegistryReady] = useState(false);
-    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [step, setStep] = useState(0);
     const ph = (key: string) => t(`placeholders.${key}`);
 
     const { register, handleSubmit, control, reset, setValue } = useForm<FormValues>({
@@ -260,20 +258,32 @@ export function AgentFormPage() {
         setValue('model', models[0] ?? '');
     };
 
+    const wizardSteps = [
+        { id: 'basics', title: t('wizard.basics'), description: t('wizard.basics_desc') },
+        { id: 'voice', title: t('wizard.voice'), description: t('wizard.voice_desc') },
+        { id: 'model', title: t('wizard.model'), description: t('wizard.model_desc') },
+        { id: 'attach', title: t('wizard.attach'), description: t('wizard.attach_desc') },
+        { id: 'review', title: t('wizard.review'), description: t('wizard.review_desc') },
+    ];
+
     return (
         <FormContainer>
             <PageHeader
                 title={isEdit ? t('agents.edit_heading', { name: slug ?? '' }) : t('agents.create_heading')}
                 description={t('forms.agent_intro_simple')}
             />
-            <HelpCallout>{t('agents.setup_hint')}</HelpCallout>
-            {error && (
-                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
-            )}
-            <Card>
-                <CardBody>
-                    <form onSubmit={onSubmit} className="space-y-6">
-                        <FormSection title={t('forms.section_basics')}>
+            {error && <ErrorBanner message={error} />}
+            <FormWizard
+                steps={wizardSteps}
+                step={step}
+                onStepChange={setStep}
+                onSubmit={() => void onSubmit()}
+                canNext={step === 0 ? Boolean(nameValue?.trim()) : true}
+                submitting={!registryReady}
+                saveLabel={isEdit ? t('actions.update') : t('actions.save')}
+            >
+                {step === 0 && (
+                    <div className="space-y-5">
                         <div className="grid gap-5 lg:grid-cols-2">
                             <FormField label={t('fields.name')} required>
                                 <Input {...register('name', { required: true })} placeholder={ph('name')} />
@@ -302,8 +312,10 @@ export function AgentFormPage() {
                         <FormField label={t('fields.instructions')} hint={t('placeholders.instructions_hint')}>
                             <Textarea {...register('instructions')} placeholder={ph('instructions')} rows={5} />
                         </FormField>
-                        </FormSection>
-                        <FormSection title={t('forms.section_persona')} description={t('forms.section_persona_desc')}>
+                    </div>
+                )}
+                {step === 1 && (
+                    <div className="space-y-5">
                         <div className="grid gap-5 lg:grid-cols-2">
                             <FormField label={t('fields.display_name')}>
                                 <Input
@@ -405,9 +417,10 @@ export function AgentFormPage() {
                         <FormField label={t('fields.persona_notes')}>
                             <Textarea {...register('persona_notes')} placeholder={ph('persona_notes')} rows={2} />
                         </FormField>
-                        </FormSection>
-                        <FormSection title={t('forms.section_ai')}>
-                        <div className="grid gap-5 lg:grid-cols-2">
+                    </div>
+                )}
+                {step === 2 && (
+                    <div className="grid gap-5 lg:grid-cols-2">
                             <FormField label={t('fields.provider')} hint={t('placeholders.provider_select')}>
                                 {!registryReady ? (
                                     <Skeleton className="h-11 w-full" />
@@ -445,9 +458,10 @@ export function AgentFormPage() {
                                     />
                                 )}
                             </FormField>
-                        </div>
-                        </FormSection>
-                        <FormSection title={t('forms.section_attach')} description={t('forms.section_attach_desc')}>
+                    </div>
+                )}
+                {step === 3 && (
+                    <div className="space-y-5">
                         <FormField label={t('fields.skills')}>
                             <Controller
                                 name="skills"
@@ -490,12 +504,10 @@ export function AgentFormPage() {
                                 )}
                             />
                         </FormField>
-                        </FormSection>
-                        <Button type="button" variant="ghost" onClick={() => setShowAdvanced((v) => !v)}>
-                            {showAdvanced ? t('forms.hide_advanced') : t('forms.show_advanced')}
-                        </Button>
-                        {showAdvanced && (
-                            <FormSection title={t('forms.section_advanced')}>
+                    </div>
+                )}
+                {step === 4 && (
+                    <div className="space-y-5">
                         <FormField label={t('fields.permissions')} hint={t('agents.permissions_hint')}>
                             <Input {...register('permissions')} placeholder="orders.*" />
                         </FormField>
@@ -513,20 +525,10 @@ export function AgentFormPage() {
                                 control={control}
                                 render={({ field }) => <JsonField value={field.value} onChange={field.onChange} rows={6} />}
                             />
-                        </FormField>
-                            </FormSection>
-                        )}
-                        <div className="flex flex-wrap gap-3 border-t border-slate-100 pt-6">
-                            <Button type="submit" disabled={!registryReady || providerOptions.length === 0}>
-                                {isEdit ? t('actions.update') : t('actions.save')}
-                            </Button>
-                            <Button type="button" variant="secondary" onClick={() => navigate(-1)}>
-                                {t('actions.back')}
-                            </Button>
-                        </div>
-                    </form>
-                </CardBody>
-            </Card>
+                            </FormField>
+                    </div>
+                )}
+            </FormWizard>
         </FormContainer>
     );
 }

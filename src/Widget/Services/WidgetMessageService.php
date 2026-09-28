@@ -4,30 +4,24 @@ namespace Agentic\Widget\Services;
 
 use Agentic\Agent\AgentDefinition;
 use Agentic\Agent\AgentResolver;
+use Agentic\Context\RuntimeContext;
 use Agentic\Conversation\ConversationManager;
 use Agentic\Exceptions\AgentNotFoundException;
 use Agentic\Execution\AgentExecutionContext;
 use Agentic\Jobs\ProcessWidgetMessageJob;
 use Agentic\Models\Conversation;
 use Agentic\Models\ConversationMessage;
+use Agentic\Reply\ChannelReplyPresenterFactory;
 use Agentic\Runtime\AgentRuntime;
 use Agentic\Widget\Broadcast\WidgetBroadcastDriver;
-use Agentic\Reply\ChannelReplyPresenterFactory;
 use Agentic\Widget\DTO\WidgetMessageData;
 use Agentic\Widget\Reply\WidgetAssistantOutputSanitizer;
 use Agentic\Widget\Support\WidgetReplyDelivery;
-use Agentic\Context\RuntimeContext;
 use Illuminate\Support\Str;
 
 final class WidgetMessageService
 {
-    public function __construct(
-        private AgentResolver $agents,
-        private AgentRuntime $runtime,
-        private ConversationManager $conversations,
-        private ChannelReplyPresenterFactory $presenters,
-        private WidgetBroadcastDriver $broadcast,
-    ) {}
+    public function __construct(private AgentResolver $agents, private AgentRuntime $runtime, private ConversationManager $conversations, private ChannelReplyPresenterFactory $presenters, private WidgetBroadcastDriver $broadcast) {}
 
     /**
      * @param  array<string, mixed>  $metadata
@@ -43,12 +37,7 @@ final class WidgetMessageService
 
         $conversation = $data->conversationId
             ? $this->conversations->continue($data->conversationId)
-            : $this->conversations->start(
-                agent: $data->agent,
-                userId: $data->identity->conversationUserId(),
-                tenantId: $data->identity->tenantId,
-                metadata: $data->metadata,
-            );
+            : $this->conversations->start(agent: $data->agent, userId: $data->identity->conversationUserId(), metadata: $data->metadata);
 
         $this->storeMessage($conversation->id, 'user', e($data->message), 'html', metadata: $data->metadata);
 
@@ -66,13 +55,8 @@ final class WidgetMessageService
      * @param  array<string, mixed>  $metadata
      * @return array<string, mixed>
      */
-    public function runAgentTurn(
-        string $agentSlug,
-        string $conversationId,
-        string $message,
-        array $metadata = [],
-        ?AgentDefinition $agent = null,
-    ): array {
+    public function runAgentTurn(string $agentSlug, string $conversationId, string $message, array $metadata = [], ?AgentDefinition $agent = null): array
+    {
         $this->publishTyping($conversationId, true);
 
         try {
@@ -84,10 +68,7 @@ final class WidgetMessageService
                 return ['success' => false, 'error' => 'Agent not found.'];
             }
 
-            $result = $this->runtime->run(
-                $agent,
-                $this->executionContextForWidgetTurn($conversationId, $message, $metadata),
-            );
+            $result = $this->runtime->run($agent, $this->executionContextForWidgetTurn($conversationId, $message, $metadata));
 
             if (! $result->success) {
                 $error = $result->error ?? 'Agent execution failed.';
@@ -100,16 +81,8 @@ final class WidgetMessageService
                 ];
             }
 
-            $presented = $this->presenters->forChannel('widget')->present(
-                WidgetAssistantOutputSanitizer::cleanOutput($result->output),
-            );
-            $assistant = $this->storeMessage(
-                $conversationId,
-                'assistant',
-                $presented->html,
-                $presented->format,
-                blocks: $presented->blocks,
-            );
+            $presented = $this->presenters->forChannel('widget')->present(WidgetAssistantOutputSanitizer::cleanOutput($result->output));
+            $assistant = $this->storeMessage($conversationId, 'assistant', $presented->html, $presented->format, blocks: $presented->blocks);
 
             $runOutput = is_array($result->output) ? $result->output : [];
             $executionId = isset($runOutput['execution_id']) ? (string) $runOutput['execution_id'] : null;

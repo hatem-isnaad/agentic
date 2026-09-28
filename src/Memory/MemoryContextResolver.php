@@ -33,12 +33,6 @@ final class MemoryContextResolver
             $scopes[] = ['scope' => MemoryScope::Agent, 'scope_key' => $agentSlug];
         }
 
-        $tenant = $this->stringKey($runtime->tenant()) ?? $this->stringKey($runtime->get('tenant_id'));
-
-        if ($tenant !== null) {
-            $scopes[] = ['scope' => MemoryScope::Tenant, 'scope_key' => $tenant];
-        }
-
         return $scopes;
     }
 

@@ -12,13 +12,19 @@
     "laravel/mcp": "^1.0",
     "pusher/pusher-php-server": "^7.0"
   },
-  "require-dev": {
-    "filament/filament": "^4.0",
-    "orchestra/testbench": "^10.0",
-    "phpunit/phpunit": "^11.0",
-    "smalot/pdfparser": "^2.0",
-    "laravel/sanctum": "^4.0"
-  },
+    "require-dev": {
+        "filament/filament": "^4.0",
+        "laravel/pint": "^1.24",
+        "orchestra/testbench": "^10.0",
+        "phpunit/phpunit": "^11.0",
+        "smalot/pdfparser": "^2.0",
+        "laravel/sanctum": "^4.0"
+    },
+    "scripts": {
+        "test": "phpunit --no-coverage",
+        "lint": "pint --test",
+        "fix": "pint"
+    },
   "suggest": {
     "filament/filament": "Required for the optional Agentic Filament admin panel (^4.0).",
     "smalot/pdfparser": "Required for PDF knowledge ingest (format=pdf).",

@@ -12,7 +12,7 @@ use RuntimeException;
 final class OAuth2TokenManager
 {
     public function __construct(
-        private HttpUrlValidator $urls = new HttpUrlValidator(),
+        private HttpUrlValidator $urls = new HttpUrlValidator,
     ) {}
 
     public function accessToken(Connection $connection): string
@@ -90,11 +90,20 @@ final class OAuth2TokenManager
                 $form['scope'] = $config['scope'];
             }
 
-            $response = Http::asForm()
+            $authExtras = ConnectionRequestExtras::forAuth($config);
+            $form = array_merge($form, $authExtras['body']);
+            $tokenUrl = $this->withQuery($tokenUrl, $authExtras['query']);
+
+            $request = Http::asForm()
                 ->withOptions(['allow_redirects' => false])
                 ->acceptJson()
-                ->timeout((float) ($config['timeout'] ?? 15))
-                ->post($tokenUrl, $form);
+                ->timeout((float) ($config['timeout'] ?? 15));
+
+            if ($authExtras['headers'] !== []) {
+                $request = $request->withHeaders($authExtras['headers']);
+            }
+
+            $response = $request->post($tokenUrl, $form);
 
             if ($response->failed()) {
                 throw new RuntimeException('OAuth2 token endpoint returned HTTP '.$response->status().'.');
@@ -123,5 +132,19 @@ final class OAuth2TokenManager
 
             return $credentials['access_token'];
         });
+    }
+
+    /**
+     * @param  array<string, string>  $query
+     */
+    private function withQuery(string $url, array $query): string
+    {
+        if ($query === []) {
+            return $url;
+        }
+
+        $separator = str_contains($url, '?') ? '&' : '?';
+
+        return $url.$separator.http_build_query($query);
     }
 }

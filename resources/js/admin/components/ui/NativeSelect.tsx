@@ -21,7 +21,7 @@ export function NativeSelect({ value, onValueChange, options, placeholder, id, c
             <RadixSelect.Trigger
                 id={id}
                 className={clsx(
-                    'inline-flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-slate-200 bg-white px-3.5 text-sm font-medium text-slate-800 shadow-sm outline-none transition hover:border-slate-300 focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15 data-[placeholder]:text-slate-400',
+                    'inline-flex h-11 w-full items-center justify-between gap-2 rounded-xl border border-slate-200/90 bg-white px-3.5 text-sm font-medium text-slate-800 outline-none transition hover:border-slate-300 focus:border-slate-900 focus:ring-4 focus:ring-slate-900/8 data-[placeholder]:text-slate-400',
                     className,
                 )}
                 aria-label={placeholder}

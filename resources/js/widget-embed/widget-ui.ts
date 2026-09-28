@@ -5,6 +5,7 @@ import {
     saveStoredConversationId,
 } from './conversation-storage';
 import { historyMessageToBubble, type WidgetHistoryMessage } from './history';
+import { dayKey, formatDayLabelEn, formatMessageTimeEn } from './timestamps';
 import { playWidgetSound } from './sounds';
 import { createRealtimeConnection } from './realtime-factory';
 import { disconnectWidgetPusher } from './realtime-pusher';
@@ -25,6 +26,52 @@ const ICON_LIST = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 7.5A2
 const ICON_PLUS = '<svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>';
 const ICON_THREAD = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6.5 4h11A3.5 3.5 0 0 1 21 7.5v6A3.5 3.5 0 0 1 17.5 17h-1.7l-2.7 3.2a.85.85 0 0 1-1.4 0L8.9 17H6.5A3.5 3.5 0 0 1 3 13.5v-6A3.5 3.5 0 0 1 6.5 4Zm1.6 4.4a.75.75 0 0 0 0 1.5h7.8a.75.75 0 0 0 0-1.5Zm0 3.2a.75.75 0 0 0 0 1.5h5.1a.75.75 0 0 0 0-1.5Z"/></svg>';
 const ICON_EMOJI = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm-3.3 8.2a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4Zm6.6 0a1.2 1.2 0 1 1 0-2.4 1.2 1.2 0 0 1 0 2.4ZM12 17.2A5.1 5.1 0 0 1 7.4 14h1.7a3.4 3.4 0 0 0 5.8 0h1.7A5.1 5.1 0 0 1 12 17.2Z"/></svg>';
+
+const MESSAGE_SKELETON_HTML = `
+<div class="ag-skel-row">
+    <div class="ag-skel-avatar"></div>
+    <div class="ag-skel-bubble">
+        <div class="ag-skel-line ag-skel-w-72"></div>
+        <div class="ag-skel-line ag-skel-w-44"></div>
+    </div>
+</div>
+<div class="ag-skel-row ag-skel-end">
+    <div class="ag-skel-bubble">
+        <div class="ag-skel-line ag-skel-w-56"></div>
+    </div>
+</div>
+<div class="ag-skel-row">
+    <div class="ag-skel-avatar"></div>
+    <div class="ag-skel-bubble">
+        <div class="ag-skel-line ag-skel-w-80"></div>
+        <div class="ag-skel-line ag-skel-w-52"></div>
+        <div class="ag-skel-line ag-skel-w-36"></div>
+    </div>
+</div>
+<div class="ag-skel-row ag-skel-end">
+    <div class="ag-skel-bubble">
+        <div class="ag-skel-line ag-skel-w-64"></div>
+        <div class="ag-skel-line ag-skel-w-40"></div>
+    </div>
+</div>
+<div class="ag-skel-row">
+    <div class="ag-skel-avatar"></div>
+    <div class="ag-skel-bubble">
+        <div class="ag-skel-line ag-skel-w-60"></div>
+        <div class="ag-skel-line ag-skel-w-44"></div>
+    </div>
+</div>
+<div class="ag-skel-row ag-skel-end">
+    <div class="ag-skel-bubble">
+        <div class="ag-skel-line ag-skel-w-48"></div>
+    </div>
+</div>`;
+
+const SKELETON_MIN_MS = 900;
+
+const TYPING_LABEL_HTML = `
+<span class="ag-dots" aria-hidden="true"><span></span><span></span><span></span></span>
+<span class="ag-typing-label">Typing</span>`;
 
 const ARABIC_SCRIPT = /[\u0600-\u06FF\u0750-\u077F\u08A0-\u08FF\uFB50-\uFDFF\uFE70-\uFEFF]/;
 
@@ -89,10 +136,12 @@ export class WidgetUi {
     private realtimeSinceId = 0;
     private replyMode: 'sync' | 'async' = 'sync';
     private typingEl: HTMLElement | null = null;
+    private typingBarEl: HTMLElement | null = null;
     private historyPageSize = 20;
     private historyMaxPageSize = 50;
     private configReady = false;
     private historyStatusEl: HTMLElement | null = null;
+    private skeletonShownAt = 0;
     private historyLoading = false;
     private hasMoreHistory = false;
     private nextBefore: number | null = null;
@@ -187,7 +236,14 @@ export class WidgetUi {
         this.loadMoreEl.className = 'ag-load-more';
         this.loadMoreEl.hidden = true;
         this.loadMoreEl.setAttribute('aria-hidden', 'true');
-        this.loadMoreEl.innerHTML = '<span class="ag-dots"><span></span><span></span><span></span></span>';
+        this.loadMoreEl.innerHTML = `
+            <div class="ag-skel-row">
+                <div class="ag-skel-avatar"></div>
+                <div class="ag-skel-bubble">
+                    <div class="ag-skel-line ag-skel-w-72"></div>
+                    <div class="ag-skel-line ag-skel-w-44"></div>
+                </div>
+            </div>`;
         this.messagesEl.appendChild(this.loadMoreEl);
         this.messagesEl.addEventListener('scroll', () => this.onMessagesScroll(), { passive: true });
 
@@ -195,7 +251,7 @@ export class WidgetUi {
         form.className = 'ag-composer';
         this.input = document.createElement('input');
         this.input.type = 'text';
-        this.input.placeholder = 'Loading…';
+        this.input.placeholder = 'Type a message…';
         this.input.disabled = true;
         this.input.required = true;
         this.emojiBtn = document.createElement('button');
@@ -259,7 +315,14 @@ export class WidgetUi {
             void this.startNewConversation();
         });
 
-        this.panel.append(header, this.messagesEl, form, this.inboxBackdropEl, this.inboxEl);
+        this.typingBarEl = document.createElement('div');
+        this.typingBarEl.className = 'ag-typing-bar';
+        this.typingBarEl.hidden = true;
+        this.typingBarEl.setAttribute('aria-live', 'polite');
+        this.typingBarEl.setAttribute('aria-label', 'Assistant is typing');
+        this.typingBarEl.innerHTML = TYPING_LABEL_HTML;
+
+        this.panel.append(header, this.messagesEl, this.typingBarEl, form, this.inboxBackdropEl, this.inboxEl);
         this.root.append(this.launcherEl, this.panel);
         this.bindHistoryObserver();
         document.addEventListener('keydown', (e) => {
@@ -288,8 +351,8 @@ export class WidgetUi {
             const cfg = await this.api.fetchConfig(this.config.agent);
 
             const embed = cfg.data.embed ?? {};
-            if (embed.auth_required && !this.config.userId && !this.config.bearerToken) {
-                throw new Error('This embed token requires userId in AgenticChat.init.');
+            if (embed.auth_required && !this.config.bearerToken) {
+                throw new Error('This embed token requires a signed-in Sanctum session or bearerToken in AgenticChat.init.');
             }
 
             this.agentLabel = agentDisplayName(cfg);
@@ -389,14 +452,6 @@ export class WidgetUi {
             return;
         }
 
-        const latest = list[0];
-        if (latest && this.isFreshConversation(latest)) {
-            this.conversationId = latest.id;
-            this.persistConversationId();
-
-            return;
-        }
-
         this.conversationId = null;
         clearStoredConversationId(this.config.agent, this.api.guestId);
     }
@@ -414,12 +469,11 @@ export class WidgetUi {
         }
 
         this.historyLoading = true;
-        this.setHistoryStatus('Loading messages…');
+        this.showMessageSkeleton();
         try {
             await this.resolveConversationForSession();
 
             if (!this.conversationId) {
-                this.clearHistoryStatus();
                 this.clearChatBubbles();
                 this.seenMessageIds.clear();
                 this.showWelcomeIfEmpty();
@@ -430,12 +484,11 @@ export class WidgetUi {
             await this.loadHistoryWithRecovery();
             this.startRealtime();
         } catch (err) {
-            this.clearHistoryStatus();
             console.error('[AgenticChat] history', err);
             this.showWelcomeIfEmpty();
         } finally {
             this.historyLoading = false;
-            this.clearHistoryStatus();
+            await this.hideMessageSkeleton();
         }
     }
 
@@ -641,14 +694,14 @@ export class WidgetUi {
         this.persistConversationId();
         this.showInbox(false);
         this.seenMessageIds.clear();
-        this.setHistoryStatus('Loading messages…');
+        this.showMessageSkeleton();
         try {
             await this.loadHistoryPage(null);
             this.startRealtime();
         } catch (err) {
             console.error('[AgenticChat] open conversation', err);
         } finally {
-            this.clearHistoryStatus();
+            await this.hideMessageSkeleton();
         }
     }
 
@@ -670,15 +723,24 @@ export class WidgetUi {
         }
     }
 
-    private setHistoryStatus(text: string): void {
-        this.clearHistoryStatus();
+    private showMessageSkeleton(): void {
+        if (this.historyStatusEl) {
+            return;
+        }
+        this.skeletonShownAt = Date.now();
         this.historyStatusEl = document.createElement('div');
-        this.historyStatusEl.className = 'ag-bubble ag-assistant ag-history-status';
-        this.historyStatusEl.textContent = text;
+        this.historyStatusEl.className = 'ag-skeleton';
+        this.historyStatusEl.setAttribute('aria-busy', 'true');
+        this.historyStatusEl.setAttribute('aria-label', 'Loading messages');
+        this.historyStatusEl.innerHTML = MESSAGE_SKELETON_HTML;
         this.messagesEl.appendChild(this.historyStatusEl);
     }
 
-    private clearHistoryStatus(): void {
+    private async hideMessageSkeleton(): Promise<void> {
+        const wait = Math.max(0, SKELETON_MIN_MS - (Date.now() - this.skeletonShownAt));
+        if (wait > 0) {
+            await new Promise((resolve) => window.setTimeout(resolve, wait));
+        }
         this.historyStatusEl?.remove();
         this.historyStatusEl = null;
     }
@@ -688,7 +750,7 @@ export class WidgetUi {
             return;
         }
         if (this.welcomeText && this.countBubbles() === 0) {
-            this.addBubble('assistant', this.welcomeText, null);
+            this.addBubble('assistant', this.welcomeText, null, null);
         }
     }
 
@@ -697,7 +759,7 @@ export class WidgetUi {
     }
 
     private clearChatBubbles(): void {
-        this.messagesEl.querySelectorAll('.ag-row, .ag-bubble').forEach((el) => el.remove());
+        this.messagesEl.querySelectorAll('.ag-row, .ag-bubble, .ag-day-divider').forEach((el) => el.remove());
     }
 
     private async loadHistoryPage(before: number | null): Promise<void> {
@@ -724,6 +786,7 @@ export class WidgetUi {
                     this.registerHistoryMessage(msg);
                     this.insertHistoryMessage(msg, false);
                 }
+                this.refreshDayDividers();
                 this.scrollMessagesToBottom();
             }
         } else {
@@ -734,7 +797,7 @@ export class WidgetUi {
                 if (!bubble.text && !bubble.html) {
                     continue;
                 }
-                const el = this.createBubbleElement(bubble.role, bubble.text, bubble.html);
+                const el = this.createBubbleElement(bubble.role, bubble.text, bubble.html, bubble.sentAt);
                 const anchor = this.loadMoreEl.nextElementSibling;
                 if (anchor) {
                     this.messagesEl.insertBefore(el, anchor);
@@ -742,8 +805,8 @@ export class WidgetUi {
                     this.messagesEl.appendChild(el);
                 }
             }
-            const delta = this.messagesEl.scrollHeight - prevHeight;
-            this.messagesEl.scrollTop += delta;
+            this.refreshDayDividers();
+            this.messagesEl.scrollTop += this.messagesEl.scrollHeight - prevHeight;
         }
 
         this.hasMoreHistory = meta.has_more;
@@ -804,7 +867,7 @@ export class WidgetUi {
             return;
         }
 
-        const el = this.createBubbleElement(bubble.role, bubble.text, bubble.html);
+        const el = this.createBubbleElement(bubble.role, bubble.text, bubble.html, bubble.sentAt);
         if (prepend) {
             const anchor = this.loadMoreEl.nextElementSibling;
             if (anchor) {
@@ -817,11 +880,18 @@ export class WidgetUi {
         }
     }
 
-    private createBubbleElement(role: 'user' | 'assistant', text: string, html: string | null): HTMLElement {
+    private createBubbleElement(
+        role: 'user' | 'assistant',
+        text: string,
+        html: string | null,
+        sentAt: string | null = null,
+    ): HTMLElement {
         const row = document.createElement('div');
         row.className = `ag-row ag-row-${role}`;
         const el = document.createElement('div');
         el.className = `ag-bubble ag-${role}`;
+        const stack = document.createElement('div');
+        stack.className = 'ag-msg';
         if (role === 'assistant') {
             const rich = assistantBubbleHtml(html, text);
             if (rich) {
@@ -834,13 +904,56 @@ export class WidgetUi {
             const avatar = document.createElement('div');
             avatar.className = 'ag-mini-avatar';
             avatar.innerHTML = ICON_SPARK;
-            row.append(avatar, el);
+            stack.append(el);
+            this.appendMessageTime(stack, sentAt);
+            row.append(avatar, stack);
         } else {
             el.textContent = text;
-            row.append(el);
+            stack.append(el);
+            this.appendMessageTime(stack, sentAt);
+            row.append(stack);
+        }
+        if (sentAt) {
+            row.dataset.sentAt = sentAt;
         }
 
         return row;
+    }
+
+    private appendMessageTime(stack: HTMLElement, sentAt: string | null): void {
+        const label = formatMessageTimeEn(sentAt);
+        if (!label || !sentAt) {
+            return;
+        }
+        const time = document.createElement('time');
+        time.className = 'ag-time';
+        time.dateTime = sentAt;
+        time.textContent = label;
+        stack.append(time);
+    }
+
+    private refreshDayDividers(): void {
+        this.messagesEl.querySelectorAll('.ag-day-divider').forEach((el) => el.remove());
+        let lastDay: string | null = null;
+        this.messagesEl.querySelectorAll<HTMLElement>('.ag-row').forEach((row) => {
+            if (row.querySelector('.ag-typing') || row.classList.contains('ag-typing') || row.classList.contains('ag-skel-row')) {
+                return;
+            }
+            const key = dayKey(row.dataset.sentAt);
+            if (!key || key === lastDay) {
+                lastDay = key ?? lastDay;
+
+                return;
+            }
+            lastDay = key;
+            const divider = document.createElement('div');
+            divider.className = 'ag-day-divider';
+            divider.setAttribute('role', 'separator');
+            const label = document.createElement('span');
+            label.textContent = formatDayLabelEn(row.dataset.sentAt);
+            divider.append(label);
+            row.parentElement?.insertBefore(divider, row);
+        });
     }
 
     private scrollMessagesToBottom(): void {
@@ -927,7 +1040,11 @@ export class WidgetUi {
                 ? (msg as { id: string }).id
                 : null;
 
-        this.showAssistantIfNew(mid, reply.text, reply.html);
+        const createdAt =
+            msg && typeof msg === 'object' && typeof (msg as { created_at?: string }).created_at === 'string'
+                ? (msg as { created_at: string }).created_at
+                : null;
+        this.showAssistantIfNew(mid, reply.text, reply.html, createdAt);
     }
 
     private trackMessageId(id: string | undefined): void {
@@ -966,7 +1083,7 @@ export class WidgetUi {
         return `txt:${normalized.slice(0, 400)}`;
     }
 
-    private showAssistantIfNew(id: string | null, text: string, html: string | null): boolean {
+    private showAssistantIfNew(id: string | null, text: string, html: string | null, sentAt: string | null = null): boolean {
         const primary = this.assistantDedupeKey(id, text, html);
         if (this.seenMessageIds.has(primary)) {
             return false;
@@ -982,7 +1099,7 @@ export class WidgetUi {
         this.setTyping(false);
         this.awaitingAssistantReply = false;
         this.pendingAssistantAfterCursor = null;
-        this.addBubble('assistant', text, html);
+        this.addBubble('assistant', text, html, sentAt ?? new Date().toISOString());
         playWidgetSound('receive', this.config.sounds ?? true);
 
         return true;
@@ -1013,7 +1130,7 @@ export class WidgetUi {
                 if (!bubble.text && !bubble.html) {
                     continue;
                 }
-                if (this.showAssistantIfNew(msg.id ?? null, bubble.text, bubble.html)) {
+                if (this.showAssistantIfNew(msg.id ?? null, bubble.text, bubble.html, bubble.sentAt)) {
                     return;
                 }
             }
@@ -1053,10 +1170,14 @@ export class WidgetUi {
             this.showInbox(false);
             this.setEmojiOpen(false);
             this.input?.blur();
+            this.setTyping(false);
 
             return;
         }
         this.input.focus();
+        if (!this.configReady) {
+            this.showMessageSkeleton();
+        }
         void this.onPanelOpened();
     }
 
@@ -1065,6 +1186,11 @@ export class WidgetUi {
     }
 
     private setTyping(active: boolean): void {
+        if (this.typingBarEl) {
+            this.typingBarEl.hidden = !active;
+        }
+        this.panel?.classList.toggle('ag-is-typing', active);
+
         if (!active) {
             this.typingEl?.remove();
             this.typingEl = null;
@@ -1073,22 +1199,24 @@ export class WidgetUi {
         }
 
         if (this.typingEl) {
+            this.scrollMessagesToBottom();
+
             return;
         }
 
-        this.typingEl = this.createBubbleElement('assistant', '', null);
-        const bubble = this.typingEl.querySelector('.ag-bubble');
-        if (bubble) {
-            bubble.classList.add('ag-typing');
-            bubble.innerHTML = '<span>Assistant is typing</span><span class="ag-dots" aria-hidden="true"><span></span><span></span><span></span></span>';
-        }
+        this.typingEl = document.createElement('div');
+        this.typingEl.className = 'ag-row ag-row-assistant ag-typing';
         this.typingEl.setAttribute('aria-live', 'polite');
+        this.typingEl.setAttribute('aria-label', 'Assistant is typing');
+        this.typingEl.innerHTML = TYPING_LABEL_HTML;
         this.messagesEl.appendChild(this.typingEl);
         this.scrollMessagesToBottom();
     }
 
-    private addBubble(role: 'user' | 'assistant', text: string, html: string | null): void {
-        this.messagesEl.appendChild(this.createBubbleElement(role, text, html));
+    private addBubble(role: 'user' | 'assistant', text: string, html: string | null = null, sentAt?: string | null): void {
+        const at = sentAt === undefined ? new Date().toISOString() : sentAt;
+        this.messagesEl.appendChild(this.createBubbleElement(role, text, html, at));
+        this.refreshDayDividers();
         this.scrollMessagesToBottom();
     }
 

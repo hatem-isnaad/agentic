@@ -21,7 +21,6 @@ final class ConversationManager
     public function start(
         string $agent,
         string|int|null $userId = null,
-        string|int|null $tenantId = null,
         ?string $sdkConversationId = null,
         array $metadata = [],
     ): Conversation {
@@ -30,7 +29,6 @@ final class ConversationManager
             agent: $agent,
             sdkConversationId: $sdkConversationId,
             userId: $userId,
-            tenantId: $tenantId,
             metadata: $metadata,
             createdAt: now()->toISOString(),
             updatedAt: now()->toISOString(),
@@ -52,16 +50,15 @@ final class ConversationManager
         string $agent,
         ?string $conversationId = null,
         string|int|null $userId = null,
-        string|int|null $tenantId = null,
         array $metadata = [],
     ): Conversation {
         if ($conversationId !== null) {
             return $this->continue($conversationId);
         }
 
-        $latest = $this->repository->findLatestFor($agent, $userId, $tenantId);
+        $latest = $this->repository->findLatestFor($agent, $userId);
 
-        return $latest ?? $this->start($agent, $userId, $tenantId, metadata: $metadata);
+        return $latest ?? $this->start($agent, $userId, metadata: $metadata);
     }
 
     public function bindSdkConversation(Conversation $conversation, string $sdkConversationId): Conversation

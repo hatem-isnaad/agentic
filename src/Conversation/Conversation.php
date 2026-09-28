@@ -17,7 +17,6 @@ final class Conversation
         public string $agent,
         public ?string $sdkConversationId = null,
         public string|int|null $userId = null,
-        public string|int|null $tenantId = null,
         public array $metadata = [],
         public ?string $createdAt = null,
         public ?string $updatedAt = null,

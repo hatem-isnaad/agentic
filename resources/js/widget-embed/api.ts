@@ -28,10 +28,6 @@ export class WidgetApiClient {
         if (bearer) {
             h.Authorization = `Bearer ${bearer}`;
         }
-        if (this.opts.userId) {
-            h['X-Agentic-User-Id'] = this.opts.userId;
-        }
-
         return h;
     }
 

@@ -2,12 +2,15 @@
 
 namespace Agentic\Console;
 
+use Agentic\Console\Concerns\ConfirmsBeforeSave;
 use Agentic\Models\WidgetEmbedToken;
 use Agentic\Widget\Embed\WidgetEmbedTokenService;
 use Illuminate\Console\Command;
 
 final class WidgetEmbedTokenCommand extends Command
 {
+    use ConfirmsBeforeSave;
+
     public function __construct(
         private WidgetEmbedTokenService $tokens,
     ) {
@@ -41,17 +44,41 @@ final class WidgetEmbedTokenCommand extends Command
 
     private function createToken(): int
     {
-        $name = (string) ($this->option('name') ?: 'embed-'.now()->format('Y-m-d'));
-        $agents = $this->csvOption('agents');
-        $origins = $this->csvOption('origins');
-        $guest = $this->option('no-guest') ? false : true;
-        $sanctum = ! $this->option('no-sanctum');
-        $days = $this->option('days');
+        $interactive = $this->wantsPrompts($this->option('name') !== null ? (string) $this->option('name') : null);
+        $name = $interactive
+            ? (string) $this->ask('Token name', 'embed-'.now()->format('Y-m-d'))
+            : (string) ($this->option('name') ?: 'embed-'.now()->format('Y-m-d'));
+        $agents = $interactive
+            ? $this->splitCsv((string) $this->ask('Allowed agent slugs (comma, empty = any)', ''))
+            : ($this->csvOption('agents') ?? []);
+        $origins = $interactive
+            ? $this->splitCsv((string) $this->ask('Allowed origins (comma, e.g. https://app.example.com)', ''))
+            : ($this->csvOption('origins') ?? []);
+        $guest = $interactive
+            ? $this->confirm('Allow guest X-Agentic-Guest-Id?', true)
+            : ($this->option('no-guest') ? false : true);
+        $sanctum = $interactive
+            ? $this->confirm('Allow Sanctum as well as the embed token?', true)
+            : ! $this->option('no-sanctum');
+        $days = $interactive
+            ? $this->ask('Expire after N days (empty = never)', '')
+            : $this->option('days');
+
+        if ($interactive && ! $this->summarizeAndConfirm([
+            ['name', $name],
+            ['agents', $agents === [] ? '*' : implode(',', $agents)],
+            ['origins', $origins === [] ? '*' : implode(',', $origins)],
+            ['guest', $guest ? 'yes' : 'no'],
+            ['sanctum', $sanctum ? 'yes' : 'no'],
+            ['days', $days === null || $days === '' ? 'never' : (string) $days],
+        ], 'Create this embed token?')) {
+            return self::SUCCESS;
+        }
 
         $created = $this->tokens->create(
             name: $name,
-            allowedAgents: $agents,
-            allowedOrigins: $origins,
+            allowedAgents: $agents === [] ? null : $agents,
+            allowedOrigins: $origins === [] ? null : $origins,
             guestAllowed: $guest,
             sanctumAllowed: $sanctum,
             expiresAt: is_numeric($days) ? now()->addDays((int) $days) : null,
@@ -97,6 +124,9 @@ final class WidgetEmbedTokenCommand extends Command
     private function revokeToken(): int
     {
         $id = $this->option('id');
+        if (! is_numeric($id) && ! $this->option('no-interaction')) {
+            $id = $this->ask('Token row id to revoke');
+        }
         if (! is_numeric($id)) {
             $this->error('--id= required for revoke');
 
@@ -108,6 +138,10 @@ final class WidgetEmbedTokenCommand extends Command
             $this->error('Token not found');
 
             return self::FAILURE;
+        }
+
+        if (! $this->option('no-interaction') && ! $this->confirm('Revoke embed token ['.$token->name.']?', false)) {
+            return self::SUCCESS;
         }
 
         $token->forceFill(['enabled' => false])->save();

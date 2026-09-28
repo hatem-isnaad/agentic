@@ -13,8 +13,8 @@ final class KnowledgeIngestor
     public function __construct(
         private KnowledgeRepository $sources,
         private KnowledgeOrchestrator $orchestrator,
-        private DocumentParserResolver $parsers = new DocumentParserResolver(),
-        private DocumentCollector $collector = new DocumentCollector(),
+        private DocumentParserResolver $parsers,
+        private DocumentCollector $collector,
         private DocumentUrlFetcher $urlFetcher,
     ) {}
 
@@ -55,10 +55,6 @@ final class KnowledgeIngestor
 
         if (isset($payload['chunk_overlap'])) {
             $configuration['chunk_overlap'] = (int) $payload['chunk_overlap'];
-        }
-
-        if (isset($payload['tenant'])) {
-            $configuration['tenant'] = (string) $payload['tenant'];
         }
 
         $updated = $this->sources->save(new KnowledgeSourceDefinition(

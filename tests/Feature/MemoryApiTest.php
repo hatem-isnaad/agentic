@@ -42,8 +42,8 @@ final class MemoryApiTest extends TestCase
         $prefix = trim((string) config('agentic.api.prefix'), '/');
 
         $response = $this->postJson('/'.$prefix.'/memories', [
-            'scope' => MemoryScope::Tenant,
-            'scope_key' => 'acme',
+            'scope' => MemoryScope::Agent,
+            'scope_key' => 'support',
             'key' => 'note',
             'content' => 'temporary',
         ])->assertCreated();
@@ -54,7 +54,7 @@ final class MemoryApiTest extends TestCase
             ->assertOk()
             ->assertJson(['deleted' => true]);
 
-        $this->getJson('/'.$prefix.'/memories?scope=tenant&scope_key=acme')
+        $this->getJson('/'.$prefix.'/memories?scope=agent&scope_key=support')
             ->assertOk()
             ->assertJsonCount(0, 'data');
     }

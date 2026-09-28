@@ -67,17 +67,17 @@ final class AgenticLaravelTool implements Approvable, Tool
     private function stringify(ToolResult $result): string
     {
         if (! $result->success) {
-            return $result->error ?? 'Tool execution failed.';
+            return 'ERROR: '.($result->error ?? 'Tool execution failed.');
         }
 
         if (is_string($result->data)) {
-            return $result->data;
+            return 'FOUND: '.$result->data;
         }
 
         if ($result->data === null) {
-            return 'ok';
+            return 'FOUND: ok';
         }
 
-        return (string) json_encode($result->data, JSON_THROW_ON_ERROR);
+        return 'FOUND: '.(string) json_encode($result->data, JSON_THROW_ON_ERROR);
     }
 }

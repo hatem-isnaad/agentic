@@ -6,12 +6,12 @@ import { useAdminConfig } from '../lib/config';
 import { useI18n } from '../lib/i18n';
 import { Button } from '../components/ui/Button';
 import { Card, CardBody } from '../components/ui/Card';
-import { FormField } from '../components/ui/FormField';
-import { NativeSelect } from '../components/ui/NativeSelect';
 import { PageContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ListFilters } from '../components/ui/ListFilters';
+import { ALL_FILTER, matchesSearch } from '../lib/listFilters';
 
 type Row = Record<string, unknown>;
 
@@ -24,6 +24,7 @@ export function ConversationsPage() {
     const [agents, setAgents] = useState<{ slug: string; name: string }[]>([]);
     const [rows, setRows] = useState<Row[]>([]);
     const [loading, setLoading] = useState(true);
+    const [q, setQ] = useState('');
 
     useEffect(() => {
         adminApi
@@ -51,12 +52,11 @@ export function ConversationsPage() {
 
     const widgetBase = boot.webPrefix.replace(/\/admin\/?$/, '/widget');
 
+    const visible = useMemo(() => rows.filter((row) => matchesSearch(row, q)), [q, rows]);
+
     const agentOptions = useMemo(
-        () => [
-            { value: '', label: t('conversations.all_agents') },
-            ...agents.map((a) => ({ value: a.slug, label: a.name })),
-        ],
-        [agents, t],
+        () => agents.map((a) => ({ value: a.slug, label: a.name })),
+        [agents],
     );
 
     return (
@@ -64,22 +64,26 @@ export function ConversationsPage() {
             <PageHeader title={t('conversations.title')} description={t('conversations.list_intro')} />
 
             <Card className="mb-6">
-                <CardBody className="flex flex-wrap items-end gap-4">
-                    <div className="min-w-[220px] flex-1">
-                    <FormField label={t('fields.agent')}>
-                        <NativeSelect
-                            value={agentFilter}
-                            onValueChange={(v) => {
-                                if (v) {
-                                    setSearchParams({ agent: v });
-                                } else {
-                                    setSearchParams({});
-                                }
-                            }}
-                            options={agentOptions}
-                        />
-                    </FormField>
-                    </div>
+                <CardBody className="space-y-4">
+                    <ListFilters
+                        search={q}
+                        onSearch={setQ}
+                        searchPlaceholder={t('filters.search')}
+                        filters={[
+                            {
+                                id: 'agent',
+                                label: t('table.agent'),
+                                value: agentFilter || ALL_FILTER,
+                                onChange: (v) => setSearchParams(v === ALL_FILTER ? {} : { agent: v }, { replace: true }),
+                                options: agentOptions,
+                            },
+                        ]}
+                        resultCount={visible.length}
+                        totalCount={rows.length}
+                        countLabel={t('filters.showing', { shown: String(visible.length), total: String(rows.length) })}
+                        allLabel={t('filters.all')}
+                        clearLabel={t('filters.clear')}
+                    />
                     {agentFilter && (
                         <a href={`${widgetBase}?agent=${encodeURIComponent(agentFilter)}`} target="_blank" rel="noreferrer">
                             <Button type="button" variant="secondary">
@@ -95,8 +99,12 @@ export function ConversationsPage() {
                 <CardBody>
                     {loading ? (
                         <TableSkeleton />
-                    ) : rows.length === 0 ? (
-                        <EmptyState icon={MessageSquare} title={t('empty.conversations')} description={t('conversations.list_intro')} />
+                    ) : visible.length === 0 ? (
+                        <EmptyState
+                            icon={MessageSquare}
+                            title={rows.length === 0 ? t('empty.conversations') : t('filters.empty')}
+                            description={rows.length === 0 ? t('conversations.list_intro') : t('filters.empty_hint')}
+                        />
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
@@ -110,7 +118,7 @@ export function ConversationsPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {rows.map((row) => {
+                                    {visible.map((row) => {
                                         const id = String(row.id ?? '');
                                         const agent = String(row.agent ?? '');
                                         return (

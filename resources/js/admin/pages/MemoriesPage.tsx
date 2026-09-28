@@ -1,5 +1,5 @@
 import { Trash2 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { adminApi } from '../lib/api';
 import { useAdminConfig } from '../lib/config';
 import { useI18n } from '../lib/i18n';
@@ -10,6 +10,9 @@ import { Input, Textarea } from '../components/ui/Input';
 import { NativeSelect } from '../components/ui/NativeSelect';
 import { PageContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
+import { DataTable } from '../components/ui/DataTable';
+import { ListFilters } from '../components/ui/ListFilters';
+import { ALL_FILTER, facetOptionsFromRows, matchesFacet, matchesSearch } from '../lib/listFilters';
 
 type MemoryRow = {
     id: number;
@@ -21,7 +24,7 @@ type MemoryRow = {
     importance?: number;
 };
 
-const SCOPES = ['user', 'agent', 'conversation', 'tenant'].map((v) => ({ value: v, label: v }));
+const SCOPES = ['user', 'agent', 'conversation'].map((v) => ({ value: v, label: v }));
 
 export function MemoriesPage() {
     const boot = useAdminConfig();
@@ -36,6 +39,8 @@ export function MemoriesPage() {
     const [newKey, setNewKey] = useState('');
     const [newContent, setNewContent] = useState('');
     const [importance, setImportance] = useState('5');
+    const [q, setQ] = useState('');
+    const [keyFilter, setKeyFilter] = useState(ALL_FILTER);
 
     const load = async () => {
         if (!scopeKey.trim()) {
@@ -86,6 +91,15 @@ export function MemoriesPage() {
             setBusy(false);
         }
     };
+
+    const visible = useMemo(
+        () =>
+            rows.filter(
+                (row) =>
+                    matchesSearch(row, q) && matchesFacet(row as unknown as Record<string, unknown>, 'key', keyFilter),
+            ),
+        [keyFilter, q, rows],
+    );
 
     const remove = async (id: number) => {
         if (!window.confirm(t('actions.confirm_delete'))) return;
@@ -143,8 +157,29 @@ export function MemoriesPage() {
                 </CardBody>
             </Card>
 
-            <Card>
-                <CardBody className="p-0 overflow-x-auto">
+            <DataTable
+                toolbar={
+                    <ListFilters
+                        search={q}
+                        onSearch={setQ}
+                        searchPlaceholder={t('filters.search')}
+                        filters={[
+                            {
+                                id: 'key',
+                                label: t('memories.fields.key'),
+                                value: keyFilter,
+                                onChange: setKeyFilter,
+                                options: facetOptionsFromRows(rows as unknown as Record<string, unknown>[], 'key'),
+                            },
+                        ]}
+                        resultCount={visible.length}
+                        totalCount={rows.length}
+                        countLabel={t('filters.showing', { shown: String(visible.length), total: String(rows.length) })}
+                        allLabel={t('filters.all')}
+                        clearLabel={t('filters.clear')}
+                    />
+                }
+            >
                     <table className="w-full text-left text-sm">
                         <thead className="border-b border-slate-100 bg-slate-50/80 text-xs font-bold uppercase text-slate-500">
                             <tr>
@@ -155,12 +190,14 @@ export function MemoriesPage() {
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-slate-100">
-                            {rows.length === 0 ? (
+                            {visible.length === 0 ? (
                                 <tr>
-                                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">{t('empty.memories')}</td>
+                                    <td colSpan={4} className="px-4 py-8 text-center text-slate-500">
+                                        {rows.length === 0 ? t('empty.memories') : t('filters.empty')}
+                                    </td>
                                 </tr>
                             ) : (
-                                rows.map((row) => (
+                                visible.map((row) => (
                                     <tr key={row.id}>
                                         <td className="px-4 py-3 font-mono text-xs">{row.id}</td>
                                         <td className="px-4 py-3 font-semibold">{row.key}</td>
@@ -176,8 +213,7 @@ export function MemoriesPage() {
                             )}
                         </tbody>
                     </table>
-                </CardBody>
-            </Card>
+            </DataTable>
         </PageContainer>
     );
 }

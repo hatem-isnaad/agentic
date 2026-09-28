@@ -1,8 +1,11 @@
 # Host application bootstrap (complete)
 
-Use this once when embedding Agentic in a **new or existing Laravel 12** app. The package repo is complete; this is the standard host wiring.
+Use this once when embedding Agentic in a **new or existing Laravel 12** app.
 
-Fast path: [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md) (install → auto PHP tools → KB → approvals).
+- **Fresh app** (empty Laravel): create the project, then follow the steps below.
+- **Finished app** (already has users, routes, UI): run the same steps **inside that project**. Append starter `.env` keys; do not replace your app. Admin uses your login + a gate. The widget goes on a page you already have.
+
+Which path and what stays yours: [START_HERE.md](./START_HERE.md) → **Two situations**. **Every extra `.env` key:** [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md). Fast path: [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md).
 
 ## 1. Require the package
 
@@ -50,28 +53,11 @@ composer require laravel/sanctum smalot/pdfparser
 # composer require laravel/passkeys filament/filament
 ```
 
-## 3. Environment (minimum viable local)
+## 3. Environment
 
-Merge from `vendor/hatem-isnaad/agentic/.env.example`:
+Copy the **starter** from `vendor/hatem-isnaad/agentic/.env.example`. That is the only list you need on day one.
 
-```env
-AGENTIC_ENABLED=true
-AGENTIC_AI_PROVIDER=ollama
-AGENTIC_AI_MODEL=qwen3.5:4b
-OLLAMA_URL=http://localhost:11434
-
-AGENTIC_KNOWLEDGE_EMBEDDING=laravel_ai
-AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER=ollama
-AGENTIC_KNOWLEDGE_EMBEDDING_MODEL=nomic-embed-text
-AGENTIC_VECTOR_STORE=pgvector
-AGENTIC_PGVECTOR_DIMENSIONS=768
-
-AGENTIC_ADMIN_ENABLED=true
-AGENTIC_WIDGET_ENABLED=true
-AGENTIC_API_ENABLED=true
-```
-
-Cloud alternative: set `AGENTIC_AI_PROVIDER=gemini` or `openai` and the matching `*_API_KEY`.
+Any extra key, small vs large, tokens: [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md).
 
 ## 4. Validate stack
 

@@ -10,7 +10,7 @@ final class MarkdownHtmlConverterTest extends TestCase
 {
     public function test_bold_and_lists_become_html(): void
     {
-        $html = (new MarkdownHtmlConverter())->convert("📦 **Outbound**\n\n- First\n- Second");
+        $html = (new MarkdownHtmlConverter)->convert("📦 **Outbound**\n\n- First\n- Second");
 
         $this->assertStringContainsString('<strong>Outbound</strong>', $html);
         $this->assertStringContainsString('<li>First</li>', $html);
@@ -19,15 +19,27 @@ final class MarkdownHtmlConverterTest extends TestCase
 
     public function test_renderer_turns_plain_markdown_into_html(): void
     {
-        $html = (new HtmlReplyRenderer())->render('Hello **world**');
+        $html = (new HtmlReplyRenderer)->render('Hello **world**');
 
         $this->assertStringContainsString('<strong>world</strong>', $html);
         $this->assertStringNotContainsString('**world**', $html);
     }
 
+    public function test_spaced_markdown_tables_become_html_tables(): void
+    {
+        $html = (new MarkdownHtmlConverter)->convert(
+            "صلت لك بيانات SKU:\n\n| التفاصيل | القيمة |\n\n|---|---|\n\n| الاسم | Gento Bundle 5 |\n\n| النوع | Kit |\n"
+        );
+
+        $this->assertStringContainsString('<table>', $html);
+        $this->assertStringContainsString('<th>', $html);
+        $this->assertStringContainsString('Gento Bundle 5', $html);
+        $this->assertStringNotContainsString('| الاسم |', $html);
+    }
+
     public function test_script_tags_are_stripped_from_html_blocks(): void
     {
-        $html = (new HtmlReplyRenderer())->render([
+        $html = (new HtmlReplyRenderer)->render([
             'format' => 'html',
             'html' => '<p>Safe</p><script>alert(1)</script>',
         ]);

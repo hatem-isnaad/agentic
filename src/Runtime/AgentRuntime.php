@@ -3,6 +3,7 @@
 namespace Agentic\Runtime;
 
 use Agentic\Agent\AgentDefinition;
+use Agentic\Channels\ChannelAgentRunner;
 use Agentic\Context\ContextBuilder;
 use Agentic\Context\ContextManager;
 use Agentic\Context\ContextPolicyResolver;
@@ -27,7 +28,7 @@ use Throwable;
  * tracking, then delegates AI execution to the Laravel AI SDK adapter.
  * It does not query Eloquent.
  */
-final class AgentRuntime
+final class AgentRuntime implements ChannelAgentRunner
 {
     public function __construct(
         private ContextBuilder $contextBuilder,

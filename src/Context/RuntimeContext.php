@@ -21,11 +21,6 @@ final class RuntimeContext
         return $this->get('user');
     }
 
-    public function tenant(): mixed
-    {
-        return $this->get('tenant');
-    }
-
     public function agent(): ?AgentDefinition
     {
         $agent = $this->get('agent');

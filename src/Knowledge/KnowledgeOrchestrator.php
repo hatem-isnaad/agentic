@@ -5,6 +5,8 @@ namespace Agentic\Knowledge;
 use Agentic\Agent\AgentDefinition;
 use Agentic\Context\RuntimeContext;
 use Agentic\Contracts\Repositories\KnowledgeRepository;
+use Agentic\Knowledge\Contracts\Indexer;
+use Agentic\Knowledge\Contracts\Retriever;
 use Agentic\Skill\SkillResolver;
 use Illuminate\Support\Facades\Log;
 
@@ -15,10 +17,10 @@ use Illuminate\Support\Facades\Log;
  */
 final class KnowledgeOrchestrator
 {
-    /** @var list<\Agentic\Knowledge\Contracts\Retriever> */
+    /** @var list<Retriever> */
     private array $retrievers = [];
 
-    /** @var list<\Agentic\Knowledge\Contracts\Indexer> */
+    /** @var list<Indexer> */
     private array $indexers = [];
 
     public function __construct(
@@ -26,12 +28,12 @@ final class KnowledgeOrchestrator
         private ?SkillResolver $skills = null,
     ) {}
 
-    public function extendRetriever(\Agentic\Knowledge\Contracts\Retriever $retriever): void
+    public function extendRetriever(Retriever $retriever): void
     {
         $this->retrievers[] = $retriever;
     }
 
-    public function extendIndexer(\Agentic\Knowledge\Contracts\Indexer $indexer): void
+    public function extendIndexer(Indexer $indexer): void
     {
         $this->indexers[] = $indexer;
     }
@@ -89,7 +91,7 @@ final class KnowledgeOrchestrator
             return [];
         }
 
-        if ((bool) config('agentic.knowledge.log_embeddings', false)) {
+        if ((bool) config('agentic.knowledge.log_queries', false)) {
             Log::info('Agentic RAG: starting retrieval', [
                 'query' => $query,
                 'sources' => $unique,
@@ -125,12 +127,15 @@ final class KnowledgeOrchestrator
 
         $result = array_slice($chunks, 0, $limit);
 
-        if ((bool) config('agentic.knowledge.log_embeddings', false)) {
-            Log::info('Agentic RAG: retrieval finished', [
-                'query' => $query,
+        if ((bool) config('agentic.knowledge.log_queries', false) || (bool) config('agentic.knowledge.log_embeddings', false)) {
+            $finished = [
                 'chunks' => count($result),
                 'top_score' => $result[0]->score ?? null,
-            ]);
+            ];
+            if ((bool) config('agentic.knowledge.log_queries', false)) {
+                $finished['query'] = $query;
+            }
+            Log::info('Agentic RAG: retrieval finished', $finished);
         }
 
         return $result;
@@ -141,7 +146,7 @@ final class KnowledgeOrchestrator
      */
     private function logRetrievalSkipped(string $query, array $sourceSlugs, string $reason): void
     {
-        if (! (bool) config('agentic.knowledge.log_embeddings', false)) {
+        if (! (bool) config('agentic.knowledge.log_queries', false)) {
             return;
         }
 

@@ -30,6 +30,8 @@ final class InstallAgenticCommand extends Command
         $this->line('  4. php artisan agentic:rag-validate --offline');
         $this->line('  5. php artisan agentic:rag-validate            # after AI keys / Ollama');
         $this->line('');
+        $this->line('Start here: vendor/hatem-isnaad/agentic/docs/START_HERE.md');
+        $this->line('Handbook:  vendor/hatem-isnaad/agentic/docs/DEVELOPER_HANDBOOK.md');
         $this->line('Quickstart: vendor/hatem-isnaad/agentic/docs/DEVELOPER_QUICKSTART.md');
         $this->line('           vendor/hatem-isnaad/agentic/docs/CONFIGURE_BY_CODE.md');
         $this->line('Docs:      vendor/hatem-isnaad/agentic/docs/HOST_BOOTSTRAP.md');

@@ -1,10 +1,15 @@
 # Agentic documentation
 
-| Document | Audience |
-|----------|----------|
-| [HOST_BOOTSTRAP.md](./HOST_BOOTSTRAP.md) | **Start here in a Laravel host app** — install, env, validate, first agent |
-| [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md) | Install → code tools → RAG → widget chatbot |
+**New to the package?** Read [START_HERE.md](./START_HERE.md) first. It uses everyday words (agent, tool, widget) and tells you which file to open next.
+
+| Document | When to open it |
+|----------|-----------------|
+| [START_HERE.md](./START_HERE.md) | **Anyone** — words, fresh vs finished project, first install |
+| [HOST_BOOTSTRAP.md](./HOST_BOOTSTRAP.md) | Putting Agentic into a Laravel app — install, env, first agent |
+| [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) | **The only env catalog** — starter set, every key, small/large, tokens |
+| [DEVELOPER_QUICKSTART.md](./DEVELOPER_QUICKSTART.md) | Short path: install → tools → RAG → chatbot |
 | [WIDGET_EMBED_SDK.md](./WIDGET_EMBED_SDK.md) | Embed popup chat on any site (`wgt_…`, themes, Pusher, HTML replies) |
+| [CHANNELS.md](./CHANNELS.md) | Widget + WhatsApp connections (Meta Cloud now, webjs sidecar later) |
 | [CONFIGURE_BY_CODE.md](./CONFIGURE_BY_CODE.md) | UI → CLI → API → PHP map (persona, widget, tools) |
 | [PRODUCTION_CHECKLIST.md](./PRODUCTION_CHECKLIST.md) | Launch hardening before go-live |
 | [IMPLEMENTATION_STATUS.md](./IMPLEMENTATION_STATUS.md) | **What is actually in the repo** — routes, features, gaps |

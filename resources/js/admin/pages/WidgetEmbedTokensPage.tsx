@@ -1,5 +1,5 @@
 import { Copy, KeyRound, Plus, Trash2 } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { adminApi, type Paginated } from '../lib/api';
 import { useAdminConfig } from '../lib/config';
 import { useI18n } from '../lib/i18n';
@@ -10,6 +10,9 @@ import { Input, Textarea } from '../components/ui/Input';
 import { PageContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
 import { TableSkeleton } from '../components/ui/Skeleton';
+import { DataTable } from '../components/ui/DataTable';
+import { ListFilters } from '../components/ui/ListFilters';
+import { ALL_FILTER, matchesFacet, matchesSearch } from '../lib/listFilters';
 
 type TokenRow = {
     id: number;
@@ -40,6 +43,8 @@ export function WidgetEmbedTokensPage() {
     const [origins, setOrigins] = useState('');
     const [guestAllowed, setGuestAllowed] = useState(true);
     const [sanctumAllowed, setSanctumAllowed] = useState(true);
+    const [q, setQ] = useState('');
+    const [enabledFilter, setEnabledFilter] = useState(ALL_FILTER);
 
     const load = useCallback(async () => {
         setLoading(true);
@@ -96,6 +101,16 @@ export function WidgetEmbedTokensPage() {
         await adminApi.put(boot, `/widget-embed-tokens/${row.id}`, { enabled: !row.enabled });
         await load();
     };
+
+    const visible = useMemo(
+        () =>
+            rows.filter(
+                (row) =>
+                    matchesSearch(row, q) &&
+                    matchesFacet({ enabled: row.enabled ? 'enabled' : 'disabled' }, 'enabled', enabledFilter),
+            ),
+        [enabledFilter, q, rows],
+    );
 
     const copyPlain = async () => {
         if (plainOnce) {
@@ -167,11 +182,35 @@ export function WidgetEmbedTokensPage() {
                 </Card>
             )}
 
-            <Card className="overflow-hidden">
-                <CardBody className="p-0">
+            <DataTable
+                toolbar={
+                    <ListFilters
+                        search={q}
+                        onSearch={setQ}
+                        searchPlaceholder={t('filters.search')}
+                        filters={[
+                            {
+                                id: 'enabled',
+                                label: t('filters.enabled'),
+                                value: enabledFilter,
+                                onChange: setEnabledFilter,
+                                options: [
+                                    { value: 'enabled', label: t('filters.values.enabled') },
+                                    { value: 'disabled', label: t('filters.values.disabled') },
+                                ],
+                            },
+                        ]}
+                        resultCount={visible.length}
+                        totalCount={rows.length}
+                        countLabel={t('filters.showing', { shown: String(visible.length), total: String(rows.length) })}
+                        allLabel={t('filters.all')}
+                        clearLabel={t('filters.clear')}
+                    />
+                }
+            >
                     {loading ? (
                         <div className="p-6"><TableSkeleton rows={3} /></div>
-                    ) : rows.length === 0 ? (
+                    ) : visible.length === 0 ? (
                         <div className="flex flex-col items-center gap-3 p-12 text-center text-sm text-slate-600">
                             <KeyRound className="h-10 w-10 text-slate-300" />
                             <p>{t('embed_tokens.empty')}</p>
@@ -189,7 +228,7 @@ export function WidgetEmbedTokensPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {rows.map((row) => (
+                                    {visible.map((row) => (
                                         <tr key={row.id} className="hover:bg-slate-50/50">
                                             <td className="px-4 py-3 font-medium">{row.name}</td>
                                             <td className="px-4 py-3 font-mono text-xs">{row.token_prefix}…</td>
@@ -216,8 +255,7 @@ export function WidgetEmbedTokensPage() {
                             </table>
                         </div>
                     )}
-                </CardBody>
-            </Card>
+            </DataTable>
 
             <p className="mt-4 text-xs text-slate-500">{t('embed_tokens.env_hint')}</p>
         </PageContainer>

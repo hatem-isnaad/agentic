@@ -5,17 +5,16 @@ import { adminApi } from '../lib/api';
 import { useAdminConfig } from '../lib/config';
 import { useStatusOptions } from '../lib/hooks';
 import { useI18n } from '../lib/i18n';
-import { Button } from '../components/ui/Button';
-import { Card, CardBody } from '../components/ui/Card';
+import { FormWizard } from '../components/forms/FormWizard';
 import { FormField } from '../components/ui/FormField';
 import { Input, Textarea } from '../components/ui/Input';
 import { NativeSelect } from '../components/ui/NativeSelect';
 import { JsonField, parseJsonObject } from '../components/ui/JsonField';
+import { ErrorBanner } from '../components/ui/DataTable';
 import { FormContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Skeleton } from '../components/ui/Skeleton';
 import { slugify } from '../lib/slugify';
-import { HelpCallout } from '../components/ui/HelpCallout';
 
 type FormValues = {
     name: string;
@@ -40,8 +39,7 @@ export function KnowledgeSourceFormPage() {
     const navigate = useNavigate();
     const [error, setError] = useState<string | null>(null);
     const [loading, setLoading] = useState(isEdit);
-
-    const [showAdvanced, setShowAdvanced] = useState(false);
+    const [step, setStep] = useState(0);
     const { register, handleSubmit, control, reset, setValue } = useForm<FormValues>({
         defaultValues: { driver: 'vector', status: 'published', config_json: '{"documents":[]}' },
     });
@@ -69,7 +67,7 @@ export function KnowledgeSourceFormPage() {
             .finally(() => setLoading(false));
     }, [boot, slug, reset]);
 
-    const onSubmit = handleSubmit(async (values) => {
+    const save = handleSubmit(async (values) => {
         setError(null);
         try {
             const config = parseJsonObject(values.config_json, 'Config');
@@ -107,56 +105,61 @@ export function KnowledgeSourceFormPage() {
                 title={isEdit ? t('knowledge.edit_heading', { name: slug ?? '' }) : t('knowledge.create_heading')}
                 description={t('knowledge.form_intro_simple')}
             />
-            <HelpCallout>{t('knowledge.create_hint')}</HelpCallout>
-            {error && (
-                <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
-            )}
-            <Card>
-                <CardBody>
-                    <form onSubmit={onSubmit} className="space-y-5">
+            {error && <ErrorBanner message={error} />}
+            <FormWizard
+                steps={[
+                    { id: 'basics', title: t('wizard.basics'), description: t('wizard.basics_desc') },
+                    { id: 'source', title: t('wizard.source'), description: t('wizard.source_desc') },
+                ]}
+                step={step}
+                onStepChange={setStep}
+                onSubmit={() => void save()}
+                canNext={Boolean(name?.trim())}
+                saveLabel={isEdit ? t('actions.update') : t('actions.save')}
+            >
+                {step === 0 && (
+                    <div className="grid gap-5 lg:grid-cols-2">
                         <FormField label={t('fields.name')} required>
                             <Input {...register('name', { required: true })} />
                         </FormField>
                         <FormField label={t('fields.slug')} required>
                             <Input {...register('slug', { required: true })} readOnly={isEdit} />
                         </FormField>
+                        <div className="lg:col-span-2">
+                            <FormField label={t('fields.description')}>
+                                <Textarea {...register('description')} rows={3} />
+                            </FormField>
+                        </div>
+                    </div>
+                )}
+                {step === 1 && (
+                    <div className="grid gap-5 lg:grid-cols-2">
                         <FormField label={t('fields.driver')} required>
                             <Controller
                                 name="driver"
                                 control={control}
-                                render={({ field }) => (
-                                    <NativeSelect value={field.value} onValueChange={field.onChange} options={DRIVER_OPTIONS} />
-                                )}
+                                render={({ field }) => <NativeSelect value={field.value} onValueChange={field.onChange} options={DRIVER_OPTIONS} />}
                             />
-                        </FormField>
-                        <FormField label={t('fields.description')}>
-                            <Textarea {...register('description')} rows={2} />
                         </FormField>
                         <FormField label={t('fields.status')}>
                             <Controller
                                 name="status"
                                 control={control}
-                                render={({ field }) => (
-                                    <NativeSelect value={field.value} onValueChange={field.onChange} options={statusOptions} />
-                                )}
+                                render={({ field }) => <NativeSelect value={field.value} onValueChange={field.onChange} options={statusOptions} />}
                             />
                         </FormField>
-                        <Button type="button" variant="ghost" onClick={() => setShowAdvanced((v) => !v)}>
-                            {showAdvanced ? t('forms.hide_advanced') : t('forms.show_advanced')}
-                        </Button>
-                        {showAdvanced && (
+                        <div className="lg:col-span-2">
                             <FormField label={t('knowledge.fields.config')} hint={t('knowledge.config_hint')}>
                                 <Controller
                                     name="config_json"
                                     control={control}
-                                    render={({ field }) => <JsonField value={field.value} onChange={field.onChange} rows={6} />}
+                                    render={({ field }) => <JsonField value={field.value} onChange={field.onChange} rows={8} />}
                                 />
                             </FormField>
-                        )}
-                        <Button type="submit">{t('actions.save')}</Button>
-                    </form>
-                </CardBody>
-            </Card>
+                        </div>
+                    </div>
+                )}
+            </FormWizard>
         </FormContainer>
     );
 }

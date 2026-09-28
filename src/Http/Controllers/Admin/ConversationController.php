@@ -13,10 +13,7 @@ use Illuminate\Http\Request;
 
 final class ConversationController
 {
-    public function __construct(
-        private ConversationAdminService $conversations,
-        private WidgetConversationService $widgetConversations,
-    ) {}
+    public function __construct(private ConversationAdminService $conversations, private WidgetConversationService $widgetConversations) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -34,11 +31,7 @@ final class ConversationController
             return JsonApiResponse::error('Conversation not found.', 404);
         }
 
-        $page = $this->widgetConversations->messagesPage(
-            $id,
-            new WidgetIdentity(null, null),
-            (int) config('agentic.widget.history.max_page_size', 50),
-        );
+        $page = $this->widgetConversations->messagesPage($id, new WidgetIdentity(null, null), (int) config('agentic.widget.history.max_page_size', 50));
 
         return JsonApiResponse::data($page['messages'], meta: AdminLocaleMeta::build());
     }

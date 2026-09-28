@@ -57,6 +57,45 @@ final class OAuth2TokenManagerTest extends TestCase
         });
     }
 
+    public function test_token_request_sends_connection_auth_extras(): void
+    {
+        Cache::flush();
+
+        Http::fake([
+            'https://auth.example.test/oauth/token*' => Http::response([
+                'access_token' => 'fresh-access-token',
+                'expires_in' => 3600,
+            ], 200),
+        ]);
+
+        $connection = Connection::create([
+            'name' => 'OAuth API',
+            'slug' => 'oauth-extras',
+            'type' => 'oauth2',
+            'status' => 'active',
+            'config' => [
+                'type' => 'oauth2',
+                'grant_type' => 'client_credentials',
+                'token_url' => 'https://auth.example.test/oauth/token',
+                'auth_headers' => ['X-Internal' => 'edge'],
+                'auth_query' => ['audience' => 'api'],
+                'auth_body' => ['resource' => 'orders'],
+            ],
+            'credentials' => [
+                'client_id' => 'client-id',
+                'client_secret' => 'client-secret',
+            ],
+        ]);
+
+        app(OAuth2TokenManager::class)->accessToken($connection->fresh());
+
+        Http::assertSent(function ($request): bool {
+            return str_contains($request->url(), 'audience=api')
+                && $request->hasHeader('X-Internal', 'edge')
+                && $request['resource'] === 'orders';
+        });
+    }
+
     public function test_oauth2_token_endpoint_must_pass_url_validation(): void
     {
         $connection = Connection::create([

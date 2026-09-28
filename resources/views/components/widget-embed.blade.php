@@ -1,6 +1,6 @@
 @props([
     'agent' => config('agentic.widget.embed.default_agent'),
-    'token' => null,
+    'token' => config('agentic.widget.embed.token') ?: config('services.agentic.widget_embed_token'),
     'api' => null,
     'theme' => 'system',
     'position' => config('agentic.widget.embed.position', 'bottom-right'),

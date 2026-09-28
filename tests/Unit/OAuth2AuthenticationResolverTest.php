@@ -3,8 +3,8 @@
 namespace Agentic\Tests\Unit;
 
 use Agentic\Models\Connection;
-use Agentic\Tool\Drivers\Http\AuthenticationResolver;
 use Agentic\Tests\TestCase;
+use Agentic\Tool\Drivers\Http\AuthenticationResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -47,5 +47,30 @@ final class OAuth2AuthenticationResolverTest extends TestCase
             $auth['headers'],
         );
         $this->assertSame([], $auth['query']);
+    }
+
+    public function test_connection_extras_are_merged_onto_every_request(): void
+    {
+        Connection::create([
+            'name' => 'Merchant',
+            'slug' => 'merchant',
+            'type' => 'bearer',
+            'status' => 'active',
+            'config' => [
+                'type' => 'bearer',
+                'headers' => ['X-Store-Id' => 'store-9', 'Accept' => 'application/json'],
+                'query' => ['locale' => 'ar'],
+            ],
+            'credentials' => [
+                'token' => 'secret-token',
+            ],
+        ]);
+
+        $auth = app(AuthenticationResolver::class)->resolve(null, 'merchant');
+
+        $this->assertSame('Bearer secret-token', $auth['headers']['Authorization']);
+        $this->assertSame('store-9', $auth['headers']['X-Store-Id']);
+        $this->assertSame('application/json', $auth['headers']['Accept']);
+        $this->assertSame(['locale' => 'ar'], $auth['query']);
     }
 }

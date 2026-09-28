@@ -1,5 +1,7 @@
 # Widget embed SDK (popup chat for Blade, SPA, any site)
 
+Env, tokens, and limits: [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md) §5.
+
 Drop a **chat popup** on any webpage: standalone JS/CSS, themes (light / dark / system / brand), optional sounds, and **production security** so random sites cannot use your widget even if they copy your script tags.
 
 ## Quick start — embed on your website
@@ -235,14 +237,14 @@ curl -s "https://YOUR_API_HOST/api/agentic/widget/config?agent=support" \
 ## Simple model (one token, one validator)
 
 1. Create an embed token in **Admin → Embed tokens** (`allowed_origins`, `allowed_agents`, **guest allowed** on/off).
-2. Page calls `AgenticChat.init({ embedToken: 'wgt_…', agent, apiBase, userId? })`.
-3. **No UI** until `GET /config?agent=…` succeeds (token in DB, host/origin match, guest or `userId` per token).
+2. Page calls `AgenticChat.init({ embedToken: 'wgt_…', agent, apiBase, bearerToken? })`.
+3. **No UI** until `GET /config?agent=…` succeeds (token in DB, host/origin match, guest header or Sanctum session).
 4. **Every** widget request (`/messages`, history, …) runs the same check again — no bypass.
 
 | Token setting | Client |
 |---------------|--------|
 | Guest allowed | Auto `X-Agentic-Guest-Id` |
-| Guests off (auth required) | Pass `userId: 'your-user-123'` → `X-Agentic-User-Id` |
+| Guests off (auth required) | Signed-in Sanctum session or `bearerToken` — **not** `X-Agentic-User-Id` |
 
 Optional: `AGENTIC_WIDGET_EMBED_REQUIRE_TOKEN=false` only for local open API (not production).
 
@@ -425,4 +427,4 @@ Optional **polling driver** (`AGENTIC_WIDGET_BROADCAST_DRIVER=polling`) loads a 
 
 - React/Vue wrapper packages
 - Custom sound packs via URL
-- WhatsApp / Messenger live adapters (presenters already exist; HTML is web-only)
+- Messenger live webhook (presenter exists; WhatsApp Meta + webjs are live — [CHANNELS.md](./CHANNELS.md))

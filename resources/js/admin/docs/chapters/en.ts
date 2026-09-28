@@ -104,7 +104,7 @@ php artisan agentic:rag-validate`,
     'namespace' => 'App\\\\Agentic\\\\Tools\\\\Custom',
 ],`,
         adminNote:
-            'Canonical host docs: vendor/hatem-isnaad/agentic/docs/DEVELOPER_QUICKSTART.md and CONFIGURE_BY_CODE.md',
+            'Start in plain language: vendor/hatem-isnaad/agentic/docs/START_HERE.md. Then DEVELOPER_HANDBOOK.md.',
     },
     environment: {
         title: '02 · Environment & config file',
@@ -113,6 +113,7 @@ php artisan agentic:rag-validate`,
         steps: [
             { title: 'Published config', body: 'config/agentic.php after agentic:install — host overrides win.' },
             { title: 'Clear config cache', body: 'php artisan config:clear after .env changes.' },
+            { title: 'Every env documented', body: 'docs/DEVELOPER_HANDBOOK.md — what each key does and what happens if you raise a limit.' },
             { title: 'Drivers', body: 'execution, conversation, knowledge, memory, workflow drivers: eloquent vs memory (tests).' },
             { title: 'Feature flags', body: 'admin.enabled, widget.enabled, api.enabled, workflows.enabled, memory.enabled.' },
         ],
@@ -176,20 +177,26 @@ POST /tools  { "driver": "code", "definition": { "handler": "..." } }`,
             { title: 'Define tool', body: 'method, url with {params}, input_schema JSON Schema' },
             { title: 'Publish', body: 'status published + publish:true on create' },
             { title: 'Permissions', body: 'Agent tool_permissions patterns if using permission checker' },
+            { title: 'Test', body: 'Open the tool and send a real request, or php artisan agentic:http-tool test {slug}' },
         ],
         api: `POST /tools
 {
   "name": "Get order",
-  "slug": "get-order",
+  "slug": "orders-get",
   "driver": "http",
   "status": "published",
   "publish": true,
   "definition": {
+    "connection": "merchant-api",
     "method": "GET",
-    "url": "https://api.example.com/orders/{order_id}",
-    "input_schema": { "type": "object", "properties": { "order_id": { "type": "string" } }, "required": ["order_id"] }
+    "url": "https://api.example.com/v1/orders/{id}",
+    "input_schema": { "type": "object", "properties": { "id": { "type": "string" } }, "required": ["id"] }
   }
-}`,
+}
+
+# Test a saved HTTP tool:
+# POST /tools/{slug}/test  { "arguments": { "id": "1004" } }
+# php artisan agentic:http-tool test orders-get --arg=id=1004`,
         ui: { path: '/tools/new', label: 'New HTTP tool' },
     },
     mcp: {
@@ -263,7 +270,7 @@ POST /agents/{slug}/execute`,
     memories: {
         title: '10 · Memories',
         summary: 'Scoped facts injected into agent context.',
-        goal: 'Tenant/user/agent/conversation scoped memory.',
+        goal: 'User/agent/conversation scoped memory.',
         steps: [
             { title: 'Enable', body: 'AGENTIC_MEMORY_ENABLED=true' },
             { title: 'CRUD via API', body: 'scope, scope_key, key, content, importance' },
@@ -533,22 +540,8 @@ POST /messages { "agent": "support", "message": "Hello" }`,
         ],
         php: "Gate::define('viewAgentic', fn ($user = null) => ...);",
     },
-    tenant: {
-        title: '20 · Multi-tenant',
-        summary: 'Resolve tenant from header or user attribute.',
-        goal: 'Isolate data per tenant in host app.',
-        steps: [
-            { title: 'Header', body: 'X-Agentic-Tenant-Id (configurable)' },
-            { title: 'User attribute', body: 'AGENTIC_TENANT_USER_ATTRIBUTE' },
-            { title: 'Custom resolver', body: 'Bind Agentic\\Contracts\\TenantResolver' },
-        ],
-        env: [
-            { key: 'AGENTIC_TENANT_HEADER', description: 'HTTP header name' },
-            { key: 'AGENTIC_TENANT_USER_ATTRIBUTE', description: 'User model column' },
-        ],
-    },
     'http-security': {
-        title: '21 · HTTP tool & ingest security',
+        title: '20 · HTTP tool & ingest security',
         summary: 'SSRF protection for HTTP tools and URL ingest.',
         goal: 'Prevent agents from hitting internal networks.',
         steps: [
@@ -561,7 +554,7 @@ POST /messages { "agent": "support", "message": "Hello" }`,
         ],
     },
     'drivers-storage': {
-        title: '22 · Drivers & storage',
+        title: '21 · Drivers & storage',
         summary: 'Swap eloquent vs memory drivers for tests.',
         goal: 'Know which driver backs each resource.',
         steps: [
@@ -577,7 +570,7 @@ POST /messages { "agent": "support", "message": "Hello" }`,
         ],
     },
     monitoring: {
-        title: '23 · Executions & conversations',
+        title: '22 · Executions & conversations',
         summary: 'Inspect runs and chat history.',
         goal: 'Debug agent behavior in production.',
         steps: [
@@ -589,7 +582,7 @@ POST /messages { "agent": "support", "message": "Hello" }`,
         ui: { path: '/executions', label: 'Executions' },
     },
     seeding: {
-        title: '24 · Seeders & demos',
+        title: '23 · Seeders & demos',
         summary: 'Repeatable full stacks in code.',
         goal: 'CI/staging environments with one command.',
         steps: [
@@ -601,7 +594,7 @@ POST /messages { "agent": "support", "message": "Hello" }`,
         php: 'database/seeders/Agentic3plFulfillmentSeeder.php',
     },
     artisan: {
-        title: '25 · Artisan command reference',
+        title: '24 · Artisan command reference',
         summary: 'All package CLI entry points.',
         goal: 'Quick lookup without opening README.',
         steps: [

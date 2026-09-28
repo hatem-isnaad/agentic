@@ -64,7 +64,7 @@ final class EloquentToolRepository implements ToolRepository
 
         $definition = $attributes['definition'] ?? null;
 
-        if (is_array($definition) && ($attributes['publish'] ?? false)) {
+        if (is_array($definition) && $definition !== []) {
             $this->publisher->publish($model, $definition);
             $model = $model->fresh();
         }

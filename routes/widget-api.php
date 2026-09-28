@@ -9,8 +9,7 @@ use Illuminate\Support\Facades\Route;
 
 Route::get('config', ConfigController::class)->name('config');
 
-Route::get('conversations', [ConversationController::class, 'index'])->name('conversations.index');
-Route::post('conversations', [ConversationController::class, 'store'])->name('conversations.store');
+Route::apiResource('conversations', ConversationController::class)->only(['index', 'store']);
 Route::get('conversations/{id}/messages', [ConversationController::class, 'messages'])->name('conversations.messages.index');
 Route::post('conversations/{id}/messages', [MessageController::class, 'store'])->name('conversations.messages.store');
 Route::get('conversations/{id}/realtime', RealtimeController::class)->name('conversations.realtime');

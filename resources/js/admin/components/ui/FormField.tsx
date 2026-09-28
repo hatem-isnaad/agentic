@@ -10,7 +10,7 @@ type Props = {
 
 export function FormField({ label, hint, children, required }: Props) {
     return (
-        <div className="space-y-1.5">
+        <div className="ag-field space-y-1.5">
             <Label>
                 {label}
                 {required && <span className="text-red-500"> *</span>}

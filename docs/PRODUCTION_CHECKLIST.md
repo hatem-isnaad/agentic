@@ -85,11 +85,7 @@ AGENTIC_KNOWLEDGE_QUEUE_REINDEX=true
 
 Run `php artisan queue:work` in the host app.
 
-## 5. Multi-tenant
-
-Bind `Agentic\Contracts\TenantResolver` if defaults are not enough. Pass tenant on widget (`X-Agentic-Tenant-Id`) and ensure knowledge ingest sets `tenant` metadata for vector isolation.
-
-## 6. MCP
+## 5. MCP
 
 1. Configure `config/mcp.php` (Laravel MCP).
 2. `php artisan agentic:mcp-sync {server}` or `POST /api/agentic/mcp/servers/{server}/sync`.
@@ -97,7 +93,7 @@ Bind `Agentic\Contracts\TenantResolver` if defaults are not enough. Pass tenant 
 4. Optional: add to agent `config` JSON — `"mcp": { "server": "docs", "resource_uris": ["file:///policy.md"] }` for runtime knowledge injection.
 5. Resources/prompts catalog: runtime API under `/mcp/servers/{server}/...`.
 
-## 7. Frontends (required for end users)
+## 6. Frontends (required for end users)
 
 The package does **not** ship production React apps.
 
@@ -108,7 +104,7 @@ The package does **not** ship production React apps.
 
 Configure Pusher or polling for widget realtime (`AGENTIC_WIDGET_BROADCAST_DRIVER`).
 
-## 8. Optional Filament ops UI
+## 7. Optional Filament ops UI
 
 ```env
 AGENTIC_FILAMENT_PANELS=admin
@@ -122,17 +118,17 @@ In your `PanelProvider`:
 
 Or rely on auto-registration when the panel ID is listed in config. Filament covers basic CRUD — not full agent↔skill relation editing or execution dashboards.
 
-## 9. Workflows
+## 8. Workflows
 
 - Approvals pause with **HTTP 202**; approve via widget/admin, then `POST .../workflows/{slug}/resume` with `approval_id`. Use `GET .../workflow-runs` to list pending runs. Low-level `WorkflowRunner` still supports `input._resume_approval_id` for custom integrations.
 - Parallel branches run sequentially in PHP (isolated variables, merged results).
 
-## 10. Verify before launch
+## 9. Verify before launch
 
 - [ ] `./vendor/bin/phpunit` in CI (package) + your app test suite
 - [ ] Tool deny/allow matches product policy (test a forbidden tool call)
 - [ ] Widget approval flow end-to-end
-- [ ] RAG retrieval returns tenant-scoped chunks only
+- [ ] RAG retrieval returns source-namespace chunks only
 - [ ] OAuth2/HTTP tools only reach allowed hosts
 - [ ] Secrets in `agentic_connections` / env, not in git
 

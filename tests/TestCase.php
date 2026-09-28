@@ -24,5 +24,9 @@ abstract class TestCase extends Orchestra
         $app['config']->set('agentic.memory.driver', 'memory');
         $app['config']->set('agentic.http.allow_unresolved_hosts', true);
         $app['config']->set('agentic.api.rate_limit.enabled', false);
+        $app['config']->set('agentic.widget.rate_limit.enabled', false);
+        $app['config']->set('agentic.channels.verify_signatures', false);
+        $app['config']->set('agentic.auth.protect.admin_api', false);
+        $app['config']->set('agentic.auth.protect.runtime_api', false);
     }
 }

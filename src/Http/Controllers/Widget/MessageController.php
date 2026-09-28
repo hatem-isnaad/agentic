@@ -9,9 +9,7 @@ use Illuminate\Http\JsonResponse;
 
 final class MessageController
 {
-    public function __construct(
-        private WidgetMessageService $messages,
-    ) {}
+    public function __construct(private WidgetMessageService $messages) {}
 
     public function store(StoreWidgetMessageRequest $request, ?string $id = null): JsonResponse
     {

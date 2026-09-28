@@ -25,6 +25,9 @@ import { DocsIndexPage } from './pages/docs/DocsIndexPage';
 import { JsonBuilderPage } from './pages/JsonBuilderPage';
 import { SetupWizardPage } from './pages/SetupWizardPage';
 import { CustomCodeToolsPage } from './pages/CustomCodeToolsPage';
+import { ConnectionsPage } from './pages/ConnectionsPage';
+import { ChannelAccountsPage } from './pages/ChannelAccountsPage';
+import { EvaluationsPage } from './pages/EvaluationsPage';
 
 const col = (key: string, labelKey: string, type?: 'status' | 'text') => ({ key, labelKey, type });
 
@@ -52,6 +55,7 @@ export default function App() {
                             createPath="/agents/new"
                             resourceBase="agents"
                             columns={[col('name', 'table.name'), col('slug', 'table.slug'), col('status', 'table.status', 'status')]}
+                            facets={[{ key: 'status', labelKey: 'table.status' }]}
                         />
                     }
                 />
@@ -69,6 +73,7 @@ export default function App() {
                             createPath="/skills/new"
                             resourceBase="skills"
                             columns={[col('name', 'table.name'), col('slug', 'table.slug'), col('status', 'table.status', 'status')]}
+                            facets={[{ key: 'status', labelKey: 'table.status' }]}
                         />
                     }
                 />
@@ -86,10 +91,18 @@ export default function App() {
                             createPath="/tools/new"
                             resourceBase="tools"
                             columns={[col('name', 'table.name'), col('slug', 'table.slug'), col('driver', 'table.driver'), col('status', 'table.status', 'status')]}
+                            facets={[
+                                { key: 'driver', labelKey: 'table.driver' },
+                                { key: 'status', labelKey: 'table.status' },
+                            ]}
+                            canClone
                         />
                     }
                 />
                 <Route path="custom-code-tools" element={<CustomCodeToolsPage />} />
+                <Route path="connections" element={<ConnectionsPage />} />
+                <Route path="channel-accounts" element={<ChannelAccountsPage />} />
+                <Route path="evaluations" element={<EvaluationsPage />} />
                 <Route path="tools/new" element={<ToolFormPage />} />
                 <Route path="tools/:slug" element={<EntityDetailPage apiBase="/tools" resourceBase="tools" />} />
                 <Route path="tools/:slug/edit" element={<ToolFormPage />} />
@@ -105,6 +118,10 @@ export default function App() {
                             createPath="/knowledge-sources/new"
                             resourceBase="knowledge-sources"
                             columns={[col('name', 'table.name'), col('slug', 'table.slug'), col('driver', 'table.driver'), col('status', 'table.status', 'status')]}
+                            facets={[
+                                { key: 'driver', labelKey: 'table.driver' },
+                                { key: 'status', labelKey: 'table.status' },
+                            ]}
                         />
                     }
                 />
@@ -122,6 +139,7 @@ export default function App() {
                             createPath="/workflows/new"
                             resourceBase="workflows"
                             columns={[col('name', 'table.name'), col('slug', 'table.slug'), col('status', 'table.status', 'status')]}
+                            facets={[{ key: 'status', labelKey: 'table.status' }]}
                         />
                     }
                 />
@@ -139,6 +157,10 @@ export default function App() {
                             resourceBase="workflow-runs"
                             slugKey="uuid"
                             columns={[col('uuid', 'table.uuid'), col('workflow_slug', 'table.workflow'), col('status', 'table.status', 'status')]}
+                            facets={[
+                                { key: 'workflow_slug', labelKey: 'table.workflow' },
+                                { key: 'status', labelKey: 'table.status' },
+                            ]}
                         />
                     }
                 />
@@ -154,6 +176,10 @@ export default function App() {
                             resourceBase="executions"
                             slugKey="id"
                             columns={[col('id', 'table.id'), col('agent_slug', 'table.agent'), col('status', 'table.status', 'status')]}
+                            facets={[
+                                { key: 'agent_slug', labelKey: 'table.agent' },
+                                { key: 'status', labelKey: 'table.status' },
+                            ]}
                         />
                     }
                 />

@@ -11,19 +11,12 @@ use Agentic\Widget\Reply\StructuredReplyBuilder;
  */
 final class WebHtmlReplyPresenter implements ChannelReplyPresenter
 {
-    public function __construct(
-        private StructuredReplyBuilder $builder,
-    ) {}
+    public function __construct(private StructuredReplyBuilder $builder) {}
 
     public function present(array|string|null $payload): PresentedReply
     {
         $built = $this->builder->build($payload);
 
-        return new PresentedReply(
-            format: $built['format'],
-            html: $built['html'],
-            text: trim(strip_tags($built['html'])),
-            blocks: $built['blocks'],
-        );
+        return new PresentedReply(format: $built['format'], html: $built['html'], text: trim(strip_tags($built['html'])), blocks: $built['blocks']);
     }
 }

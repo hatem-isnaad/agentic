@@ -2,8 +2,9 @@
 
 namespace Agentic\Tool\Drivers\Http;
 
-use Agentic\Contracts\Connections\ConnectionResolver;
+use Agentic\Connections\ConnectionRequestExtras;
 use Agentic\Connections\OAuth2TokenManager;
+use Agentic\Contracts\Connections\ConnectionResolver;
 use Agentic\Models\Connection;
 use InvalidArgumentException;
 
@@ -38,15 +39,26 @@ final class AuthenticationResolver
                     throw new InvalidArgumentException('OAuth2 token manager is not configured.');
                 }
 
-                return [
+                return $this->withConnectionExtras($model, [
                     'headers' => ['Authorization' => 'Bearer '.$this->oauth2->accessToken($model)],
                     'query' => [],
-                ];
+                ]);
             }
 
             $auth = array_merge($model->config ?? [], $credentials);
+
+            return $this->withConnectionExtras($model, $this->resolveAuth($auth));
         }
 
+        return $this->resolveAuth($auth);
+    }
+
+    /**
+     * @param  array<string, mixed>|null  $auth
+     * @return array{headers: array<string, string>, query: array<string, string>}
+     */
+    private function resolveAuth(?array $auth): array
+    {
         if ($auth === null || $auth === []) {
             return ['headers' => [], 'query' => []];
         }
@@ -63,6 +75,20 @@ final class AuthenticationResolver
         };
     }
 
+    /**
+     * @param  array{headers: array<string, string>, query: array<string, string>}  $auth
+     * @return array{headers: array<string, string>, query: array<string, string>}
+     */
+    private function withConnectionExtras(Connection $connection, array $auth): array
+    {
+        $extras = ConnectionRequestExtras::forRequests(is_array($connection->config) ? $connection->config : []);
+
+        return [
+            'headers' => array_merge($extras['headers'], $auth['headers']),
+            'query' => array_merge($extras['query'], $auth['query']),
+        ];
+    }
+
     private function secret(array $auth, string $key): string
     {
         $value = $auth[$key] ?? null;
@@ -72,9 +98,12 @@ final class AuthenticationResolver
         }
 
         if (str_starts_with($value, 'env:')) {
-            $env = getenv(substr($value, 4));
-
+            $key = substr($value, 4);
+            $env = getenv($key);
             if ($env === false || $env === '') {
+                $env = (string) env($key, '');
+            }
+            if ($env === '') {
                 throw new InvalidArgumentException("Environment secret [{$value}] is not set.");
             }
 

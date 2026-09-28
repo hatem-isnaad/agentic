@@ -13,7 +13,7 @@ final class MarkdownHtmlConverter
 
     public function convert(string $markdown): string
     {
-        $markdown = trim($markdown);
+        $markdown = $this->normalizeTableRows(trim($markdown));
         if ($markdown === '') {
             return '';
         }
@@ -21,6 +21,14 @@ final class MarkdownHtmlConverter
         $engine = $this->engine();
 
         return $engine !== null ? trim((string) $engine->convert($markdown)) : $this->fallback($markdown);
+    }
+
+    /**
+     * Models often insert a blank line between every table row, which breaks GFM tables.
+     */
+    private function normalizeTableRows(string $markdown): string
+    {
+        return preg_replace('/(\|[^\n]*\|)[ \t]*\n(?:[ \t]*\n)+(?=\|)/u', "$1\n", $markdown) ?? $markdown;
     }
 
     private function engine(): mixed
@@ -61,7 +69,7 @@ final class MarkdownHtmlConverter
         $escaped = preg_replace('/__(.+?)__/s', '<strong>$1</strong>', $escaped) ?? $escaped;
         $escaped = preg_replace('/(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)/s', '<em>$1</em>', $escaped) ?? $escaped;
         $escaped = preg_replace('/`([^`]+)`/', '<code>$1</code>', $escaped) ?? $escaped;
-        $escaped = preg_replace("/\n{2,}/", "</p><p>", $escaped) ?? $escaped;
+        $escaped = preg_replace("/\n{2,}/", '</p><p>', $escaped) ?? $escaped;
         $escaped = nl2br($escaped, false);
 
         if (! str_contains($escaped, '<p>') && ! str_contains($escaped, '<h') && ! str_contains($escaped, '<ul') && ! str_contains($escaped, '<ol') && ! str_contains($escaped, '<table') && ! str_contains($escaped, '<pre')) {

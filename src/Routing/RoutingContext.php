@@ -14,7 +14,6 @@ final readonly class RoutingContext
         public string $message = '',
         public ?string $agentHint = null,
         public string|int|null $userId = null,
-        public string|int|null $tenantId = null,
         public array $attributes = [],
     ) {}
 

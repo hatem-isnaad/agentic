@@ -12,7 +12,7 @@ final class EloquentAgentRepository implements AgentRepository
 {
     public function findById(int|string $id): ?AgentDefinition
     {
-        $agent = Agent::query()->with(['skills' => fn ($q) => $q->where('status', Status::Published)])->find($id);
+        $agent = Agent::query()->with($this->skillEagerLoad())->find($id);
 
         return $agent ? $this->toDefinition($agent) : null;
     }
@@ -20,7 +20,7 @@ final class EloquentAgentRepository implements AgentRepository
     public function findBySlug(string $slug): ?AgentDefinition
     {
         $agent = Agent::query()
-            ->with(['skills' => fn ($q) => $q->where('status', Status::Published)])
+            ->with($this->skillEagerLoad())
             ->where('slug', $slug)
             ->first();
 
@@ -31,7 +31,7 @@ final class EloquentAgentRepository implements AgentRepository
     {
         return Agent::query()
             ->published()
-            ->with(['skills' => fn ($q) => $q->where('status', Status::Published)])
+            ->with($this->skillEagerLoad())
             ->get()
             ->map(fn (Agent $agent) => $this->toDefinition($agent))
             ->all();
@@ -40,7 +40,7 @@ final class EloquentAgentRepository implements AgentRepository
     public function all(): array
     {
         return Agent::query()
-            ->with(['skills'])
+            ->with($this->skillEagerLoad(false))
             ->orderBy('name')
             ->get()
             ->map(fn (Agent $agent) => $this->toDefinition($agent))
@@ -91,7 +91,7 @@ final class EloquentAgentRepository implements AgentRepository
             $model->skills()->sync($sync);
         }
 
-        return $this->toDefinition($model->fresh(['skills']));
+        return $this->toDefinition($model->fresh($this->skillEagerLoad(false)));
     }
 
     public function delete(string $slug): bool
@@ -99,9 +99,38 @@ final class EloquentAgentRepository implements AgentRepository
         return Agent::query()->where('slug', $slug)->delete() > 0;
     }
 
+    /**
+     * @return array<int|string, mixed>
+     */
+    private function skillEagerLoad(bool $publishedOnly = true): array
+    {
+        $tools = $publishedOnly
+            ? fn ($query) => $query->where('status', Status::Published)
+            : fn ($query) => $query;
+
+        return [
+            'skills' => $publishedOnly
+                ? fn ($query) => $query->where('status', Status::Published)->with(['tools' => $tools])
+                : fn ($query) => $query->with(['tools' => $tools]),
+        ];
+    }
+
     private function toDefinition(Agent $agent): AgentDefinition
     {
         $modelConfig = $agent->model_config ?? [];
+        $directTools = array_values(array_filter(
+            is_array($agent->config['tools'] ?? null) ? $agent->config['tools'] : [],
+            'is_string',
+        ));
+        $skillTools = $agent->skills
+            ->flatMap(fn (Skill $skill) => $skill->tools->pluck('slug'))
+            ->filter()
+            ->values()
+            ->all();
+        $configuredPermissions = array_values(array_filter(
+            is_array($agent->config['permissions'] ?? null) ? $agent->config['permissions'] : [],
+            'is_string',
+        ));
 
         return new AgentDefinition(
             name: $agent->name,
@@ -118,8 +147,8 @@ final class EloquentAgentRepository implements AgentRepository
             provider: $modelConfig['provider'] ?? null,
             temperature: isset($modelConfig['temperature']) ? (float) $modelConfig['temperature'] : null,
             maxTokens: isset($modelConfig['max_tokens']) ? (int) $modelConfig['max_tokens'] : null,
-            tools: $agent->config['tools'] ?? [],
-            permissions: $agent->config['permissions'] ?? [],
+            tools: $directTools,
+            permissions: array_values(array_unique(array_merge($configuredPermissions, $directTools, $skillTools))),
             runtime: $agent->config['runtime'] ?? [],
             status: $agent->status instanceof Status ? $agent->status->value : (string) $agent->status,
         );

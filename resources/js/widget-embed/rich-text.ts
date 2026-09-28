@@ -17,11 +17,21 @@ export function assistantBubbleHtml(html: string | null, text: string): string {
         return '';
     }
 
+    if (looksLikeUnrenderedMarkdownTable(source, text)) {
+        return sanitizeAssistantHtml(markdownToSafeHtml(plainFromStoredHtml(source)));
+    }
+
     if (looksLikeRichHtml(source)) {
         return sanitizeAssistantHtml(source);
     }
 
     return sanitizeAssistantHtml(markdownToSafeHtml(plainFromStoredHtml(source)));
+}
+
+function looksLikeUnrenderedMarkdownTable(source: string, text: string): boolean {
+    const probe = `${source}\n${text}`;
+
+    return /\|.+\|/.test(probe) && /\|[-: ]+\|/.test(probe) && !/<table\b/i.test(source);
 }
 
 function looksLikeRichHtml(value: string): boolean {
@@ -36,7 +46,7 @@ function plainFromStoredHtml(value: string): string {
 }
 
 function markdownToSafeHtml(markdown: string): string {
-    let value = escapeHtml(markdown.trim());
+    let value = escapeHtml(normalizeTableRows(markdown.trim()));
     if (!value) {
         return '';
     }
@@ -63,6 +73,10 @@ function markdownToSafeHtml(markdown: string): string {
     }
 
     return value;
+}
+
+function normalizeTableRows(markdown: string): string {
+    return markdown.replace(/(\|[^\n]*\|)[ \t]*\n(?:[ \t]*\n)+(?=\|)/g, '$1\n');
 }
 
 function renderTables(value: string): string {

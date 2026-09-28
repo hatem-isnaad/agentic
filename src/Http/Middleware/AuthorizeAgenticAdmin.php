@@ -8,10 +8,9 @@ use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Optional admin authorization (Telescope-style). When agentic.admin.authorization.gate
- * is set, the named gate must pass. When null, all requests are allowed (host should
- * add auth middleware separately for production). Gate callbacks should accept
- * ?$user = null so they run for guests when the admin API is not behind auth yet.
+ * Authorization after authentication. Sanctum is attached first when
+ * AGENTIC_ADMIN_REQUIRE_AUTH is true (package default). A configured gate
+ * always runs. With no gate, local and testing stay open; production is 403.
  */
 final class AuthorizeAgenticAdmin
 {
@@ -19,12 +18,16 @@ final class AuthorizeAgenticAdmin
     {
         $gate = config('agentic.admin.authorization.gate');
 
-        if (! is_string($gate) || $gate === '') {
+        if (is_string($gate) && $gate !== '') {
+            Gate::authorize($gate);
+
             return $next($request);
         }
 
-        Gate::authorize($gate);
+        if (app()->environment(['local', 'testing'])) {
+            return $next($request);
+        }
 
-        return $next($request);
+        abort(403, 'Define AGENTIC_ADMIN_GATE and Gate::define() before exposing Agentic admin.');
     }
 }

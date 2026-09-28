@@ -47,13 +47,18 @@ final class RuntimeApiRequireAuthTest extends TestCase
             'agent' => 'billing',
             'message' => 'Hello',
         ])->assertUnauthorized();
+
+        $this->postJson('/'.$prefix.'/workflows/greet/execute', [
+            'input' => ['name' => 'Ada'],
+        ])->assertUnauthorized();
     }
 
     public function test_runtime_api_accepts_sanctum_token_when_auth_required(): void
     {
         AnonymousAgent::fake(['Authenticated response']);
 
-        $this->app->bind(AgentRepository::class, fn () => new class implements AgentRepository {
+        $this->app->bind(AgentRepository::class, fn () => new class implements AgentRepository
+        {
             public function findById(int|string $id): ?AgentDefinition
             {
                 return null;
@@ -88,7 +93,7 @@ final class RuntimeApiRequireAuthTest extends TestCase
             {
                 unset($attributes);
 
-                throw new \BadMethodCallException();
+                throw new \BadMethodCallException;
             }
 
             public function delete(string $slug): bool

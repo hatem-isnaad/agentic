@@ -4,11 +4,12 @@ import { Link, useNavigate, useParams } from 'react-router-dom';
 import { adminApi } from '../lib/api';
 import { useAdminConfig } from '../lib/config';
 import { useI18n } from '../lib/i18n';
+import { FormWizard } from '../components/forms/FormWizard';
 import { Button } from '../components/ui/Button';
-import { Card, CardBody } from '../components/ui/Card';
 import { FormField } from '../components/ui/FormField';
 import { Input, Textarea } from '../components/ui/Input';
 import { NativeSelect } from '../components/ui/NativeSelect';
+import { ErrorBanner } from '../components/ui/DataTable';
 import { FormContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Skeleton } from '../components/ui/Skeleton';
@@ -85,6 +86,7 @@ export function WidgetSettingsFormPage() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [hasOverride, setHasOverride] = useState(false);
+    const [step, setStep] = useState(0);
 
     const { register, handleSubmit, control, reset } = useForm<FormValues>();
 
@@ -104,7 +106,7 @@ export function WidgetSettingsFormPage() {
             .catch(() => setHasOverride(false));
     }, [boot, agentSlug, reset]);
 
-    const onSubmit = handleSubmit(async (values) => {
+    const save = handleSubmit(async (values) => {
         setError(null);
         try {
             const settings = formToSettings(values);
@@ -139,44 +141,50 @@ export function WidgetSettingsFormPage() {
                 description={t('widget_settings.json_hint')}
                 actions={
                     <Link to="/widget-settings">
-                        <Button type="button" variant="secondary">{t('actions.back')}</Button>
+                        <Button type="button" variant="secondary">
+                            {t('actions.back')}
+                        </Button>
                     </Link>
                 }
             />
 
             {loading ? (
-                <Skeleton className="h-64 w-full" />
+                <Skeleton className="h-96 w-full" />
             ) : (
                 <>
-                    {error && (
-                        <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
-                            {error}
-                        </div>
-                    )}
-                    <Card>
-                        <CardBody>
-                            <form onSubmit={onSubmit} className="space-y-5">
+                    {error && <ErrorBanner message={error} />}
+                    <FormWizard
+                        steps={[
+                            { id: 'basics', title: t('wizard.basics'), description: t('wizard.basics_desc') },
+                            { id: 'welcome', title: t('wizard.welcome'), description: t('wizard.welcome_desc') },
+                            { id: 'appearance', title: t('wizard.appearance'), description: t('wizard.appearance_desc') },
+                        ]}
+                        step={step}
+                        onStepChange={setStep}
+                        onSubmit={() => void save()}
+                        saveLabel={t('actions.update')}
+                    >
+                        {step === 0 && (
+                            <div className="grid gap-5 lg:grid-cols-2">
                                 <FormField label={t('widget_settings.fields.auth_mode')}>
                                     <Controller
                                         name="auth_mode"
                                         control={control}
                                         render={({ field }) => (
-                                            <NativeSelect
-                                                value={field.value}
-                                                onValueChange={field.onChange}
-                                                options={authOptions}
-                                            />
+                                            <NativeSelect value={field.value} onValueChange={field.onChange} options={authOptions} />
                                         )}
                                     />
                                 </FormField>
-                                <div className="grid gap-5 sm:grid-cols-2">
-                                    <FormField label={t('widget_settings.fields.locale')}>
-                                        <Input {...register('locale')} />
-                                    </FormField>
-                                    <FormField label={t('widget_settings.fields.agent_language')}>
-                                        <Input {...register('agent_language')} placeholder="en" />
-                                    </FormField>
-                                </div>
+                                <FormField label={t('widget_settings.fields.locale')}>
+                                    <Input {...register('locale')} />
+                                </FormField>
+                                <FormField label={t('widget_settings.fields.agent_language')}>
+                                    <Input {...register('agent_language')} placeholder="en" />
+                                </FormField>
+                            </div>
+                        )}
+                        {step === 1 && (
+                            <div className="space-y-5">
                                 <FormField label={t('widget_settings.fields.intake_enabled')}>
                                     <Controller
                                         name="intake_enabled"
@@ -196,29 +204,27 @@ export function WidgetSettingsFormPage() {
                                 <FormField label={t('widget_settings.fields.welcome_message')}>
                                     <Textarea {...register('welcome_message')} rows={3} />
                                 </FormField>
-                                <FormField
-                                    label={t('widget_settings.fields.intake_questions')}
-                                    hint={t('widget_settings.intake_questions_hint')}
-                                >
+                                <FormField label={t('widget_settings.fields.intake_questions')} hint={t('widget_settings.intake_questions_hint')}>
                                     <Textarea {...register('intake_questions')} rows={4} />
                                 </FormField>
+                            </div>
+                        )}
+                        {step === 2 && (
+                            <div className="space-y-5">
                                 <FormField label={t('widget_settings.fields.reply_formats')} hint={t('placeholders.list_hint')}>
                                     <Input {...register('reply_formats')} />
                                 </FormField>
                                 <FormField label={t('widget_settings.fields.theme')} hint={t('widget_settings.theme_hint')}>
                                     <Textarea {...register('theme_json')} rows={8} className="font-mono text-xs" />
                                 </FormField>
-                                <div className="flex flex-wrap gap-3 pt-2">
-                                    <Button type="submit">{t('actions.update')}</Button>
-                                    {hasOverride && (
-                                        <Button type="button" variant="danger" onClick={onResetOverrides}>
-                                            {t('widget_settings.reset_to_default')}
-                                        </Button>
-                                    )}
-                                </div>
-                            </form>
-                        </CardBody>
-                    </Card>
+                                {hasOverride && (
+                                    <Button type="button" variant="danger" onClick={() => void onResetOverrides()}>
+                                        {t('widget_settings.reset_to_default')}
+                                    </Button>
+                                )}
+                            </div>
+                        )}
+                    </FormWizard>
                 </>
             )}
         </FormContainer>

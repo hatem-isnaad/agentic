@@ -37,6 +37,17 @@ final class AdminWebTest extends TestCase
             ->assertSee('support', false);
     }
 
+    public function test_widget_chat_page_sends_configured_embed_token(): void
+    {
+        $this->app['config']->set('agentic.widget.embed.token', 'wgt_page_test_token');
+        $prefix = trim((string) config('agentic.widget.web.prefix'), '/');
+
+        $this->get('/'.$prefix.'?agent=support')
+            ->assertOk()
+            ->assertSee('wgt_page_test_token', false)
+            ->assertSee('AgenticChat', false);
+    }
+
     public function test_spa_deep_links_serve_shell(): void
     {
         $admin = trim((string) config('agentic.admin.web.prefix'), '/');

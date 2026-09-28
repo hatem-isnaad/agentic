@@ -7,6 +7,7 @@ use Agentic\Tests\TestCase;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Symfony\Component\HttpKernel\Exception\HttpException;
 
 final class AuthorizeAgenticAdminTest extends TestCase
 {
@@ -14,7 +15,7 @@ final class AuthorizeAgenticAdminTest extends TestCase
     {
         config(['agentic.admin.authorization.gate' => null]);
 
-        $middleware = new AuthorizeAgenticAdmin();
+        $middleware = new AuthorizeAgenticAdmin;
         $response = $middleware->handle(Request::create('/'), fn () => response('ok', 200));
 
         $this->assertSame(200, $response->getStatusCode());
@@ -25,7 +26,7 @@ final class AuthorizeAgenticAdminTest extends TestCase
         config(['agentic.admin.authorization.gate' => 'viewAgenticDeny']);
         Gate::define('viewAgenticDeny', fn () => false);
 
-        $middleware = new AuthorizeAgenticAdmin();
+        $middleware = new AuthorizeAgenticAdmin;
 
         $this->expectException(AuthorizationException::class);
 
@@ -37,9 +38,19 @@ final class AuthorizeAgenticAdminTest extends TestCase
         config(['agentic.admin.authorization.gate' => 'viewAgenticOk']);
         Gate::define('viewAgenticOk', fn ($user = null) => true);
 
-        $middleware = new AuthorizeAgenticAdmin();
+        $middleware = new AuthorizeAgenticAdmin;
         $response = $middleware->handle(Request::create('/'), fn () => response('ok', 200));
 
         $this->assertSame(200, $response->getStatusCode());
+    }
+
+    public function test_denies_production_when_gate_missing(): void
+    {
+        config(['agentic.admin.authorization.gate' => null]);
+        $this->app['env'] = 'production';
+
+        $this->expectException(HttpException::class);
+
+        (new AuthorizeAgenticAdmin)->handle(Request::create('/'), fn () => response('ok', 200));
     }
 }

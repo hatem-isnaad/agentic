@@ -18,16 +18,6 @@ final class ConversationContextProvider implements ContextProvider
 
         $values = [];
 
-        if ($conversation->tenantId !== null) {
-            if (! $context->has('tenant_id')) {
-                $values['tenant_id'] = $conversation->tenantId;
-            }
-
-            if (! $context->has('tenant')) {
-                $values['tenant'] = $conversation->tenantId;
-            }
-        }
-
         if ($conversation->userId !== null && ! $context->has('user_id')) {
             $values['user_id'] = $conversation->userId;
         }

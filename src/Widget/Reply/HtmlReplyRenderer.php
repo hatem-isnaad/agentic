@@ -7,9 +7,7 @@ namespace Agentic\Widget\Reply;
  */
 final class HtmlReplyRenderer
 {
-    public function __construct(
-        private MarkdownHtmlConverter $markdown = new MarkdownHtmlConverter(),
-    ) {}
+    public function __construct(private MarkdownHtmlConverter $markdown = new MarkdownHtmlConverter) {}
 
     /**
      * @param  array<string, mixed>|string|null  $payload

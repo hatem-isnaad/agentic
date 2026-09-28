@@ -2,9 +2,9 @@
 
 namespace Agentic\Tests\Unit;
 
-use Laravel\Ai\Contracts\Tool;
 use Agentic\Integrations\LaravelAi\LaravelAiToolSetBuilder;
 use Agentic\Tests\TestCase;
+use Laravel\Ai\Contracts\Tool;
 use Laravel\Ai\Providers\Tools\ToolSearch;
 
 final class LaravelAiToolSetBuilderTest extends TestCase
@@ -51,6 +51,26 @@ final class LaravelAiToolSetBuilderTest extends TestCase
         $this->assertInstanceOf(ToolSearch::class, $result[1]);
         $this->assertCount(2, $result[1]->tools);
         $this->assertSame('bm25', $result[1]->strategy);
+    }
+
+    public function test_typical_agent_tool_count_stays_direct(): void
+    {
+        config()->set('agentic.ai.deferred_tools', [
+            'enabled' => true,
+            'deferred_count' => 32,
+            'direct_tools' => 8,
+            'strategy' => null,
+        ]);
+
+        $tools = array_map(
+            fn (int $i) => $this->createMock(Tool::class),
+            range(1, 14),
+        );
+
+        $result = app(LaravelAiToolSetBuilder::class)->build($tools, 'anthropic');
+
+        $this->assertCount(14, $result);
+        $this->assertNotContains(ToolSearch::class, array_map(fn ($tool) => $tool::class, $result));
     }
 
     public function test_unsupported_provider_keeps_all_tools(): void

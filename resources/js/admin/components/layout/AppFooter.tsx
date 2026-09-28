@@ -5,9 +5,9 @@ export function AppFooter() {
     const year = new Date().getFullYear();
 
     return (
-        <footer className="mt-auto border-t border-slate-200/80 bg-white/60 px-4 py-5 backdrop-blur sm:px-8 lg:px-10">
+        <footer className="mt-auto border-t border-slate-200/70 bg-white/50 px-4 py-4 backdrop-blur sm:px-6 lg:px-8">
             <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                <p className="text-sm text-slate-500">
+                <p className="text-xs text-slate-500">
                     © {year} {t('app_title')}. {t('footer.rights')}
                 </p>
                 <p className="text-xs text-slate-400">{t('footer.tagline')}</p>

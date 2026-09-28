@@ -3,12 +3,15 @@
 namespace Agentic\Http\Controllers\Admin;
 
 use Agentic\Admin\Services\ToolAdminService;
+use Agentic\Exceptions\ToolNotFoundException;
 use Agentic\Http\Requests\Admin\StoreToolRequest;
 use Agentic\Http\Requests\Admin\UpdateToolRequest;
 use Agentic\Http\Support\AdminLocaleMeta;
 use Agentic\Http\Support\AdminPaginator;
+use Agentic\Tool\HttpToolTester;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use InvalidArgumentException;
 
 final class ToolController
 {
@@ -55,5 +58,40 @@ final class ToolController
         }
 
         return response()->json(null, 204);
+    }
+
+    public function clone(Request $request, string $slug): JsonResponse
+    {
+        $validated = $request->validate([
+            'name' => ['nullable', 'string', 'max:255'],
+            'slug' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        try {
+            return response()->json([
+                'data' => $this->tools->clone(
+                    $slug,
+                    $validated['name'] ?? null,
+                    $validated['slug'] ?? null,
+                )->toArray(),
+            ], 201);
+        } catch (ToolNotFoundException) {
+            return response()->json(['message' => 'Tool not found.'], 404);
+        }
+    }
+
+    public function test(Request $request, string $slug, HttpToolTester $tester): JsonResponse
+    {
+        $validated = $request->validate([
+            'arguments' => ['nullable', 'array'],
+        ]);
+
+        try {
+            return response()->json(['data' => $tester->run($slug, $validated['arguments'] ?? [])]);
+        } catch (ToolNotFoundException) {
+            return response()->json(['message' => 'Tool not found.'], 404);
+        } catch (InvalidArgumentException $exception) {
+            return response()->json(['message' => $exception->getMessage()], 422);
+        }
     }
 }

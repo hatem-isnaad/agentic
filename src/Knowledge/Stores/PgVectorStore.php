@@ -6,6 +6,7 @@ use Agentic\Knowledge\Contracts\VectorStore;
 use Agentic\Knowledge\KnowledgeChunk;
 use Agentic\Knowledge\Support\CosineSimilarity;
 use Agentic\Models\VectorEntry;
+
 /**
  * Database-backed vector store (JSON vectors + cosine ranking).
  *

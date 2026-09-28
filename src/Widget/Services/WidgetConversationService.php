@@ -10,9 +10,7 @@ use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 final class WidgetConversationService
 {
-    public function __construct(
-        private ConversationManager $conversations,
-    ) {}
+    public function __construct(private ConversationManager $conversations) {}
 
     /**
      * @return list<array<string, mixed>>
@@ -39,16 +37,9 @@ final class WidgetConversationService
      */
     public function create(string $agentSlug, WidgetIdentity $identity, array $metadata = []): array
     {
-        $conversation = $this->conversations->start(
-            agent: $agentSlug,
-            userId: $identity->conversationUserId(),
-            tenantId: $identity->tenantId,
-            metadata: $metadata,
-        );
+        $conversation = $this->conversations->start(agent: $agentSlug, userId: $identity->conversationUserId(), metadata: $metadata);
 
-        return $this->serializeConversation(
-            Conversation::query()->where('uuid', $conversation->id)->firstOrFail(),
-        );
+        return $this->serializeConversation(Conversation::query()->where('uuid', $conversation->id)->firstOrFail());
     }
 
     /**
@@ -56,12 +47,8 @@ final class WidgetConversationService
      *
      * @return array{messages: list<array<string, mixed>>, meta: array{has_more: bool, next_before: int|null}}
      */
-    public function messagesPage(
-        string $conversationUuid,
-        WidgetIdentity $identity,
-        int $limit = 20,
-        ?int $beforeCursor = null,
-    ): array {
+    public function messagesPage(string $conversationUuid, WidgetIdentity $identity, int $limit = 20, ?int $beforeCursor = null): array
+    {
         $conversation = $this->resolveConversationForIdentity($conversationUuid, $identity);
 
         $max = max(1, (int) config('agentic.widget.history.max_page_size', 50));
@@ -102,12 +89,12 @@ final class WidgetConversationService
         $conversation = Conversation::query()->where('uuid', $conversationUuid)->first();
 
         if ($conversation === null) {
-            throw new ModelNotFoundException();
+            throw new ModelNotFoundException;
         }
 
         $userId = $identity->conversationUserId();
         if ($userId !== null && $conversation->user_id !== null && $conversation->user_id !== $userId) {
-            throw new ModelNotFoundException();
+            throw new ModelNotFoundException;
         }
 
         return $conversation;
@@ -144,7 +131,6 @@ final class WidgetConversationService
             'id' => $row->uuid,
             'agent' => $row->agent,
             'user_id' => $row->user_id,
-            'tenant_id' => $row->tenant_id,
             'metadata' => $row->metadata ?? [],
             'preview' => mb_substr($preview, 0, 120),
             'last_message_at' => optional($lastAt)?->toISOString(),

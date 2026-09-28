@@ -101,6 +101,7 @@ final class EloquentSkillRepository implements SkillRepository
                 'display_name' => $skill->name,
                 'instructions' => $skill->instructions,
                 'status' => $skill->status instanceof Status ? $skill->status->value : (string) $skill->status,
+                'keywords' => is_array($skill->config['keywords'] ?? null) ? $skill->config['keywords'] : [],
             ],
         );
     }

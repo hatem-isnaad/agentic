@@ -32,7 +32,7 @@ final class HttpToolDriverTest extends TestCase
                     'method' => 'GET',
                     'url' => 'https://api.example.test/orders/{id}',
                     'query' => ['include' => 'items'],
-                    'headers' => ['X-Tenant' => '{tenant}'],
+                    'headers' => ['X-Shop' => '{shop}'],
                     'auth' => ['type' => 'bearer', 'token' => 'secret-token'],
                     'response_mapping' => [
                         'order_id' => 'body.id',
@@ -44,7 +44,7 @@ final class HttpToolDriverTest extends TestCase
         );
 
         $result = $tool->execute(new ToolExecutionContext(
-            arguments: ['id' => 42, 'tenant' => 'acme'],
+            arguments: ['id' => 42, 'shop' => 'acme'],
         ));
 
         $this->assertTrue($result->success);
@@ -53,7 +53,7 @@ final class HttpToolDriverTest extends TestCase
         Http::assertSent(function ($request) {
             return $request->url() === 'https://api.example.test/orders/42?include=items'
                 && $request->hasHeader('Authorization', 'Bearer secret-token')
-                && $request->hasHeader('X-Tenant', 'acme');
+                && $request->hasHeader('X-Shop', 'acme');
         });
     }
 
@@ -112,7 +112,7 @@ final class HttpToolDriverTest extends TestCase
             app(DriverResolver::class),
         );
 
-        $result = $tool->execute(new ToolExecutionContext());
+        $result = $tool->execute(new ToolExecutionContext);
 
         $this->assertTrue($result->success);
         $this->assertSame(['id' => 42], $result->data);
@@ -144,7 +144,7 @@ final class HttpToolDriverTest extends TestCase
             app(DriverResolver::class),
         );
 
-        $result = $tool->execute(new ToolExecutionContext());
+        $result = $tool->execute(new ToolExecutionContext);
 
         $this->assertFalse($result->success);
         $this->assertStringContainsString('ORDER_NOT_FOUND', (string) $result->error);
@@ -215,7 +215,7 @@ final class HttpToolDriverTest extends TestCase
             app(DriverResolver::class),
         );
 
-        $result = $tool->execute(new ToolExecutionContext());
+        $result = $tool->execute(new ToolExecutionContext);
 
         $this->assertFalse($result->success);
         $this->assertStringContainsString('status 404', (string) $result->error);

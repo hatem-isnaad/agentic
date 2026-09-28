@@ -1,6 +1,12 @@
 # Configure Agentic without the admin UI
 
-Use this when you prefer **commands**, **config**, **HTTP API**, or **PHP** over clicking in `/agentic/admin`.
+Every `.env` key and artisan command: [DEVELOPER_HANDBOOK.md](./DEVELOPER_HANDBOOK.md).
+
+**Two complete paths.** Use **only** `/agentic/admin` if you want a UI. Use **only** `php artisan agentic:make` / `agentic:manage` if you never want a UI. They write the same tables. You do not need both.
+
+Interactive CLI: one question at a time, a summary table, then “Save this?”. Flags + `--no-interaction` skip the prompts.
+
+Use this page when you prefer **commands**, **config**, **HTTP API**, or **PHP** over clicking in `/agentic/admin`.
 
 Prefix defaults: **Admin API** `POST/GET /api/agentic/admin/...` · **Widget API** `/api/agentic/widget/...` · **Runtime API** `/api/agentic/...` (when `AGENTIC_API_ENABLED=true`).
 
@@ -23,15 +29,19 @@ Prefix defaults: **Admin API** `POST/GET /api/agentic/admin/...` · **Widget API
 
 | UI | CLI | Admin API |
 |----|-----|-----------|
-| New HTTP tool | — | `POST /tools` (`driver: http`, `definition.method`, `definition.url`, `input_schema`) |
+| HTTP connection (bearer / OAuth) | `php artisan agentic:make connection` | `POST /connections` · `POST /connections/{id}/refresh` |
+| New HTTP tool | `php artisan agentic:make http-tool` | `POST /tools` |
+| Test HTTP tool | `php artisan agentic:http-tool test {slug}` | `POST /tools/{slug}/test` |
+| Clone tool | `php artisan agentic:http-tool clone {slug}` | `POST /tools/{slug}/clone` |
+| HTTP tool test / clone | `php artisan agentic:http-tool test {slug}` | `POST /tools/{slug}/test` |
 | MCP servers | `php artisan agentic:mcp-sync {server}` | `POST /mcp/servers/{server}/sync` |
 
 ## Skills & agents
 
-| UI | Admin API | PHP |
-|----|-----------|-----|
-| Skills | `POST /skills`, `PUT /skills/{slug}` | `SkillRepository::save()` |
-| Agents | `POST /agents`, `PUT /agents/{slug}`, `POST /agents/{slug}/execute` | `AgentRepository::save()` |
+| UI | CLI | Admin API | PHP |
+|----|-----|-----------|-----|
+| Skills | `php artisan agentic:make skill` | `POST /skills`, `PUT /skills/{slug}` | `SkillRepository::save()` |
+| Agents | `php artisan agentic:make agent` | `POST /agents`, `PUT /agents/{slug}`, `POST /agents/{slug}/execute` | `AgentRepository::save()` |
 | Agent voice (name, gender, language, dialect, tone) | `config.persona` on the agent payload | Same `config.persona` array (see below) |
 | Attach skills/tools/KB | Include `skills`, `tools`, `knowledge` slugs on agent payload | Same arrays in repository save |
 
@@ -60,9 +70,16 @@ $agents->save([
 
 | UI | CLI | Admin API | PHP |
 |----|-----|-----------|-----|
-| Create source | — | `POST /knowledge-sources` | `KnowledgeRepository::save()` |
-| Ingest text/PDF/URLs | — | `POST /knowledge-sources/{slug}/ingest` | `KnowledgeIngestor::ingest()` |
+| Create source | `php artisan agentic:make knowledge` | `POST /knowledge-sources` | `KnowledgeRepository::save()` |
+| Ingest text/PDF/URLs | `php artisan agentic:knowledge ingest` | `POST /knowledge-sources/{slug}/ingest` | `KnowledgeIngestor::ingest()` |
 | Reindex | — | `POST /knowledge-sources/{slug}/index` | Via ingest with `reindex: true` |
+
+## Channel accounts & evaluations
+
+| UI | CLI | Admin API |
+|----|-----|-----------|
+| Channel accounts (widget / WhatsApp) | `php artisan agentic:make channel-account` | `POST /channel-accounts` |
+| Evaluation scores 1–5 | `php artisan agentic:make evaluation` | `POST /evaluations` |
 
 ## Widget & chat
 
@@ -96,10 +113,10 @@ $agents->save([
 
 | UI | Config / code |
 |----|----------------|
-| Open admin (default) | No gate; no `AGENTIC_ADMIN_REQUIRE_AUTH` |
-| Sanctum on admin API | `AGENTIC_ADMIN_REQUIRE_AUTH=true` |
+| Open admin (laptop only) | `AGENTIC_ADMIN_REQUIRE_AUTH=false` (never on a live server) |
+| Sanctum on admin API | Default. Keep `AGENTIC_ADMIN_REQUIRE_AUTH=true` |
 | Telescope-style gate | `AGENTIC_ADMIN_GATE=viewAgentic` + `Gate::define('viewAgentic', fn ($user = null) => ...)` |
-| SPA session auth | Add `auth` to `config/agentic.php` → `admin.web.middleware` |
+| SPA session auth | Auto `auth` outside local, or add `auth` to `admin.web.middleware` |
 
 ## Seed a full demo
 
@@ -108,6 +125,8 @@ php artisan db:seed --class=Agentic3plFulfillmentSeeder
 ```
 
 Host example: `laravel-host/database/seeders/Agentic3plFulfillmentSeeder.php` (agents, skills, code tools, KB, memories).
+
+Vendor-specific HTTP catalogs belong in the host app (a seeder + connection row). The package only ships the generic HTTP tool driver.
 
 ## JSON payloads
 

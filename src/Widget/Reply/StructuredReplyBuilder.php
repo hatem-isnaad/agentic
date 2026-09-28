@@ -7,9 +7,7 @@ namespace Agentic\Widget\Reply;
  */
 final class StructuredReplyBuilder
 {
-    public function __construct(
-        private HtmlReplyRenderer $html,
-    ) {}
+    public function __construct(private HtmlReplyRenderer $html) {}
 
     /**
      * @param  array<string, mixed>|string|null  $payload

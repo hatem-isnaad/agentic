@@ -29,10 +29,6 @@ final class StoreWidgetConversationRequest extends FormRequest
     {
         $validated = $this->validated();
 
-        return new WidgetConversationData(
-            agent: $validated['agent'],
-            identity: WidgetIdentity::fromRequest($this),
-            metadata: $validated['metadata'] ?? [],
-        );
+        return new WidgetConversationData(agent: $validated['agent'], identity: WidgetIdentity::fromRequest($this), metadata: $validated['metadata'] ?? []);
     }
 }

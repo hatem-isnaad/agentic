@@ -44,13 +44,12 @@ final class InMemoryConversationRepository implements ConversationRepository
         return array_slice($items, -$limit);
     }
 
-    public function findLatestFor(string $agent, string|int|null $userId = null, string|int|null $tenantId = null): ?Conversation
+    public function findLatestFor(string $agent, string|int|null $userId = null): ?Conversation
     {
         $matches = array_values(array_filter(
             $this->conversations,
             fn (Conversation $conversation) => $conversation->agent === $agent
-                && $conversation->userId == $userId
-                && $conversation->tenantId == $tenantId,
+                && $conversation->userId == $userId,
         ));
 
         return $matches === [] ? null : $matches[array_key_last($matches)];

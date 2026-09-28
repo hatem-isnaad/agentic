@@ -28,7 +28,7 @@ Read the repo docs:
 
 - Admin + widget locale: `X-Agentic-Locale: en|ar` (also support `?locale=`)
 - Widget guest: `X-Agentic-Guest-Id: <persist in localStorage>`
-- Widget optional: `X-Agentic-Tenant-Id`
+- Widget user identity: Sanctum session / Bearer only (never `X-Agentic-User-Id`)
 - Auth: use host Laravel Sanctum/session/Bearer as configured by the host app
 
 ## Admin API routes to implement (all under admin prefix)
@@ -82,7 +82,6 @@ Load copy from GET `/translations`. Apply RTL layout when `meta.direction === "r
 - TypeScript, React 18+, modern fetch client with typed responses
 - Do not mock APIs for final deliverable — use env-based base URL
 - Accessible components (keyboard, ARIA on action buttons)
-- No tenant feature unless host app adds it separately
 
 ## Acceptance criteria
 

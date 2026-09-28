@@ -5,12 +5,14 @@ import { adminApi, type Paginated } from '../lib/api';
 import { useAdminConfig } from '../lib/config';
 import { useI18n } from '../lib/i18n';
 import { Button } from '../components/ui/Button';
-import { Card, CardBody } from '../components/ui/Card';
 import { EmptyState } from '../components/ui/EmptyState';
 import { PageContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { Inbox } from 'lucide-react';
+import { DataTable } from '../components/ui/DataTable';
+import { ListFilters } from '../components/ui/ListFilters';
+import { ALL_FILTER, matchesFacet, matchesSearch } from '../lib/listFilters';
 
 type AgentRow = { slug: string; name: string; status?: string };
 type OverrideRow = { agent_slug: string };
@@ -21,6 +23,9 @@ export function WidgetSettingsListPage() {
     const [agents, setAgents] = useState<AgentRow[]>([]);
     const [overrides, setOverrides] = useState<Set<string>>(new Set());
     const [loading, setLoading] = useState(true);
+    const [q, setQ] = useState('');
+    const [appearance, setAppearance] = useState(ALL_FILTER);
+    const [statusFilter, setStatusFilter] = useState(ALL_FILTER);
 
     useEffect(() => {
         Promise.all([
@@ -43,25 +48,75 @@ export function WidgetSettingsListPage() {
         [agents],
     );
 
+    const visible = useMemo(
+        () =>
+            sorted.filter((agent) => {
+                const appearanceValue = overrides.has(agent.slug) ? 'custom' : 'default';
+                return (
+                    matchesSearch(agent, q) &&
+                    matchesFacet({ appearance: appearanceValue }, 'appearance', appearance) &&
+                    matchesFacet(agent as unknown as Record<string, unknown>, 'status', statusFilter)
+                );
+            }),
+        [appearance, overrides, q, sorted, statusFilter],
+    );
+
     return (
         <PageContainer>
             <PageHeader title={t('widget_settings.title')} description={t('widget_settings.intro')} />
 
-            <Card className="overflow-hidden">
-                <CardBody className="p-0">
+            <DataTable
+                toolbar={
+                    <ListFilters
+                        search={q}
+                        onSearch={setQ}
+                        searchPlaceholder={t('filters.search')}
+                        filters={[
+                            {
+                                id: 'appearance',
+                                label: t('filters.appearance'),
+                                value: appearance,
+                                onChange: setAppearance,
+                                options: [
+                                    { value: 'custom', label: t('filters.values.custom') },
+                                    { value: 'default', label: t('filters.values.default') },
+                                ],
+                            },
+                            {
+                                id: 'status',
+                                label: t('table.status'),
+                                value: statusFilter,
+                                onChange: setStatusFilter,
+                                options: [...new Set(agents.map((agent) => String(agent.status ?? '')).filter(Boolean))].map((value) => ({
+                                    value,
+                                    label: value,
+                                })),
+                            },
+                        ]}
+                        resultCount={visible.length}
+                        totalCount={agents.length}
+                        countLabel={t('filters.showing', { shown: String(visible.length), total: String(agents.length) })}
+                        allLabel={t('filters.all')}
+                        clearLabel={t('filters.clear')}
+                    />
+                }
+            >
+                <div>
                     {loading ? (
                         <div className="p-6">
                             <TableSkeleton rows={4} />
                         </div>
-                    ) : sorted.length === 0 ? (
+                    ) : visible.length === 0 ? (
                         <EmptyState
                             icon={Inbox}
-                            title={t('empty.agents')}
-                            description={t('widget_settings.no_agents_hint')}
+                            title={agents.length === 0 ? t('empty.agents') : t('filters.empty')}
+                            description={agents.length === 0 ? t('widget_settings.no_agents_hint') : t('filters.empty_hint')}
                             action={
+                                agents.length === 0 ? (
                                 <Link to="/agents/new">
                                     <Button type="button">{t('agents.create')}</Button>
                                 </Link>
+                                ) : undefined
                             }
                         />
                     ) : (
@@ -75,7 +130,7 @@ export function WidgetSettingsListPage() {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
-                                    {sorted.map((agent) => {
+                                    {visible.map((agent) => {
                                         const custom = overrides.has(agent.slug);
                                         return (
                                             <tr key={agent.slug} className="hover:bg-slate-50/50">
@@ -109,8 +164,8 @@ export function WidgetSettingsListPage() {
                             </table>
                         </div>
                     )}
-                </CardBody>
-            </Card>
+                </div>
+            </DataTable>
 
             {sorted.length > 0 && overrides.size === 0 && (
                 <p className="mt-4 text-sm text-slate-600">{t('empty.widget_settings')}</p>

@@ -24,12 +24,11 @@ final class ConversationPersistenceTest extends TestCase
             id: $id,
             agent: 'support',
             userId: '42',
-            tenantId: 'acme',
             metadata: ['channel' => 'web'],
         ));
 
         $found = $repo->find($id);
-        $latest = $repo->findLatestFor('support', '42', 'acme');
+        $latest = $repo->findLatestFor('support', '42');
 
         $this->assertNotNull($found);
         $this->assertSame('support', $found->agent);

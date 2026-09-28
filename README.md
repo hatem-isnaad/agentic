@@ -1,13 +1,21 @@
 # Agentic
 
-**Agentic** is a Laravel-native, configuration-driven framework for building production AI agent systems on top of the [Laravel AI SDK](https://laravel.com/docs/ai-sdk). It provides orchestration, persistence, tools, skills, permissions, knowledge retrieval, execution tracking, and headless JSON APIs for separate **Admin** and **Widget** frontends.
+**New here?** Start with [docs/START_HERE.md](docs/START_HERE.md) — short word list and the first install.
 
-| Layer | Responsibility |
+**Agentic** is a Laravel package that adds AI chat to your app. You get:
+
+- an **admin** screen to create agents, tools, and documents
+- a **chat widget** you drop on any website
+- APIs if you want to build your own UI
+
+It sits on the [Laravel AI SDK](https://laravel.com/docs/ai-sdk). You pick the provider (OpenAI, Anthropic, Gemini, or local Ollama) and put the key in `.env`.
+
+| Layer | What it does |
 |-------|----------------|
-| **Your app** | Users, auth, business domain, React SPAs |
-| **Agentic** | Agents, tools, skills, conversations, approvals, admin/widget APIs |
-| **Laravel AI SDK** | Provider calls, streaming, native AI primitives |
-| **LLM provider** | OpenAI, Anthropic, Gemini, Ollama, etc. (via Laravel AI SDK) |
+| **Your app** | Users, login, your business |
+| **Agentic** | Agents, tools, chats, admin + widget |
+| **Laravel AI SDK** | Sends the prompt to the provider |
+| **Provider** | OpenAI, Anthropic, Gemini, or Ollama |
 
 ```
 Application (React admin + widget, domain services)
@@ -19,14 +27,15 @@ Laravel AI SDK
 LLM provider
 ```
 
-**Design constraints:** The runtime never queries Eloquent directly; authorization is enforced before any tool driver runs; code tools never execute untrusted PHP from the UI.
+The chat engine does not query the database itself (repositories do). A tool cannot run until permission says yes. Staff cannot paste raw PHP into the admin and execute it.
 
 ---
 
 ## Table of contents
 
+- [Fresh project vs existing project](#fresh-project-vs-existing-project)
 - [Requirements & install](#requirements--install)
-- [Configuration overview](#configuration-overview)
+- [Configuration](#configuration)
 - [Authentication (Sanctum + WebAuthn passkeys)](#authentication-sanctum--webauthn-passkeys)
 - [Runtime quick start](#runtime-quick-start)
 - [Tools (HTTP, code, MCP)](#tools-http-code-mcp)
@@ -39,6 +48,24 @@ LLM provider
 - [Optional runtime API](#optional-runtime-api)
 - [Frontend documentation](#frontend-documentation)
 - [Development & testing](#development--testing)
+
+---
+
+## Fresh project vs existing project
+
+**Same package, same commands.** The difference is what you already own.
+
+| | Fresh Laravel app | Finished / live app |
+|--|-------------------|---------------------|
+| Start | `laravel new` then install Agentic | `composer require` **inside the app you already have** |
+| `.env` | Create from `.env.example` + starter Agentic keys | **Append** starter keys only — never wipe `APP_KEY` or DB settings |
+| Database | `migrate` as usual | `migrate` adds `agentic_*` tables only; your data stays |
+| Users / login | You add staff later; laptop admin is open | Use **your** users + `AGENTIC_ADMIN_GATE` |
+| Widget | Put on `welcome` or a new page | Put on an **existing** layout; keep your header and auth |
+| Tools | New PHP classes as you go | Call **your** domain services |
+| Queue | Start `queue:work` | Reuse Horizon / your worker — same `QUEUE_CONNECTION` |
+
+Step-by-step for both: [docs/START_HERE.md](docs/START_HERE.md). Extra env keys: [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md).
 
 ---
 
@@ -58,7 +85,7 @@ php artisan migrate
 php artisan agentic:rag-validate --offline
 ```
 
-Copy variables from [`.env.example`](.env.example) into your application `.env`. See [docs/HOST_BOOTSTRAP.md](docs/HOST_BOOTSTRAP.md) for the full host checklist. Optional **Blade admin** and **widget chat page** ship in the package (`AGENTIC_ADMIN_WEB_ENABLED`, `AGENTIC_WIDGET_WEB_ENABLED`); custom SPAs can still target the JSON APIs (see [Frontend documentation](#frontend-documentation)). Optional **Filament** CRUD is available via `Agentic\Filament\AgenticPlugin` when `filament/filament` is installed.
+Copy variables from [`.env.example`](.env.example) into your application `.env`. **What each key does, and what happens if you raise a limit:** [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md). Host checklist: [docs/HOST_BOOTSTRAP.md](docs/HOST_BOOTSTRAP.md). Optional **Blade admin** and **widget chat page** ship in the package (`AGENTIC_ADMIN_WEB_ENABLED`, `AGENTIC_WIDGET_WEB_ENABLED`); custom SPAs can still target the JSON APIs (see [Frontend documentation](#frontend-documentation)). Optional **Filament** CRUD is available via `Agentic\Filament\AgenticPlugin` when `filament/filament` is installed.
 
 **Monorepo:** after package changes, run `composer agentic-sync` in `laravel-host/`.
 
@@ -66,76 +93,13 @@ Before production, follow **[docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECK
 
 ---
 
-## Configuration overview
+## Configuration
 
-Published config: `config/agentic.php`. Common environment flags:
+Set the **starter** keys in `.env` (see [`.env.example`](.env.example)). **Do not copy long env lists from old docs.**
 
-```env
-# Core
-AGENTIC_ENABLED=true
-AGENTIC_AI_PROVIDER=openai
-AGENTIC_AI_MODEL=gpt-4.1-mini
-AGENTIC_PERMISSION_DEFAULT=deny
+Every other key, small vs large values, and **token cost:** [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md) only.
 
-# Headless admin JSON (React dashboard)
-AGENTIC_ADMIN_ENABLED=true
-AGENTIC_ADMIN_API_PREFIX=api/agentic/admin
-AGENTIC_ADMIN_REQUIRE_AUTH=false
-
-# Embeddable widget JSON (React widget)
-AGENTIC_WIDGET_ENABLED=true
-AGENTIC_WIDGET_PREFIX=api/agentic/widget
-AGENTIC_WIDGET_AUTH_MODE=both
-
-# Auth (Sanctum + passkeys)
-AGENTIC_AUTH_ENABLED=true
-AGENTIC_AUTH_PREFIX=api/agentic/auth
-
-# Optional programmatic CRUD/execute API
-AGENTIC_API_ENABLED=false
-```
-
-Persistence drivers (`eloquent` vs `memory`) are configurable per subsystem — see `.env.example` for execution, conversation, and knowledge drivers.
-
-### AI providers (OpenAI, Anthropic, Gemini, Ollama)
-
-Agentic does **not** ship separate provider clients — all text, tools, and embeddings go through the **[Laravel AI SDK](https://laravel.com/docs/ai-sdk)** (`laravel/ai`), which already includes **Gemini** and **Ollama**.
-
-1. Publish SDK config in the host app (optional but recommended):
-
-```bash
-php artisan vendor:publish --tag=ai-config
-```
-
-2. Set credentials / URLs in `.env` (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OLLAMA_URL`, … — see `config/ai.php`).
-
-3. Point agents (or defaults) at a provider:
-
-```env
-AGENTIC_AI_PROVIDER=gemini
-AGENTIC_AI_MODEL=gemini-3.6-flash
-# or local:
-AGENTIC_AI_PROVIDER=ollama
-AGENTIC_AI_MODEL=qwen3.5:4b
-```
-
-4. Model picklists for admin/widget UIs come from `AGENTIC_*_MODELS` in `config/agentic.php` (`AGENTIC_GEMINI_MODELS`, `AGENTIC_OLLAMA_MODELS`, …).
-
-**RAG embeddings** with the same SDK:
-
-```env
-AGENTIC_KNOWLEDGE_EMBEDDING=laravel_ai
-AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER=gemini
-AGENTIC_KNOWLEDGE_EMBEDDING_MODEL=gemini-embedding-2
-AGENTIC_PGVECTOR_DIMENSIONS=3072
-```
-
-```env
-# Local Ollama embeddings (e.g. nomic-embed-text)
-AGENTIC_KNOWLEDGE_EMBEDDING_PROVIDER=ollama
-AGENTIC_KNOWLEDGE_EMBEDDING_MODEL=nomic-embed-text
-AGENTIC_PGVECTOR_DIMENSIONS=768
-```
+Published file: `config/agentic.php`. Providers go through the [Laravel AI SDK](https://laravel.com/docs/ai-sdk) (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, `OLLAMA_URL`).
 
 ---
 
@@ -191,7 +155,7 @@ AGENTIC_AUTH_ISSUE_TOKEN_ON_PASSKEY_LOGIN=true
 AGENTIC_AUTH_TOKEN_NAME=agentic-admin
 ```
 
-When enabled, admin routes use `auth:sanctum` plus Sanctum’s stateful middleware for cookie-based SPAs.
+Those two keys default to `true`. Set them `false` only on a trusted laptop. Set `AGENTIC_ADMIN_GATE` and `Gate::define()` or production admin/demo return 403. See [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md) §4.
 
 ### 5. Auth API routes
 
@@ -335,28 +299,28 @@ use Agentic\Tool\ToolExecutionContext;
 use Agentic\Tool\ToolFactory;
 
 app(ToolFactory::class)->register(new ToolDefinition(
-    name: 'orders.get',
-    description: 'Fetch order by ID',
+    name: 'orders-get',
+    description: 'Fetch an order by id',
     inputSchema: [
-        'id' => ['type' => 'integer', 'required' => true],
+        'id' => ['type' => 'string', 'required' => true],
     ],
     driver: 'http',
     configuration: [
         'method' => 'GET',
-        'url' => 'https://api.example.com/orders/{id}',
-        'auth' => ['type' => 'bearer', 'token' => 'env:ORDERS_API_TOKEN'],
+        'url' => 'https://api.example.com/v1/orders/{id}',
+        'connection' => 'merchant-api',
         'timeout' => 15,
         'retry' => ['times' => 2, 'sleep' => 200],
         'response_mapping' => [
-            'order_id' => 'body.id',
-            'status' => 'body.fulfillment_status',
+            'order_id' => 'body.data.id',
+            'status' => 'body.data.status',
         ],
     ],
 ));
 
 $result = app(\Agentic\Tool\Registry\ToolRegistry::class)
-    ->resolve('orders.get')
-    ->execute(new ToolExecutionContext(arguments: ['id' => 1042]));
+    ->resolve('orders-get')
+    ->execute(new ToolExecutionContext(arguments: ['id' => '1004']));
 ```
 
 ### Code tool (trusted PHP handler)
@@ -584,7 +548,7 @@ With auto-resume enabled, the response may include a new assistant `message` aft
 
 ## Admin API (SPA dashboard)
 
-Base URL: **`/api/agentic/admin`** (prefix configurable). Uses middleware `api` + locale; add Sanctum when `AGENTIC_ADMIN_REQUIRE_AUTH=true`.
+Base URL: **`/api/agentic/admin`** (prefix configurable). Middleware: `api` + locale + `auth:sanctum` (default) + admin gate.
 
 | Method | Path | Notes |
 |--------|------|--------|
@@ -639,7 +603,7 @@ Base URL: **`/api/agentic/widget`**. Supports **guest** and **authenticated** us
 
 **Embed on any site:** publish `agentic-widget.js` + `.css`, create a `wgt_…` token with `allowed_origins`, inject the token from your server. See **[docs/WIDGET_EMBED_SDK.md](docs/WIDGET_EMBED_SDK.md)**.
 
-**Web vs other platforms:** widget/admin replies are **Markdown → safe HTML** (bold, lists, tables, code) and follow the theme. WhatsApp/Messenger presenters exist for later — they use those networks’ text markers, not HTML.
+**Web vs other platforms:** widget/admin replies are **Markdown → safe HTML**. WhatsApp uses text markers (no HTML). Connect many numbers in admin — Meta Cloud is live; webjs is a sidecar contract. See [docs/CHANNELS.md](docs/CHANNELS.md).
 
 | Endpoint | Purpose |
 |----------|---------|
@@ -718,6 +682,8 @@ The package ships an **admin SPA** (`/agentic/admin`) and an **embeddable widget
 
 | Document | Purpose |
 |----------|---------|
+| [docs/START_HERE.md](docs/START_HERE.md) | **Anyone** — word list and first install |
+| [docs/DEVELOPER_HANDBOOK.md](docs/DEVELOPER_HANDBOOK.md) | Every `.env` key, limits, login, widget, commands |
 | [docs/DEVELOPER_QUICKSTART.md](docs/DEVELOPER_QUICKSTART.md) | Install → tools → RAG → chatbot |
 | [docs/WIDGET_EMBED_SDK.md](docs/WIDGET_EMBED_SDK.md) | Popup embed, tokens, themes, Pusher, HTML replies |
 | [docs/CONFIGURE_BY_CODE.md](docs/CONFIGURE_BY_CODE.md) | Persona, widget, and agent config from PHP |

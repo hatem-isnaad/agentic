@@ -1,16 +1,18 @@
 import { FolderCode, RefreshCw } from 'lucide-react';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../lib/api';
 import { useAdminConfig } from '../lib/config';
 import { useI18n } from '../lib/i18n';
 import { Button } from '../components/ui/Button';
-import { Card, CardBody } from '../components/ui/Card';
 import { HelpCallout } from '../components/ui/HelpCallout';
 import { PageContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
 import { Skeleton } from '../components/ui/Skeleton';
 import { CodeBlock } from '../components/docs/CodeBlock';
+import { DataTable } from '../components/ui/DataTable';
+import { ListFilters } from '../components/ui/ListFilters';
+import { ALL_FILTER, matchesFacet, matchesSearch } from '../lib/listFilters';
 
 type HandlerRow = {
     handler: string;
@@ -30,6 +32,8 @@ export function CustomCodeToolsPage() {
     const [busy, setBusy] = useState(false);
     const [message, setMessage] = useState<string | null>(null);
     const [error, setError] = useState<string | null>(null);
+    const [q, setQ] = useState('');
+    const [linkedFilter, setLinkedFilter] = useState(ALL_FILTER);
 
     const load = useCallback(() => {
         setLoading(true);
@@ -79,6 +83,16 @@ export function CustomCodeToolsPage() {
         }
     };
 
+    const visible = useMemo(
+        () =>
+            rows.filter(
+                (row) =>
+                    matchesSearch(row, q) &&
+                    matchesFacet({ linked: row.tool_slug ? 'yes' : 'no' }, 'linked', linkedFilter),
+            ),
+        [linkedFilter, q, rows],
+    );
+
     const cliMake = 'php artisan agentic:make-code-tool LookupOrder --handler=myapp.orders.lookup';
     const cliSync = 'php artisan agentic:code-tools-sync';
 
@@ -112,12 +126,36 @@ export function CustomCodeToolsPage() {
                 <CodeBlock title="2. Register handlers" code={cliSync} />
             </div>
 
-            <Card>
-                <CardBody>
+            <DataTable
+                toolbar={
+                    <ListFilters
+                        search={q}
+                        onSearch={setQ}
+                        searchPlaceholder={t('filters.search')}
+                        filters={[
+                            {
+                                id: 'linked',
+                                label: t('filters.linked'),
+                                value: linkedFilter,
+                                onChange: setLinkedFilter,
+                                options: [
+                                    { value: 'yes', label: t('filters.values.yes') },
+                                    { value: 'no', label: t('filters.values.no') },
+                                ],
+                            },
+                        ]}
+                        resultCount={visible.length}
+                        totalCount={rows.length}
+                        countLabel={t('filters.showing', { shown: String(visible.length), total: String(rows.length) })}
+                        allLabel={t('filters.all')}
+                        clearLabel={t('filters.clear')}
+                    />
+                }
+            >
                     {loading ? (
-                        <Skeleton className="h-40 w-full" />
-                    ) : rows.length === 0 ? (
-                        <p className="text-sm text-slate-600">{t('custom_tools.empty')}</p>
+                        <div className="p-6"><Skeleton className="h-40 w-full" /></div>
+                    ) : visible.length === 0 ? (
+                        <p className="p-6 text-sm text-slate-600">{rows.length === 0 ? t('custom_tools.empty') : t('filters.empty')}</p>
                     ) : (
                         <div className="overflow-x-auto">
                             <table className="w-full text-left text-sm">
@@ -130,7 +168,7 @@ export function CustomCodeToolsPage() {
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {rows.map((row) => (
+                                    {visible.map((row) => (
                                         <tr key={row.handler} className="border-b border-slate-100">
                                             <td className="py-3 pr-4 font-mono text-xs">{row.handler}</td>
                                             <td className="py-3 pr-4 text-slate-700">{row.class.split('\\').pop()}</td>
@@ -156,8 +194,7 @@ export function CustomCodeToolsPage() {
                             </table>
                         </div>
                     )}
-                </CardBody>
-            </Card>
+            </DataTable>
         </PageContainer>
     );
 }

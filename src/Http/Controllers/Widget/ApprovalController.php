@@ -10,10 +10,7 @@ use Illuminate\Http\Request;
 
 final class ApprovalController
 {
-    public function __construct(
-        private ToolApprovalService $approvals,
-        private ToolApprovalExecutionService $executor,
-    ) {}
+    public function __construct(private ToolApprovalService $approvals, private ToolApprovalExecutionService $executor) {}
 
     public function approve(Request $request, string $id): JsonResponse
     {

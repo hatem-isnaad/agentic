@@ -70,7 +70,7 @@ export const chaptersAr: DocChapterMap = {
         envExample: `AGENTIC_AI_PROVIDER=ollama
 AGENTIC_AI_MODEL=qwen3.5:4b
 OLLAMA_URL=http://localhost:11434`,
-        adminNote: 'الدليل الكامل: vendor/hatem-isnaad/agentic/docs/DEVELOPER_QUICKSTART.md',
+        adminNote: 'ابدأ من START_HERE.md ثم DEVELOPER_HANDBOOK.md في vendor/hatem-isnaad/agentic/docs/',
     },
     environment: {
         title: '02 · البيئة وملف الإعداد',
@@ -111,6 +111,7 @@ OLLAMA_URL=http://localhost:11434`,
         steps: [
             { title: 'التعريف', body: 'method، url، input_schema' },
             { title: 'النشر', body: 'status published' },
+            { title: 'الاختبار', body: 'من صفحة الأداة أو php artisan agentic:http-tool test' },
         ],
     },
     mcp: {
@@ -139,7 +140,7 @@ OLLAMA_URL=http://localhost:11434`,
     },
     memories: {
         title: '10 · الذاكرة',
-        summary: 'حقائق بنطاق tenant/user/agent.',
+        summary: 'حقائق بنطاق user/agent/conversation.',
         goal: 'ذاكرة طويلة المدى في السياق.',
         steps: [{ title: 'API', body: 'GET|POST /memories' }],
     },
@@ -284,12 +285,6 @@ curl -O https://YOUR-HOST/vendor/agentic/widget/agentic-widget.css`,
         summary: 'مفتوح افتراضياً؛ Sanctum + Gate للإنتاج.',
         goal: 'إدارة آمنة.',
         steps: [{ title: 'البوابة', body: 'AGENTIC_ADMIN_GATE + Gate::define' }],
-    },
-    tenant: {
-        title: '19 · تعدد المستأجرين',
-        summary: 'رأس X-Agentic-Tenant-Id أو خاصية المستخدم.',
-        goal: 'عزل البيانات.',
-        steps: [{ title: 'المحلّي', body: 'TenantResolver مخصص' }],
     },
     'http-security': {
         title: '20 · أمان HTTP',

@@ -1,5 +1,13 @@
 <?php
 
+use Agentic\Http\Middleware\AuthorizeAgenticAdmin;
+use Agentic\Http\Middleware\SetAdminLocale;
+use Agentic\Http\Middleware\ValidateWidgetEmbed;
+use Agentic\Permission\DenyAllPermissionChecker;
+use Agentic\Tool\Drivers\CodeToolDriver;
+use Agentic\Tool\Drivers\HttpToolDriver;
+use Agentic\Tool\Drivers\McpToolDriver;
+
 return [
     'enabled' => env('AGENTIC_ENABLED', true),
 
@@ -41,8 +49,8 @@ return [
         ],
         'deferred_tools' => [
             'enabled' => filter_var(env('AGENTIC_DEFERRED_TOOLS', true), FILTER_VALIDATE_BOOL),
-            'deferred_count' => env('AGENTIC_DEFERRED_TOOL_COUNT', 10),
-            'direct_tools' => env('AGENTIC_DIRECT_TOOL_COUNT', 1),
+            'deferred_count' => env('AGENTIC_DEFERRED_TOOL_COUNT', 32),
+            'direct_tools' => env('AGENTIC_DIRECT_TOOL_COUNT', 8),
             'strategy' => env('AGENTIC_DEFERRED_TOOL_STRATEGY'),
         ],
     ],
@@ -86,8 +94,10 @@ return [
         'route_name_prefix' => 'agentic.auth.',
         'middleware' => ['api'],
         'protect' => [
-            'admin_api' => env('AGENTIC_ADMIN_REQUIRE_AUTH', false),
-            'runtime_api' => env('AGENTIC_API_REQUIRE_AUTH', false),
+            // true = Sanctum. false = open (laptop only). Admin + runtime APIs default closed.
+            'admin_api' => env('AGENTIC_ADMIN_REQUIRE_AUTH', true),
+            'admin_web' => env('AGENTIC_ADMIN_WEB_REQUIRE_AUTH'),
+            'runtime_api' => env('AGENTIC_API_REQUIRE_AUTH', true),
         ],
         'sanctum' => [
             'stateful_widget' => env('AGENTIC_AUTH_STATEFUL_WIDGET', true),
@@ -105,12 +115,13 @@ return [
         | Admin authorization (Telescope-style)
         |--------------------------------------------------------------------------
         |
-        | By default the admin SPA, admin API, and widget demo page are open. For
-        | production, combine:
-        |   - AGENTIC_ADMIN_REQUIRE_AUTH=true (Sanctum on admin API)
-        |   - auth / auth:sanctum on admin.web.middleware (session for SPA)
-        |   - AGENTIC_ADMIN_GATE=viewAgentic + Gate::define('viewAgentic', ...) in
-        |     your AppServiceProvider (allow specific users, roles, or emails).
+        | Authentication (who) then authorization (allowed):
+        |   - AGENTIC_ADMIN_REQUIRE_AUTH defaults true (auth:sanctum on admin JSON).
+        |   - AGENTIC_API_REQUIRE_AUTH defaults true (auth:sanctum on /api/agentic).
+        |   - Set either to false only on a trusted laptop.
+        |   - AGENTIC_ADMIN_GATE=viewAgentic + Gate::define('viewAgentic', ...)
+        |     in AppServiceProvider (Telescope/Horizon allow list).
+        | Without a gate, production admin and the widget demo return 403.
         |
         */
         'authorization' => [
@@ -122,8 +133,8 @@ return [
             'prefix' => env('AGENTIC_ADMIN_API_PREFIX', 'api/agentic/admin'),
             'middleware' => [
                 'api',
-                Agentic\Http\Middleware\SetAdminLocale::class,
-                Agentic\Http\Middleware\AuthorizeAgenticAdmin::class,
+                SetAdminLocale::class,
+                AuthorizeAgenticAdmin::class,
             ],
             'route_name_prefix' => 'agentic.admin.api.',
         ],
@@ -133,8 +144,8 @@ return [
             'prefix' => env('AGENTIC_ADMIN_PREFIX', 'agentic/admin'),
             'middleware' => [
                 'web',
-                Agentic\Http\Middleware\SetAdminLocale::class,
-                Agentic\Http\Middleware\AuthorizeAgenticAdmin::class,
+                SetAdminLocale::class,
+                AuthorizeAgenticAdmin::class,
             ],
             'route_name_prefix' => 'agentic.admin.',
         ],
@@ -148,8 +159,8 @@ return [
         'prefix' => env('AGENTIC_WIDGET_PREFIX', 'api/agentic/widget'),
         'middleware' => [
             'api',
-            Agentic\Http\Middleware\SetAdminLocale::class,
-            Agentic\Http\Middleware\ValidateWidgetEmbed::class,
+            SetAdminLocale::class,
+            ValidateWidgetEmbed::class,
         ],
         'route_name_prefix' => 'agentic.widget.',
         'web' => [
@@ -176,6 +187,7 @@ return [
         */
         'embed' => [
             'require_token' => filter_var(env('AGENTIC_WIDGET_EMBED_REQUIRE_TOKEN', true), FILTER_VALIDATE_BOOLEAN),
+            'token' => env('AGENTIC_WIDGET_EMBED_TOKEN'),
             'sanctum_allowed' => filter_var(env('AGENTIC_WIDGET_EMBED_SANCTUM_ALLOWED', true), FILTER_VALIDATE_BOOLEAN),
             'script_url' => env('AGENTIC_WIDGET_EMBED_SCRIPT_URL'),
             'default_agent' => env('AGENTIC_WIDGET_EMBED_DEFAULT_AGENT'),
@@ -259,6 +271,28 @@ return [
             ],
         ],
         'agents' => [],
+        'rate_limit' => [
+            'enabled' => filter_var(env('AGENTIC_WIDGET_RATE_LIMIT_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+            'per_minute' => (int) env('AGENTIC_WIDGET_RATE_LIMIT_PER_MINUTE', 60),
+        ],
+    ],
+
+    /*
+    | Channel accounts = messaging connections (widget, WhatsApp, later Messenger).
+    | Not the same as agentic_connections (HTTP tool OAuth).
+    | WhatsApp: pick driver meta_cloud (live) or webjs (sidecar later). Attach many numbers.
+    */
+    'channels' => [
+        'enabled' => filter_var(env('AGENTIC_CHANNELS_ENABLED', true), FILTER_VALIDATE_BOOLEAN),
+        'prefix' => env('AGENTIC_CHANNELS_PREFIX', 'api/agentic/channels'),
+        'route_name_prefix' => 'agentic.channels.',
+        'middleware' => ['api'],
+        'verify_signatures' => filter_var(env('AGENTIC_CHANNELS_VERIFY_SIGNATURES', true), FILTER_VALIDATE_BOOLEAN),
+        'whatsapp' => [
+            'graph_version' => env('AGENTIC_WHATSAPP_GRAPH_VERSION', 'v21.0'),
+            'verify_token' => env('AGENTIC_WHATSAPP_VERIFY_TOKEN'),
+            'app_secret' => env('AGENTIC_WHATSAPP_APP_SECRET'),
+        ],
     ],
 
     /*
@@ -305,7 +339,7 @@ return [
     */
     'permissions' => [
         'default' => env('AGENTIC_PERMISSION_DEFAULT', 'deny'),
-        'checker' => env('AGENTIC_PERMISSION_CHECKER', Agentic\Permission\DenyAllPermissionChecker::class),
+        'checker' => env('AGENTIC_PERMISSION_CHECKER', DenyAllPermissionChecker::class),
         'denial_message' => env('AGENTIC_PERMISSION_DENIAL_MESSAGE', 'Permission denied for tool [:tool].'),
         'allow_patterns' => array_filter(explode(',', (string) env('AGENTIC_PERMISSION_ALLOW_PATTERNS', ''))),
         'deny_patterns' => array_filter(explode(',', (string) env('AGENTIC_PERMISSION_DENY_PATTERNS', ''))),
@@ -328,7 +362,7 @@ return [
     | Conversations
     |--------------------------------------------------------------------------
     |
-    | Agentic conversation records associate agent/user/tenant metadata.
+    | Agentic conversation records associate agent/user metadata.
     | Laravel AI SDK remains responsible for provider-level message history.
     |
     | driver: eloquent | memory
@@ -384,23 +418,9 @@ return [
             'max_bytes' => (int) env('AGENTIC_KNOWLEDGE_URL_FETCH_MAX_BYTES', 5 * 1024 * 1024),
         ],
         'queue_reindex' => env('AGENTIC_KNOWLEDGE_QUEUE_REINDEX', false),
-        'log_embeddings' => filter_var(env('AGENTIC_KNOWLEDGE_LOG_EMBEDDINGS', false), FILTER_VALIDATE_BOOL),
+        'log_queries' => filter_var(env('AGENTIC_RAG_LOG_QUERIES', false), FILTER_VALIDATE_BOOL),
+        'log_embeddings' => filter_var(env('AGENTIC_RAG_LOG_EMBEDDINGS', env('AGENTIC_KNOWLEDGE_LOG_EMBEDDINGS', false)), FILTER_VALIDATE_BOOL),
         'log_embedding_preview_dims' => max(1, (int) env('AGENTIC_KNOWLEDGE_LOG_EMBEDDING_PREVIEW', 8)),
-    ],
-
-    /*
-    |--------------------------------------------------------------------------
-    | Multi-tenant resolution
-    |--------------------------------------------------------------------------
-    |
-    | Bind Agentic\Contracts\TenantResolver in the host app to customize tenant
-    | detection. Defaults read X-Agentic-Tenant-Id and the authenticated user's
-    | tenant_id attribute.
-    |
-    */
-    'tenant' => [
-        'header' => env('AGENTIC_TENANT_HEADER', 'X-Agentic-Tenant-Id'),
-        'user_attribute' => env('AGENTIC_TENANT_USER_ATTRIBUTE', 'tenant_id'),
     ],
 
     /*
@@ -409,7 +429,7 @@ return [
     |--------------------------------------------------------------------------
     |
     | Scoped long-term facts injected into agent context (user, conversation,
-    | agent, tenant). Opt-in per host app via API or MemoryManager.
+    | agent). Opt-in per host app via API or MemoryManager.
     |
     | driver: eloquent | memory
     |
@@ -464,6 +484,7 @@ return [
     'api' => [
         'enabled' => env('AGENTIC_API_ENABLED', false),
         'prefix' => env('AGENTIC_API_PREFIX', 'api/agentic'),
+        'route_name_prefix' => 'agentic.api.',
         'middleware' => ['api'],
         'rate_limit' => [
             'enabled' => env('AGENTIC_API_RATE_LIMIT_ENABLED', true),
@@ -489,9 +510,9 @@ return [
     |
     */
     'tool_drivers' => [
-        'http' => Agentic\Tool\Drivers\HttpToolDriver::class,
-        'code' => Agentic\Tool\Drivers\CodeToolDriver::class,
-        'mcp' => Agentic\Tool\Drivers\McpToolDriver::class,
+        'http' => HttpToolDriver::class,
+        'code' => CodeToolDriver::class,
+        'mcp' => McpToolDriver::class,
     ],
 
     /*

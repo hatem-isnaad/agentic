@@ -2,8 +2,8 @@
 
 namespace Agentic\Http\Controllers\Widget\Web;
 
-use Agentic\Models\Agent;
 use Agentic\Enums\Status;
+use Agentic\Models\Agent;
 use Illuminate\Contracts\View\View;
 use Illuminate\Http\Request;
 
@@ -23,11 +23,13 @@ final class ChatWebController
             $conversationId = null;
         }
 
+        $embedToken = (string) (config('agentic.widget.embed.token') ?: config('services.agentic.widget_embed_token') ?: '');
+
         return view('agentic::widget.chat', [
             'agentSlug' => $agent?->slug ?? $agentSlug,
             'agentName' => $agent?->name ?? $agentSlug,
-            'widgetApiPrefix' => '/'.trim((string) config('agentic.widget.prefix'), '/'),
             'initialConversationId' => $conversationId,
+            'embedToken' => $embedToken,
         ]);
     }
 }

@@ -7,10 +7,7 @@ namespace Agentic\Widget\Broadcast;
  */
 final class CompositeWidgetBroadcastDriver implements WidgetBroadcastDriver
 {
-    public function __construct(
-        private DatabaseWidgetBroadcastDriver $database,
-        private PusherWidgetBroadcastDriver $pusher,
-    ) {}
+    public function __construct(private DatabaseWidgetBroadcastDriver $database, private PusherWidgetBroadcastDriver $pusher) {}
 
     /**
      * @param  array<string, mixed>  $payload

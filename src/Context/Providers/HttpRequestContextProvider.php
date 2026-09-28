@@ -4,15 +4,10 @@ namespace Agentic\Context\Providers;
 
 use Agentic\Context\Contracts\ContextProvider;
 use Agentic\Context\RuntimeContext;
-use Agentic\Contracts\TenantResolver;
 use Illuminate\Http\Request;
 
 final class HttpRequestContextProvider implements ContextProvider
 {
-    public function __construct(
-        private TenantResolver $tenants,
-    ) {}
-
     public function provide(RuntimeContext $context): array
     {
         $request = $context->get('request');
@@ -33,29 +28,19 @@ final class HttpRequestContextProvider implements ContextProvider
 
         $user = $request->user();
 
-        if ($user !== null) {
-            if (! $context->has('user')) {
-                $values['user'] = $user;
-            }
-
-            if (! $context->has('user_id')) {
-                $id = $user->getAuthIdentifier();
-
-                if (is_string($id) || is_int($id)) {
-                    $values['user_id'] = $id;
-                }
-            }
+        if ($user === null) {
+            return $values;
         }
 
-        $tenant = $this->tenants->resolve($request);
+        if (! $context->has('user')) {
+            $values['user'] = $user;
+        }
 
-        if ($tenant !== null) {
-            if (! $context->has('tenant_id')) {
-                $values['tenant_id'] = $tenant;
-            }
+        if (! $context->has('user_id')) {
+            $id = $user->getAuthIdentifier();
 
-            if (! $context->has('tenant')) {
-                $values['tenant'] = $tenant;
+            if (is_string($id) || is_int($id)) {
+                $values['user_id'] = $id;
             }
         }
 

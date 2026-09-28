@@ -4,6 +4,7 @@ namespace Agentic\Admin\Services;
 
 use Agentic\Admin\DTO\ToolData;
 use Agentic\Contracts\Repositories\ToolRepository;
+use Agentic\Exceptions\ToolNotFoundException;
 
 final class ToolAdminService
 {
@@ -49,5 +50,47 @@ final class ToolAdminService
     public function delete(string $slug): bool
     {
         return $this->tools->delete($slug);
+    }
+
+    public function clone(string $slug, ?string $name = null, ?string $newSlug = null): ToolData
+    {
+        $source = $this->find($slug);
+
+        if ($source === null) {
+            throw new ToolNotFoundException($slug);
+        }
+
+        $definition = $source->definition;
+        $hasDefinition = $definition !== [];
+        $label = $name !== null && $name !== '' ? $name : $this->copyLabel($source->name);
+
+        return $this->store(new ToolData(
+            name: $label,
+            slug: $this->uniqueSlug($newSlug !== null && $newSlug !== '' ? $newSlug : $source->slug.'-copy'),
+            driver: $source->driver,
+            description: $label,
+            status: $hasDefinition ? 'published' : 'draft',
+            config: $source->config,
+            definition: $definition,
+            publish: $hasDefinition,
+        ));
+    }
+
+    private function copyLabel(string $name): string
+    {
+        return str_ends_with($name, ' (copy)') ? $name : $name.' (copy)';
+    }
+
+    private function uniqueSlug(string $base): string
+    {
+        $slug = $base;
+        $i = 2;
+
+        while ($this->tools->findBySlug($slug) !== null) {
+            $slug = $base.'-'.$i;
+            $i++;
+        }
+
+        return $slug;
     }
 }

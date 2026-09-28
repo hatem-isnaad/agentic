@@ -1,15 +1,17 @@
 import { RefreshCw } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { adminApi } from '../lib/api';
 import { useAdminConfig } from '../lib/config';
 import { useI18n } from '../lib/i18n';
 import { Button } from '../components/ui/Button';
-import { Card, CardBody } from '../components/ui/Card';
 import { PageContainer } from '../components/ui/PageContainer';
 import { PageHeader } from '../components/ui/PageHeader';
 import { TableSkeleton } from '../components/ui/Skeleton';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Server } from 'lucide-react';
+import { DataTable } from '../components/ui/DataTable';
+import { ListFilters } from '../components/ui/ListFilters';
+import { matchesSearch } from '../lib/listFilters';
 
 export function McpServersPage() {
     const boot = useAdminConfig();
@@ -20,6 +22,7 @@ export function McpServersPage() {
     const [lastResult, setLastResult] = useState<Record<string, string[]>>({});
     const [error, setError] = useState<string | null>(null);
     const [catalog, setCatalog] = useState<Record<string, unknown[]>>({});
+    const [q, setQ] = useState('');
 
     const load = () => {
         setLoading(true);
@@ -44,6 +47,8 @@ export function McpServersPage() {
         }
     };
 
+    const visible = useMemo(() => servers.filter((server) => matchesSearch({ server }, q)), [q, servers]);
+
     const sync = async (server: string) => {
         setSyncing(server);
         setError(null);
@@ -65,14 +70,30 @@ export function McpServersPage() {
                 <div className="mb-4 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">{error}</div>
             )}
 
-            <Card className="overflow-hidden">
-                <CardBody className="p-0">
+            <DataTable
+                toolbar={
+                    <ListFilters
+                        search={q}
+                        onSearch={setQ}
+                        searchPlaceholder={t('filters.search')}
+                        resultCount={visible.length}
+                        totalCount={servers.length}
+                        countLabel={t('filters.showing', { shown: String(visible.length), total: String(servers.length) })}
+                        allLabel={t('filters.all')}
+                        clearLabel={t('filters.clear')}
+                    />
+                }
+            >
                     {loading ? (
                         <div className="p-6">
                             <TableSkeleton rows={3} />
                         </div>
-                    ) : servers.length === 0 ? (
-                        <EmptyState icon={Server} title={t('mcp.empty')} description={t('mcp.empty_hint')} />
+                    ) : visible.length === 0 ? (
+                        <EmptyState
+                            icon={Server}
+                            title={servers.length === 0 ? t('mcp.empty') : t('filters.empty')}
+                            description={servers.length === 0 ? t('mcp.empty_hint') : t('filters.empty_hint')}
+                        />
                     ) : (
                         <table className="w-full text-left text-sm">
                             <thead className="border-b border-slate-100 bg-slate-50/80 text-xs font-bold uppercase tracking-wide text-slate-500">
@@ -83,7 +104,7 @@ export function McpServersPage() {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-100">
-                                {servers.map((server) => (
+                                {visible.map((server) => (
                                     <tr key={server}>
                                         <td className="px-6 py-4 font-mono font-semibold">{server}</td>
                                         <td className="px-6 py-4 text-slate-600">
@@ -118,8 +139,7 @@ export function McpServersPage() {
                             </tbody>
                         </table>
                     )}
-                </CardBody>
-            </Card>
+            </DataTable>
         </PageContainer>
     );
 }

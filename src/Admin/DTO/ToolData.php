@@ -34,13 +34,17 @@ final readonly class ToolData
             'retry' => $tool->configuration['retry'] ?? null,
             'response_mapping' => $tool->configuration['response_mapping'] ?? null,
             'headers' => $tool->configuration['headers'] ?? null,
+            'query' => $tool->configuration['query'] ?? null,
+            'body' => $tool->configuration['body'] ?? null,
+            'request_mapping' => $tool->configuration['request_mapping'] ?? null,
             'handler' => $tool->configuration['handler'] ?? null,
             'connection' => $tool->connection,
         ], static fn ($value) => $value !== null && $value !== [] && $value !== '');
 
         $config = $tool->configuration;
         foreach ([
-            'method', 'url', 'auth', 'timeout', 'retry', 'response_mapping', 'headers', 'handler',
+            'method', 'url', 'auth', 'timeout', 'retry', 'response_mapping', 'headers', 'query', 'body', 'request_mapping',
+            'handler', 'connection',
             'input_schema', 'inputSchema', 'output_schema', 'outputSchema', 'permissions', 'runtime', 'approval',
         ] as $key) {
             unset($config[$key]);

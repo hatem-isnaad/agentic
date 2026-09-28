@@ -41,7 +41,7 @@ flowchart LR
   WidgetAPI --> Realtime[Pusher / Polling / Socket.IO bridge]
 ```
 
-**Auth:** The package ships **Laravel Sanctum** + **WebAuthn passkeys** (`laravel/passkeys`) under `AGENTIC_AUTH_PREFIX` (default `/api/agentic/auth`). Enable `AGENTIC_ADMIN_REQUIRE_AUTH=true` to guard the admin API with `auth:sanctum`. Widget routes use Sanctum stateful middleware when `AGENTIC_AUTH_STATEFUL_WIDGET=true` so logged-in users share the passkey session. Guest widget traffic still uses `X-Agentic-Guest-Id` (see below).
+**Auth:** The package ships **Laravel Sanctum** + **WebAuthn passkeys** (`laravel/passkeys`) under `AGENTIC_AUTH_PREFIX` (default `/api/agentic/auth`). Admin JSON and `/api/agentic` default to `auth:sanctum` (`AGENTIC_ADMIN_REQUIRE_AUTH` / `AGENTIC_API_REQUIRE_AUTH` = true). Widget routes use Sanctum stateful middleware when `AGENTIC_AUTH_STATEFUL_WIDGET=true` so logged-in users share the passkey session. Guest widget traffic still uses `X-Agentic-Guest-Id`. `X-Agentic-User-Id` is not identity.
 
 **Host app setup**
 
@@ -149,8 +149,7 @@ All admin **index** endpoints return:
 | Header | When | Purpose |
 |--------|------|---------|
 | `X-Agentic-Guest-Id` | Guest users | Stable guest id (persist in localStorage); server may generate UUID if missing |
-| `X-Agentic-Tenant-Id` | Optional | Passed through to conversations (host-defined) |
-| Laravel auth cookie / Bearer | Authenticated widget | When `AGENTIC_WIDGET_AUTH_MODE=auth` or `both` |
+| Laravel auth cookie / Bearer | Authenticated widget | The only user identity |
 
 **403** if auth mode disallows current user type (`EnsureWidgetAccess` middleware).
 

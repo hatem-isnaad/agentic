@@ -27,7 +27,6 @@ final class KnowledgeIngestPayload
             'urls.*' => ['url', 'max:2048'],
             'chunk_size' => ['nullable', 'integer', 'min:100', 'max:8000'],
             'chunk_overlap' => ['nullable', 'integer', 'min:0', 'max:2000'],
-            'tenant' => ['nullable', 'string', 'max:191'],
             'reindex' => ['nullable'],
             'files' => ['nullable', 'array', 'max:20'],
             'files.*' => ['file', 'mimes:pdf', 'max:15360'],

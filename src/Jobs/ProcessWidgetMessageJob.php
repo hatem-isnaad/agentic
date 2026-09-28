@@ -19,20 +19,10 @@ final class ProcessWidgetMessageJob implements ShouldQueue
     /**
      * @param  array<string, mixed>  $metadata
      */
-    public function __construct(
-        public string $agentSlug,
-        public string $conversationId,
-        public string $message,
-        public array $metadata = [],
-    ) {}
+    public function __construct(public string $agentSlug, public string $conversationId, public string $message, public array $metadata = []) {}
 
     public function handle(WidgetMessageService $messages): void
     {
-        $messages->runAgentTurn(
-            agentSlug: $this->agentSlug,
-            conversationId: $this->conversationId,
-            message: $this->message,
-            metadata: $this->metadata,
-        );
+        $messages->runAgentTurn($this->agentSlug, $this->conversationId, $this->message, $this->metadata);
     }
 }

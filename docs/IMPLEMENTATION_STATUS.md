@@ -11,6 +11,7 @@
 | `/api/agentic/admin` | `routes/admin-api.php` | JSON admin API (`AGENTIC_ADMIN_API_ENABLED`) |
 | `/{AGENTIC_ADMIN_PREFIX}` | `routes/admin-web.php` | Blade admin UI (`AGENTIC_ADMIN_WEB_ENABLED`) |
 | `/api/agentic/widget` | `routes/widget-api.php` | Embeddable widget API (`AGENTIC_WIDGET_ENABLED`) |
+| `/api/agentic/channels` | `routes/channels-api.php` | WhatsApp Meta + webjs webhooks |
 | `/{AGENTIC_WIDGET_WEB_PREFIX}` | `routes/widget-web.php` | Standalone widget chat page (`AGENTIC_WIDGET_WEB_ENABLED`) |
 | `/api/agentic/auth` | `routes/auth-api.php` | Sanctum + passkeys when packages installed (`AGENTIC_AUTH_ENABLED`) |
 
@@ -27,15 +28,17 @@
 | Admin API | ✅ | Agents, skills, tools, knowledge, workflows (CRUD + execute/resume), workflow runs, executions, widget settings |
 | Widget API | ✅ | Config, conversations, messages, approvals, realtime; Form Requests + DTOs; `JsonApiResponse` |
 | Widget embed SDK | ✅ | Published JS/CSS, `wgt_…` + origins, themes, inbox drawer, emoji, RTL |
-| Channel replies | ✅ | Web/widget → Markdown HTML; WhatsApp/Messenger presenters reserved |
+| Channel replies | ✅ | Web/widget → Markdown HTML; WhatsApp/Messenger text presenters |
+| Channel accounts | ✅ | Many connections: `widget`/`embed`, WhatsApp `meta_cloud` (live) + `webjs` (sidecar). Messenger kind reserved |
+| WhatsApp live | ✅ | Meta Cloud webhook + Graph send; webjs HTTP contract for a later sidecar |
+| Agent evals | ✅ | Admin `POST /evaluations` score 1–5 |
 | Agent persona | ✅ | Name, gender, language/dialect, tone in `config.persona` + admin form |
 | Lean context | ✅ | Default on; widget caps history/skills/tools/RAG per turn |
 | Auth API | ✅ | Sanctum + passkeys when host installs packages |
 | MCP discovery | ✅ | Tool sync, catalog API, optional resource injection via agent `config.mcp` |
-| API rate limiting | ✅ | `throttle:agentic-api` on runtime routes |
+| API rate limiting | ✅ | `throttle:agentic-api` on runtime; `throttle:agentic-widget` on widget |
 | Filament UI (optional) | ✅ | Agents (+ skills), skills, tools, knowledge, workflows, workflow runs (read-only), executions (read-only) |
 | Rule-based tool permissions | ✅ | `RuleBasedPermissionChecker` + allow/deny fnmatch patterns |
-| Multi-tenant contract | ✅ | `TenantResolver`, request/conversation context providers |
 
 ## Knowledge ingest
 
@@ -44,7 +47,7 @@
 - `format`: `text`, `markdown`, `html`, `json`, `pdf` (requires `smalot/pdfparser`)
 - `documents` or `raw_text`
 - optional `urls` — HTTPS fetch (SSRF-safe, size-limited) merged before parsing
-- optional `chunk_size`, `chunk_overlap`, `tenant`
+- optional `chunk_size`, `chunk_overlap`
 - `reindex` (default `true`) — sync or queued (`AGENTIC_KNOWLEDGE_QUEUE_REINDEX`)
 
 ## MCP

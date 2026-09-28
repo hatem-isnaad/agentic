@@ -11,10 +11,7 @@ use Agentic\Widget\Support\WidgetReplyDelivery;
 
 final class WidgetConfigService
 {
-    public function __construct(
-        private AgentResolver $agents,
-        private WidgetSettingsService $settings,
-    ) {}
+    public function __construct(private AgentResolver $agents, private WidgetSettingsService $settings) {}
 
     /**
      * Minimal payload for embed / chat UI (no admin secrets, no AI provider catalog).
