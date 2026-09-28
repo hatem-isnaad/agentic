@@ -76,9 +76,11 @@ Step-by-step for both: [docs/START_HERE.md](docs/START_HERE.md). Extra env keys:
 - [`laravel/ai`](https://github.com/laravel/ai) ^1.0 (installed automatically with Agentic)
 
 ```bash
-composer require hatem-isnaad/agentic
+composer require hatem-isnaad/agentic:^0.2
 php artisan agentic:install
 ```
+
+Pin an exact release: `composer require hatem-isnaad/agentic:0.2.0` (Git tag `v0.2.0`).
 
 The install command runs an **interactive wizard** (deployment mode, provider, model, RAG, credentials) and merges results into `.env`. Guide: [docs/INSTALL_WIZARD.md](docs/INSTALL_WIZARD.md). Use `php artisan agentic:install --quick` to skip the wizard.
 

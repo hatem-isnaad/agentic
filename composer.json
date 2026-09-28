@@ -1,6 +1,7 @@
 {
   "name": "hatem-isnaad/agentic",
   "description": "A configuration-driven AI agent orchestration framework for Laravel, built on the Laravel AI SDK.",
+  "version": "0.2.0",
   "type": "library",
   "license": "MIT",
   "require": {
