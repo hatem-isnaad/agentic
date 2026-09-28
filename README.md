@@ -93,6 +93,55 @@ Before production, follow **[docs/PRODUCTION_CHECKLIST.md](docs/PRODUCTION_CHECK
 
 ---
 
+## Releases & Composer versions
+
+Install a **stable line** (recommended for production):
+
+```bash
+composer require hatem-isnaad/agentic:^0.2
+```
+
+Pin one release exactly (same as Git tag **`v0.2.0`**):
+
+```bash
+composer require hatem-isnaad/agentic:0.2.0
+```
+
+If the package is not on Packagist yet, add the VCS repository in your app `composer.json`:
+
+```json
+"repositories": [
+    {
+        "type": "vcs",
+        "url": "git@isnaad:hatem-isnaad/agentic.git"
+    }
+],
+"require": {
+    "hatem-isnaad/agentic": "^0.2"
+}
+```
+
+Then `composer update hatem-isnaad/agentic`. Composer resolves versions from **annotated Git tags** (`v0.2.0`, `v0.2.1`, …).
+
+| You want | Composer constraint | Git tag |
+|----------|---------------------|---------|
+| Latest 0.2.x fixes | `^0.2` | newest `v0.2.*` |
+| Exact build | `0.2.0` | `v0.2.0` |
+| Local monorepo symlink | `@dev` + path repo | (any commit on `../agentic`) |
+
+**Maintainers — ship a new version:**
+
+1. Bump `"version"` in `composer.json` (e.g. `0.2.1`).
+2. Commit, tag, push:
+
+```bash
+git tag -a v0.2.1 -m "v0.2.1 — short summary"
+git push origin main
+git push origin v0.2.1
+```
+
+---
+
 ## Configuration
 
 Set the **starter** keys in `.env` (see [`.env.example`](.env.example)). **Do not copy long env lists from old docs.**
