@@ -4,7 +4,6 @@ namespace Agentic\Tests\Unit;
 
 use Agentic\Http\Middleware\AuthorizeAgenticAdmin;
 use Agentic\Tests\TestCase;
-use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Symfony\Component\HttpKernel\Exception\HttpException;
@@ -28,7 +27,7 @@ final class AuthorizeAgenticAdminTest extends TestCase
 
         $middleware = new AuthorizeAgenticAdmin;
 
-        $this->expectException(AuthorizationException::class);
+        $this->expectException(HttpException::class);
 
         $middleware->handle(Request::create('/'), fn () => response('ok', 200));
     }

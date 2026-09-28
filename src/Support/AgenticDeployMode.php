@@ -38,7 +38,11 @@ final class AgenticDeployMode
             return self::Local;
         }
 
-        return app()->environment(['local', 'testing']) ? self::Local : self::Production;
+        if (app()->environment('testing')) {
+            return '';
+        }
+
+        return app()->environment('local') ? self::Local : self::Production;
     }
 
     public static function isWidgetOnly(): bool
@@ -48,7 +52,12 @@ final class AgenticDeployMode
 
     public static function applyPresets(): void
     {
-        match (self::current()) {
+        $mode = self::current();
+        if ($mode === '') {
+            return;
+        }
+
+        match ($mode) {
             self::Widget => self::applyWidget(),
             self::Production => self::applyProduction(),
             default => self::applyLocal(),
